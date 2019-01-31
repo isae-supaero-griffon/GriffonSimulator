@@ -19,8 +19,7 @@ def generate_data_layer(data_file):
     :return JsonInterpreter """
 
     # Pass the file name
-    data_directory = "C:/Users/Felix Zapata/Google Drive/" \
-                     "MSc in AE ISAE - SUPAERO/Griffon Project/GriffonSimulator/data"
+    data_directory = "../data"
 
     # Return the output
     return JsonInterpreter(file_name="/".join([data_directory, data_file]))
@@ -86,8 +85,7 @@ def test_simulation_initializer():
     # --------------- Export results to csv files:
 
     # data directory
-    data_directory = "C:/Users/Felix Zapata/Google Drive/" \
-                     "MSc in AE ISAE - SUPAERO/Griffon Project/GriffonSimulator/data/data_tests"
+    data_directory = "../data/data_tests"
 
     file_name_expression = "Griffon Output Test {number}.csv"
 

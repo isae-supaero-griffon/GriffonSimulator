@@ -18,8 +18,7 @@ def generate_data_layer(data_file="Thermodynamic Data 36 bar OF 0,1 to 8,0.json"
     :return JsonInterpreter """
 
     # Pass the file name
-    data_directory = "C:/Users/Felix Zapata/Google Drive/" \
-                     "MSc in AE ISAE - SUPAERO/Griffon Project/GriffonSimulator/data"
+    data_directory = "../data"
 
     # Return the output
     return JsonInterpreter(file_name="/".join([data_directory, data_file]))
@@ -37,8 +36,7 @@ def save_to_json(dictionary, name):
     assert isinstance(name, str), "Insert a valid str as file_name"
 
     # Pass the file name
-    data_directory = "C:/Users/Felix Zapata/Google Drive/" \
-                     "MSc in AE ISAE - SUPAERO/Griffon Project/GriffonSimulator/data/data_tests"
+    data_directory = "../data/data_tests"
 
     with open("/".join([data_directory, name]), 'w') as f:
         json.dump(dictionary, f)
