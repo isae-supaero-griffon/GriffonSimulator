@@ -17,7 +17,7 @@
       "aluminium": {
         "identifier": "aluminium",
         "density": 2700.0,
-        "yield_stress": 290000000.0
+        "yield_stress": 250000000.0
       },
       "liner_mat": {
         "identifier": "liner_mat",
@@ -103,7 +103,7 @@
           "pressuriser_valve": {
             "identifier": "pressuriser_valve",
             "type": "StaticPart",
-            "mass": 0.1
+            "mass": 0.4
           }
         }
       },
@@ -113,7 +113,7 @@
           "pipes": {
             "identifier": "pipes",
             "type": "StaticPart",
-            "mass": 0.1
+            "mass": 0.5
           },
           "valve1": {
             "identifier": "valve1",
