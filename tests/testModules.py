@@ -24,8 +24,7 @@ def generate_data_layer(data_file="Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 
     :return JsonInterpreter """
 
     # Pass the file name
-    data_directory = "C:/Users/Felix Zapata/Google Drive/" \
-                     "MSc in AE ISAE - SUPAERO/Griffon Project/GriffonSimulator/data"
+    data_directory = "../data"
 
     # Return the output
     return JsonInterpreter(file_name="/".join([data_directory, data_file]))
