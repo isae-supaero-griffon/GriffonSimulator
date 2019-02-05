@@ -3,47 +3,148 @@ import math
 
 
 class Part(ABC):
+    """Abstract base class for a generic part.
+
+    Attributes:
+        subsystem (subsystem): Parent subsystem of part.
+
+    """
+
     def __init__(self, sender, **kwargs):
+        """The constructor for a generic part.
+
+        :param sender: subsystem which is generating the part.
+        :param kwargs: dictionary of additional part parameters.
+
+        """
         self.subsystem = sender
 
     def get_part_link(self, subsystem_ref, part_ref):
+        """Get a reference to a specific part in the system.
+
+        :param subsystem_ref: identifier of subsystem to which the part belongs.
+        :param part_ref: identifier of part.
+        :return: reference to part (subsystem_ref, part_ref).
+
+        """
         return self.subsystem.parent.get_part_link(subsystem_ref, part_ref)
 
     @abstractmethod
     def get_mass(self):
+        """Abstract method for calculating mass of part.
+
+        This method must be implemented for each subclass of Part.
+
+        :return: part mass
+
+        """
         pass
 
 
 class StaticPart(Part):
+    """Part with static mass value
+
+    This type of part only has a single value attributed to its mass which is unaffected by other design parameters.
+
+    Attributes:
+        mass (real): Fixed mass of part.
+
+    """
     def __init__(self, mass, sender, **kwargs):
+        """The constructor for a static part.
+
+        :param mass: fixed mass value of part.
+        :param sender: subsystem which is generating the part.
+        :param kwargs: dictionary of additional part parameters.
+
+        """
         super().__init__(sender, **kwargs)
         self.mass = mass
 
     def get_mass(self):
+        """Method for getting mass of part.
+
+        Overrides superclass method.
+
+        :return: part mass.
+        """
+
         return self.mass
 
 
 class DynamicPart(Part):
+    """Abstract class for a generic dynamic part.
+
+    Subclasses of this class should define a method for determining part mass based on its parameters.
+
+    """
     @abstractmethod
     def get_mass(self):
+        """Abstract method for calculating mass of part.
+
+        This method must be implemented for each subclass of Part.
+
+        :return: part mass
+
+        """
         pass
 
 
 class Tank(DynamicPart):
+    """Generic tank class.
+
+    Defines a type of dynamic part whose geometry is assumed to be a cylinder with circular end caps.
+
+    Attributes:
+        radius (real): radius of the tank.
+        height (real): height of the tank.
+
+    """
     def __init__(self, tank_radius, tank_height, sender, **kwargs):
+        """The constructor for a tank part.
+
+        :param tank_radius: radius of the tank
+        :param tank_height: height of the tank.
+        :param sender: subsystem which is generating the part.
+        :param kwargs: dictionary of additional part parameters.
+
+        """
         super().__init__(sender, **kwargs)
         self.radius = tank_radius
         self.height = tank_height
 
     @abstractmethod
     def get_mass(self):
+        """Abstract method for calculating mass of part.
+
+        This method must be implemented for each subclass of Part.
+
+        :return: part mass
+
+        """
         pass
 
     def get_internal_volume(self):
+        """Method for calculating material volume of tank part.
+
+        Calculates the volume of a cylinder with tank dimensions.
+
+        :return: internal volume of tank part.
+
+        """
         return math.pi * self.radius**2 * self.height
 
 
 class DimensionedTank(Tank):
+    """Class for tanks with wall thickness affected by its parameters.
+
+    Attributes:
+        pressure (real): chamber pressure in tank.
+        propellant_mass (real): mass of propellant stored in tank.
+        safety_factor (real): safety factor on wall thickness.
+        material (material_id): id of tank material
+
+    """
     def __init__(self, radius, height, material_id, pressure, propellant_mass, sender, safety_factor=None, **kwargs):
         super().__init__(radius, height, sender, **kwargs)
         self.pressure = pressure
