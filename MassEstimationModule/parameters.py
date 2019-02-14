@@ -1,3 +1,10 @@
+"""
+
+THIS FILE IS CURRENTLY NOT IN USE
+
+"""
+
+"""
 # from MassEstimationModule.part import *
 
 # avionics params
@@ -39,7 +46,7 @@ rocket_structure_mass = 20.
 
 # material params
 al_density = 2700.
-al_yield = 290.e6
+al_yield = 250.e6   # Aluminum 6082-T6
 liner_density = 1070.
 
 safety_factor = 3.
@@ -184,3 +191,4 @@ system_dict = {
     },
     "safety_factor": safety_factor
 }
+"""
