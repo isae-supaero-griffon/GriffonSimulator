@@ -204,8 +204,9 @@ class SimulationObject:
             try:
                 self.run_simulation()
 
-            except (TypeError, ValueError, ArithmeticError, ZeroDivisionError, KeyError):
+            except (TypeError, ValueError, ArithmeticError, ZeroDivisionError, KeyError) as e:
                 print("\n-----------ERROR ENCOUNTERED WHILE RUNNING THE SIMULATION---------\n")
+                print(e)
 
     def run_simulation(self):
         """ run the simulation to obtain the data """
