@@ -37,8 +37,8 @@ def test_simulation_initializer():
 
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': OneCircularPort, 'L': 0.2, 'rintInitial': 0.03,
-                                                            'rext0': 0.05},
+                                       'geometric_params': {'type': ThreeCircularPorts, 'L': 0.6, 'portsIntialRadius': 0.015,
+                                                            'r_ext': 0.07},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
@@ -52,10 +52,10 @@ def test_simulation_initializer():
 
                       }
     simulation_parameters = {
-                              'combustion': {'ox_flow': 1, 'safety_thickness': 0.005, 'dt': 0.05,
-                                             'max_burn_time': None},
+                              'combustion': {'ox_flow': 1.0, 'safety_thickness': 0.0025, 'dt': 0.05,
+                                             'max_burn_time': 5},
 
-                              'mass_simulator': {'ox_flow': 3, 'burn_time': 'TBD', 'extra_filling': 0.05,
+                              'mass_simulator': {'ox_flow': 1.0, 'burn_time': 'TBD', 'extra_filling': 0.05,
                                                  'injection_loss': 0.5, 'area_injection': 0.000105},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},

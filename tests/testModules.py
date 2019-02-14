@@ -67,6 +67,43 @@ def test_combustion():
     combustion_obj.plot_results()
 
 
+def test_combustion_three_port_geometry():
+    """ perform the test over the combustion module """
+
+    # ------------ Define parameters:
+
+    geometric_params = {'L': 0.6, 'portsIntialRadius': 0.01, 'r_ext': 0.07}
+
+    nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
+
+    design_params = {'gamma': 1.27, 'p_chamber': 4000000, 'p_exit': 100000,
+                     'c_star': 1500, 'isp': 230, 'thrust': 30000}
+
+    simulation_params = {'ox_flow': 1.0, 'safety_thickness': 0.005, 'dt': 0.05}
+
+    # ------------- Generate objects:
+
+    geometry_obj = Geom.ThreeCircularPorts(**geometric_params)
+    nozzle_obj = Noz.Nozzle(**nozzle_params)
+    nozzle_obj.set_design(**design_params)
+    json_interpreter = generate_data_layer()
+
+    # Instantiate the combustion module
+    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+                                      geometry_object=geometry_obj,
+                                      nozzle_object=nozzle_obj)
+
+    # -------------- Run simulation & Plot:
+
+    combustion_obj.run_simulation_constant_fuel_sliver(**simulation_params)
+
+    # Print the module
+    print(combustion_obj)
+
+    # Plot the results
+    combustion_obj.plot_results()
+
+
 def test_combustion_onera_data():
     """ perform the test over the combustion module but with Onera Test Data """
 
@@ -107,9 +144,6 @@ def test_mass_simulator():
 
     json_interpreter = generate_data_layer()
     mass_simulator_obj = System(json_interpreter.return_mass_simulator_table())
-
-    # Print the total mass
-    print("\nRockets Total Mass: {0} kgs".format(mass_simulator_obj.get_mass()))
 
     # Print the results
     print(mass_simulator_obj)
@@ -176,6 +210,7 @@ if __name__ == '__main__':
 
     # Call on test_combustion method
     # test_combustion()
+    # test_combustion_three_port_geometry()
     # test_mass_simulator()
     # test_trajectory()
     test_combustion_onera_data()
