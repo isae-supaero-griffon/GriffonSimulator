@@ -176,6 +176,7 @@ class CombustionObject:
 
             # Regression rate and mass flow calculations
             fuel_flow = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow,
+                                                        max_regression_rate=self.data_dictionary['max_regression_rate'],
                                                         a=a, n=n, m=m)
             total_mass_flow = ox_flow + fuel_flow
             of_ratio = ox_flow / fuel_flow
@@ -216,7 +217,8 @@ class CombustionObject:
                 self.results["run_values"]["radius"].append(0)
 
             # Update the geometry and nozzle
-            self.geometry.regress(ox_flow=ox_flow, a=a, n=n, m=m, dt=dt)
+            self.geometry.regress(ox_flow=ox_flow, max_regression_rate=self.data_dictionary['max_regression_rate'],
+                                  a=a, n=n, m=m, dt=dt)
             self.nozzle.erode(dt)
 
             # Update the loop

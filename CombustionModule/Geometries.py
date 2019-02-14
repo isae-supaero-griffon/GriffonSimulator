@@ -16,11 +16,12 @@ def cylinder_volume(length, radius):
     return length * m.pi * (radius**2)
 
 
-def compute_regression_rate(geometry, ox_flow, a, n, m):
+def compute_regression_rate(geometry, ox_flow, max_regression_rate, a, n, m):
     """
     Return the instantaneous fuel regression rate of the geometry given flow properties.
     :param geometry: Port geometry from which the regression rate should be calculated. Port number must be 1.
     :param ox_flow: instantaneous oxidizer flow
+    :param max_regression_rate: maximum allowed regression rate until it reaches saturation
     :param a: classical regression rate factor (depends on fuel choice)
     :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
     :param m: classical regression rate exponent for fuel length(usually set to -0.2)
@@ -34,7 +35,16 @@ def compute_regression_rate(geometry, ox_flow, a, n, m):
 
     Go = ox_flow / geometry.totalCrossSectionArea()
 
-    return a * (geometry.length ** m) * (Go ** n)
+    # Compute the regression rate following the exponential regression law.
+    regression_rate = a * (geometry.length ** m) * (Go ** n)
+
+    # If the regression rate is higher than the maximum return the maximum, else use the exponential law
+    if max_regression_rate < regression_rate:
+        print("Warning: Exceeding Max allowed Regression Rate, Actual: {0:.2E} m/seg, Setting Cap "
+              "to: {1:.2E} m/seg".format(regression_rate, max_regression_rate))
+        regression_rate = max_regression_rate
+
+    return regression_rate
 
 
 def draw_circular_port(ax, center, port):
@@ -89,7 +99,7 @@ class Geometry(ABC):
         return self.port_number
 
     @abstractmethod
-    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+    def compute_fuel_rate(self, rho, ox_flow, max_regression_rate, a, n, m):
         """
         Return the instantaneous fuel mass flow rate for the geometry
         :param rho: fuel density
@@ -111,10 +121,11 @@ class Geometry(ABC):
         pass
 
     @abstractmethod
-    def regress(self, ox_flow, a, n, m, dt):
+    def regress(self, ox_flow, max_regression_rate, a, n, m, dt):
         """
         Apply regression to the geometry
         :param ox_flow: instantaneous oxidizer flow
+        :param max_regression_rate: maximum allowed regression rate for the fuel under consideration
         :param a: classical regression rate factor (depends on fuel choice)
         :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
         :param m: classical regression rate exponent for fuel length(usually set to -0.2)
@@ -143,6 +154,14 @@ class Geometry(ABC):
         """
         Return the initial fuel mass based on fuel_density
         :param fuel_density: density of the fuel [kg/m^3]
+        """
+        pass
+
+    @abstractmethod
+    def return_external_radius(self):
+        """
+        Return external radius of the geometry
+        :return: external radius of the geometry
         """
         pass
 
@@ -175,16 +194,17 @@ class OneCircularPort(Geometry):
 
     # Abstract methods implementation
 
-    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+    def compute_fuel_rate(self, rho, ox_flow, max_regression_rate, a, n, m):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
+        :param max_regression_rate: maximum allowed regression rate to operate
         :param a: classical regression rate factor (depends on fuel choice)
         :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
         :param m: classical regression rate exponent for fuel length(usually set to -0.2)
         """
 
-        return rho * compute_regression_rate(self, ox_flow, a, n, m) * self.totalSurfaceArea()
+        return rho * compute_regression_rate(self, ox_flow, max_regression_rate, a, n, m) * self.totalSurfaceArea()
 
     def totalCrossSectionArea(self):
 
@@ -194,9 +214,9 @@ class OneCircularPort(Geometry):
 
         return self.length * 2 * m.pi * self.r_int
 
-    def regress(self, ox_flow, a, n, m, dt):
+    def regress(self, ox_flow, max_regression_rate, a, n, m, dt):
 
-        self.r_int += compute_regression_rate(self, ox_flow, a, n, m) * dt
+        self.r_int += compute_regression_rate(self, ox_flow, max_regression_rate, a, n, m) * dt
 
         # print("Port radius : " + str(self.r_int*1000) + " mm")
 
@@ -222,6 +242,9 @@ class OneCircularPort(Geometry):
 
         return fuel_density * (cylinder_volume(self.length, self.r_ext) - cylinder_volume(self.length, self.r_int))
 
+    def return_external_radius(self):
+        return self.r_ext
+
 
 class MultipleCircularPortsWithCircularCenter(Geometry):
     """
@@ -236,7 +259,7 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
     Those two attributes combined with port number encapsulate all geometrical aspects such as total radius.
     """
 
-    def __init__(self, N, L, ringPortsIntialRadius, centralPortInitialRadius, externalRadius):
+    def __init__(self, N, L, ringPortsIntialRadius, centralPortInitialRadius, r_ext):
         """
         class initializer
         """
@@ -249,8 +272,9 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
 
         c = m.sin( m.pi / (N-1) ) # Shape parameter linked to the number of ring ports (= N-1)
 
-        self.ring_ports = OneCircularPort(L, ringPortsIntialRadius, externalRadius * c / (1+c) )
-        self.central_port = OneCircularPort(L, centralPortInitialRadius, externalRadius - self.ring_ports.r_ext - ringPortsIntialRadius)
+        self.r_ext = r_ext
+        self.ring_ports = OneCircularPort(L, ringPortsIntialRadius, r_ext * c / (1+c) )
+        self.central_port = OneCircularPort(L, centralPortInitialRadius, r_ext - self.ring_ports.r_ext - ringPortsIntialRadius)
 
     # Methods specific to this geometry
 
@@ -262,10 +286,11 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
 
     # Abstract methods implementation
 
-    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+    def compute_fuel_rate(self, rho, ox_flow, max_regression_rate, a, n, m):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
+        :param max_regression_rate: maximum allowed regression rate for the fuel
         :param a: classical regression rate factor (depends on fuel choice)
         :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
         :param m: classical regression rate exponent for fuel length(usually set to -0.2)
@@ -275,8 +300,9 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
         ring_individual_port_ox_flow = ox_flow * self.ring_ports.totalCrossSectionArea() / self.totalCrossSectionArea()
         center_port_ox_flow = ox_flow * self.central_port.totalCrossSectionArea() / self.totalCrossSectionArea()
 
-        return self.central_port.compute_fuel_rate(rho, center_port_ox_flow, a, n, m) + \
-               (self.port_number - 1) * self.ring_ports.compute_fuel_rate(rho, ring_individual_port_ox_flow, a, n, m)
+        return self.central_port.compute_fuel_rate(rho, center_port_ox_flow, max_regression_rate, a, n, m) + \
+               (self.port_number - 1) * self.ring_ports.compute_fuel_rate(rho, ring_individual_port_ox_flow,
+                                                                          max_regression_rate, a, n, m)
 
     def totalCrossSectionArea(self):
 
@@ -286,7 +312,7 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
 
         return self.central_port.totalSurfaceArea() + (self.port_number - 1) * self.ring_ports.totalSurfaceArea()
 
-    def regress(self, ox_flow, a, n, m, dt):
+    def regress(self, ox_flow, max_regression_rate, a, n, m, dt):
 
         # Compute oxidizer flow in each port
         ring_individual_port_ox_flow = ox_flow * self.ring_ports.totalCrossSectionArea() / self.totalCrossSectionArea()
@@ -294,8 +320,8 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
 
         initial_ring_radius = self.ring_ports.get_port_radius()
 
-        self.central_port.regress(center_port_ox_flow, a, n, m, dt)
-        self.ring_ports.regress(ring_individual_port_ox_flow, a, n, m, dt)
+        self.central_port.regress(center_port_ox_flow, max_regression_rate, a, n, m, dt)
+        self.ring_ports.regress(ring_individual_port_ox_flow, max_regression_rate, a, n, m, dt)
 
         self.central_port.r_ext += initial_ring_radius - self.ring_ports.get_port_radius()
 
@@ -333,6 +359,9 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
                                cylinder_volume(self.length, self.ring_ports.r_int) -
                                cylinder_volume(self.length, self.central_port.r_int))
 
+    def return_external_radius(self):
+        return self.r_ext
+
 
 class ThreeCircularPorts(Geometry):
     """
@@ -344,14 +373,15 @@ class ThreeCircularPorts(Geometry):
     central_port: OneCircularGeometry object representing the central port.
     """
 
-    def __init__(self, L, portsIntialRadius, externalRadius):
+    def __init__(self, L, portsIntialRadius, r_ext):
         """
         class initializer
         """
 
         super().__init__(L, 3)
 
-        self.ports = OneCircularPort(L, portsIntialRadius, externalRadius / (1 + 2/m.sqrt(3)))
+        self.r_ext = r_ext
+        self.ports = OneCircularPort(L, portsIntialRadius, r_ext / (1 + 2/m.sqrt(3)))
 
     # Methods specific to this geometry
 
@@ -369,16 +399,17 @@ class ThreeCircularPorts(Geometry):
 
     # Abstract methods implementation
 
-    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+    def compute_fuel_rate(self, rho, ox_flow, max_regression_rate, a, n, m):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
+        :param max_regression_rate: maximum allowed regression rate for the fuel
         :param a: classical regression rate factor (depends on fuel choice)
         :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
         :param m: classical regression rate exponent for fuel length(usually set to -0.2)
         """
 
-        return 3 * self.ports.compute_fuel_rate(rho, ox_flow / 3, a, n, m)
+        return 3 * self.ports.compute_fuel_rate(rho, ox_flow / 3, max_regression_rate, a, n, m)
 
     def totalCrossSectionArea(self):
 
@@ -388,9 +419,9 @@ class ThreeCircularPorts(Geometry):
 
         return 3 * self.ports.totalSurfaceArea()
 
-    def regress(self, ox_flow, a, n, m, dt):
+    def regress(self, ox_flow, max_regression_rate, a, n, m, dt):
 
-        self.ports.regress(ox_flow / 3, a, n, m, dt)
+        self.ports.regress(ox_flow / 3, max_regression_rate, a, n, m, dt)
 
     def min_bloc_thickness(self):
 
@@ -417,6 +448,9 @@ class ThreeCircularPorts(Geometry):
 
         return fuel_density * (cylinder_volume(self.length, self.get_total_outer_radius()) -
                                 3 * cylinder_volume(self.length, self.ports.r_int))
+
+    def return_external_radius(self):
+        return self.r_ext
 
 
 
