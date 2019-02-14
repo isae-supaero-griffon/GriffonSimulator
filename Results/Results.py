@@ -164,8 +164,9 @@ class ResultsCollection(Collections):
             # Execute the statement in a try-except block
             try:
 
-                element.export_results_to_file(file_name.format(number=count))
-                print("\nSuccessfully saved file: {name}".format(name=file_name))
+                f_name = file_name.format(number=count)
+                element.export_results_to_file(f_name)
+                print("\nSuccessfully saved file: {name}".format(name=f_name))
 
             finally:
                 pass
