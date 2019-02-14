@@ -237,7 +237,7 @@ class Initializer:
         # ----------------------- Calculate propellant mass
 
         chamber_length = self.combustion_parameters['geometry_object'].length
-        chamber_radius = self.combustion_parameters['geometry_object'].r_ext
+        chamber_radius = self.combustion_parameters['geometry_object'].return_external_radius()
         propellant_mass = InitializerCalculator.calculate_fuel_mass(self.combustion_parameters['geometry_object'],
                                                                     combustion_table['rho_fuel'])
 
