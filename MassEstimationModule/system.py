@@ -35,6 +35,10 @@ class System:
         return part_link
 
     def __str__(self):
+
         output_str = " \n".join(("\n {0} \n\t {1}".format(key, value) for key, value in
                                  sorted(self.subsystems_dict.items())))
-        return output_str
+
+        total_mass = " \n\n Rockets Total Mass, {0} kgs".format(self.get_mass())
+
+        return output_str + total_mass
