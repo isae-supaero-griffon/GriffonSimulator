@@ -15,6 +15,9 @@ def cylinder_volume(length, radius):
 
     return length * m.pi * (radius**2)
 
+def n_star_volume(length, base_radius, int_radius, number_branches) :
+
+    return 2 * length * number_branches * base_radius * int_radius * m.sin (m.pi / number_branches)
 
 def compute_regression_rate(geometry, ox_flow, a, n, m):
     """
@@ -42,6 +45,19 @@ def draw_circular_port(ax, center, port):
     # Plot the combustion port
     ax.add_patch(plt.Circle(center, radius=port.r_int * 1000, color='w'))
 
+
+def draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle):
+
+    rot = [[m.cos(rotation_angle), - m.sin(rotation_angle)],
+           [m.sin(rotation_angle), m.cos(rotation_angle)]]
+
+    p1 = p1 * rot
+    p2 = p2 * rot
+    p3 = p3 * rot
+
+    # Plot the combustion port
+    plt.plot(p1, p3, 'w-', lw=2)
+    plt.plot(p2, p3, 'w - ', lw=2)
 
 # -------------------------- CLASS DEFINITIONS ------------------
 
@@ -419,4 +435,209 @@ class ThreeCircularPorts(Geometry):
                                 3 * cylinder_volume(self.length, self.ports.r_int))
 
 
+class NBranchStarPort(Geometry):
+    """
+    Implementation of the Geometry abstract class for a more simple, one centered
+    N branches star.
+    Total branches number must be between 3 and 8
 
+    Additional attributes:
+    r_b: base circonscrit circle radius
+    r_int :  complete star circonscrit circle radius
+    r_ext: total fuel slab radius
+    n : number of branches of the star geometry
+    """
+
+    def __init__(self, L, rint0, rext0, rb0, n0):
+        """
+        class initializer
+        """
+
+        if N < 3:
+
+            raise ValueError("Geometry must have at least 3 branches")
+
+        elif N > 8:
+
+            raise ValueError("Geometry must have at most 8 branches")
+
+
+        super().__init__(L, 1)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        self.r_b = rb0
+        self.r_ext = rext0
+        self.r_int = rint0
+        self.n = n0
+
+        # Methods specific to this geometry
+
+    def get_port_base_radius(self):
+        """
+        Return the current combustion port base radius
+        """
+        return self.r_b
+
+    def get_port_int_radius(self):
+        """
+        Return the current combustion port int radius
+        """
+        return self.r_int
+
+    def get_port_ext_radius(self):
+        """
+        Return the current combustion port ext radius
+        """
+        return self.r_ext
+
+    # Abstract methods implementation
+
+    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+        """
+        Return the instantaneous fuel regression rate of the geometry given flow properties.
+        :param ox_flow: instantaneous oxidizer flow
+        :param a: classical regression rate factor (depends on fuel choice)
+        :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
+        :param m: classical regression rate exponent for fuel length(usually set to -0.2)
+        """
+
+        return rho * compute_regression_rate(self, ox_flow, a, n, m) * self.totalSurfaceArea()
+
+    def totalCrossSectionArea(self):
+
+        return 2 * self.n * self.r_b * self.r_int * m.sin(m.pi / self.n)
+
+    def totalSurfaceArea(self):
+
+        return self.length * 2 * self.n * sqrt( (self.r_int - self.r_b * m.cos(m.pi / self.n)) ** 2 + (self.r_b * m.sin(m.pi / self.n)) ** 2)
+
+    def regress(self, ox_flow, a, n, m, dt):
+
+        self.r_int += compute_regression_rate(self, ox_flow, a, n, m) * dt
+        self.r_b += compute_regression_rate(self, ox_flow, a, n, m) * dt
+
+
+    def min_bloc_thickness(self):
+
+        return self.r_ext - self.r_int
+
+    def draw_geometry(self):
+
+        p1_0 = [self.r_b / 2 * m.sin(m.pi / self.n), self.r_b * m.cos(m.pi / self.n)]
+        p2_0 = [- self.r_b / 2 * m.sin(m.pi / self.n), - self.r_b * m.cos(m.pi / self.n)]
+        p3_0 = [0, - self.r_int]
+
+        for i in range(0, self.n):
+            rotation_angle = m.pi / self.n * i
+            draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle)
+
+        # Ajust axis and show
+        plt.axis("scaled")
+        plt.show()
+
+
+    def get_fuel_mass(self, fuel_density):
+
+        return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n)
+
+
+class NBranchRectangleStarPort(Geometry):
+    """
+    Implementation of the Geometry abstract class for a more simple, one centered
+    N branches star with rectangular branches.
+    Total branches number must be between 3 and 8
+
+    Additional attributes:
+    r_b: base circonscrit circle radius
+    r_int :  complete star circonscrit circle radius
+    r_ext: total fuel slab radius
+    n : number of branches of the star geometry
+    """
+
+    def __init__(self, L, rint0, rext0, rb0, n0):
+        """
+        class initializer
+        """
+
+        if N < 3:
+
+            raise ValueError("Geometry must have at least 3 branches")
+
+        elif N > 8:
+
+            raise ValueError("Geometry must have at most 8 branches")
+
+
+        super().__init__(L, 1)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        self.r_b = rb0
+        self.r_ext = rext0
+        self.r_int = rint0
+        self.n = n0
+
+        # Methods specific to this geometry
+
+    def get_port_base_radius(self):
+        """
+        Return the current combustion port base radius
+        """
+        return self.r_b
+
+    def get_port_int_radius(self):
+        """
+        Return the current combustion port int radius
+        """
+        return self.r_int
+
+    def get_port_ext_radius(self):
+        """
+        Return the current combustion port ext radius
+        """
+        return self.r_ext
+
+    # Abstract methods implementation
+
+    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+        """
+        Return the instantaneous fuel regression rate of the geometry given flow properties.
+        :param ox_flow: instantaneous oxidizer flow
+        :param a: classical regression rate factor (depends on fuel choice)
+        :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
+        :param m: classical regression rate exponent for fuel length(usually set to -0.2)
+        """
+
+        return rho * compute_regression_rate(self, ox_flow, a, n, m) * self.totalSurfaceArea()
+
+    def totalCrossSectionArea(self):
+
+        return 2 * self.n * self.r_b * self.r_int * m.sin(m.pi / self.n) * (1 - (self.r_b / self.r_int * m.sin(m.pi / self.n)) ** 2)**0.5
+
+    def totalSurfaceArea(self):
+
+        return self.length * 2 * self.n * self.r_b * ( ((self.r_int / self.r_b) ** 2 - m.sin(m.pi / self.n) ** 2)**0.5 + m.sin(m.pi / self.n) - m.cos(m.pi / self.n))
+
+    def regress(self, ox_flow, a, n, m, dt):
+
+        self.r_int += compute_regression_rate(self, ox_flow, a, n, m) * dt
+        self.r_b += compute_regression_rate(self, ox_flow, a, n, m) * dt
+
+
+    def min_bloc_thickness(self):
+
+        return self.r_ext - self.r_int
+
+    def draw_geometry(self):
+
+        p1_0 = [self.r_b / 2 * m.sin(m.pi / self.n), self.r_b * m.cos(m.pi / self.n)]
+        p2_0 = [- self.r_b / 2 * m.sin(m.pi / self.n), - self.r_b * m.cos(m.pi / self.n)]
+        p3_0 = [0, - self.r_int]
+
+        for i in range(0, self.n):
+            rotation_angle = m.pi / self.n * i
+            draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle)
+
+        # Ajust axis and show
+        plt.axis("scaled")
+        plt.show()
+
+
+    def get_fuel_mass(self, fuel_density):
+
+        return fuel_density * (cylinder_volume(self.length, self.r_ext) – n_star_volume(self.length, self.r_b, self.r_int, self.n) )
