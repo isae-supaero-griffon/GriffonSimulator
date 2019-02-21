@@ -6,18 +6,18 @@
 
 from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
-import math as m
+from math import *
 
 # ------------------------ FUNCTION DEFINITIONS -----------------
 
 
 def cylinder_volume(length, radius):
 
-    return length * m.pi * (radius**2)
+    return length * pi * (radius**2)
 
 def n_star_volume(length, base_radius, int_radius, number_branches) :
 
-    return 2 * length * number_branches * base_radius * int_radius * m.sin (m.pi / number_branches)
+    return 2 * length * number_branches * base_radius * int_radius * sin (pi / number_branches)
 
 def compute_regression_rate(geometry, ox_flow, a, n, m):
     """
@@ -48,12 +48,12 @@ def draw_circular_port(ax, center, port):
 
 def draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle):
 
-    rot = [[m.cos(rotation_angle), - m.sin(rotation_angle)],
-           [m.sin(rotation_angle), m.cos(rotation_angle)]]
+    rot = [[cos(rotation_angle), - sin(rotation_angle)],
+           [sin(rotation_angle), cos(rotation_angle)]]
 
-    p1 = p1 * rot
-    p2 = p2 * rot
-    p3 = p3 * rot
+    p1 = p1_0 * rot
+    p2 = p2_0 * rot
+    p3 = p3_0 * rot
 
     # Plot the combustion port
     plt.plot(p1, p3, 'w-', lw=2)
@@ -204,11 +204,11 @@ class OneCircularPort(Geometry):
 
     def totalCrossSectionArea(self):
 
-        return m.pi * (self.r_int**2)
+        return pi * (self.r_int**2)
 
     def totalSurfaceArea(self):
 
-        return self.length * 2 * m.pi * self.r_int
+        return self.length * 2 * pi * self.r_int
 
     def regress(self, ox_flow, a, n, m, dt):
 
@@ -263,7 +263,7 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
 
         super().__init__(L,N)
 
-        c = m.sin( m.pi / (N-1) ) # Shape parameter linked to the number of ring ports (= N-1)
+        c = sin( pi / (N-1) ) # Shape parameter linked to the number of ring ports (= N-1)
 
         self.ring_ports = OneCircularPort(L, ringPortsIntialRadius, externalRadius * c / (1+c) )
         self.central_port = OneCircularPort(L, centralPortInitialRadius, externalRadius - self.ring_ports.r_ext - ringPortsIntialRadius)
@@ -333,11 +333,11 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
 
         n = self.port_number - 1
 
-        R = self.get_total_outer_radius() / (1 + m.sin(m.pi / n)) * 1000
+        R = self.get_total_outer_radius() / (1 + sin(pi / n)) * 1000
 
         for k in range(n):
 
-            draw_circular_port(ax, (R*m.cos(2*k*m.pi/n), R*m.sin(2*k*m.pi/n)), self.ring_ports)
+            draw_circular_port(ax, (R*cos(2*k*pi/n), R*sin(2*k*pi/n)), self.ring_ports)
 
         # Ajust axis and show
         plt.axis("scaled")
@@ -367,7 +367,7 @@ class ThreeCircularPorts(Geometry):
 
         super().__init__(L, 3)
 
-        self.ports = OneCircularPort(L, portsIntialRadius, externalRadius / (1 + 2/m.sqrt(3)))
+        self.ports = OneCircularPort(L, portsIntialRadius, externalRadius / (1 + 2/sqrt(3)))
 
     # Methods specific to this geometry
 
@@ -381,7 +381,7 @@ class ThreeCircularPorts(Geometry):
         """
         Return the total outer radius of the fuel slab
         """
-        return self.ports.r_ext * (1 + 2/m.sqrt(3))
+        return self.ports.r_ext * (1 + 2/sqrt(3))
 
     # Abstract methods implementation
 
@@ -419,11 +419,11 @@ class ThreeCircularPorts(Geometry):
         # Plot the outer shape
         ax.add_patch(plt.Circle((0, 0), radius=self.get_total_outer_radius() * 1000, color='g'))
 
-        R = self.ports.r_ext * 2 / m.sqrt(3) * 1000
+        R = self.ports.r_ext * 2 / sqrt(3) * 1000
 
         for k in range(3):
 
-            draw_circular_port(ax, (R*m.cos(2*k*m.pi/3), R*m.sin(2*k*m.pi/3)), self.ports)
+            draw_circular_port(ax, (R*cos(2*k*pi/3), R*sin(2*k*pi/3)), self.ports)
 
         # Ajust axis and show
         plt.axis("scaled")
@@ -453,11 +453,11 @@ class NBranchStarPort(Geometry):
         class initializer
         """
 
-        if N < 3:
+        if n0 < 3:
 
             raise ValueError("Geometry must have at least 3 branches")
 
-        elif N > 8:
+        elif n0 > 8:
 
             raise ValueError("Geometry must have at most 8 branches")
 
@@ -503,11 +503,11 @@ class NBranchStarPort(Geometry):
 
     def totalCrossSectionArea(self):
 
-        return 2 * self.n * self.r_b * self.r_int * m.sin(m.pi / self.n)
+        return 2 * self.n * self.r_b * self.r_int * sin(pi / self.n)
 
     def totalSurfaceArea(self):
 
-        return self.length * 2 * self.n * sqrt( (self.r_int - self.r_b * m.cos(m.pi / self.n)) ** 2 + (self.r_b * m.sin(m.pi / self.n)) ** 2)
+        return self.length * 2 * self.n * sqrt( (self.r_int - self.r_b * cos(pi / self.n)) ** 2 + (self.r_b * sin(pi / self.n)) ** 2)
 
     def regress(self, ox_flow, a, n, m, dt):
 
@@ -521,12 +521,12 @@ class NBranchStarPort(Geometry):
 
     def draw_geometry(self):
 
-        p1_0 = [self.r_b / 2 * m.sin(m.pi / self.n), self.r_b * m.cos(m.pi / self.n)]
-        p2_0 = [- self.r_b / 2 * m.sin(m.pi / self.n), - self.r_b * m.cos(m.pi / self.n)]
+        p1_0 = [self.r_b / 2 * sin(pi / self.n), self.r_b * cos(pi / self.n)]
+        p2_0 = [- self.r_b / 2 * sin(pi / self.n), - self.r_b * cos(pi / self.n)]
         p3_0 = [0, - self.r_int]
 
         for i in range(0, self.n):
-            rotation_angle = m.pi / self.n * i
+            rotation_angle = pi / self.n * i
             draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle)
 
         # Ajust axis and show
@@ -536,7 +536,7 @@ class NBranchStarPort(Geometry):
 
     def get_fuel_mass(self, fuel_density):
 
-        return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n)
+        return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n))
 
 
 class NBranchRectangleStarPort(Geometry):
@@ -557,11 +557,11 @@ class NBranchRectangleStarPort(Geometry):
         class initializer
         """
 
-        if N < 3:
+        if n0 < 3:
 
             raise ValueError("Geometry must have at least 3 branches")
 
-        elif N > 8:
+        elif n0 > 8:
 
             raise ValueError("Geometry must have at most 8 branches")
 
@@ -607,11 +607,11 @@ class NBranchRectangleStarPort(Geometry):
 
     def totalCrossSectionArea(self):
 
-        return 2 * self.n * self.r_b * self.r_int * m.sin(m.pi / self.n) * (1 - (self.r_b / self.r_int * m.sin(m.pi / self.n)) ** 2)**0.5
+        return 2 * self.n * self.r_b * self.r_int * sin(pi / self.n) * sqrt (1 - (self.r_b / self.r_int * sin(pi / self.n)) ** 2)
 
     def totalSurfaceArea(self):
 
-        return self.length * 2 * self.n * self.r_b * ( ((self.r_int / self.r_b) ** 2 - m.sin(m.pi / self.n) ** 2)**0.5 + m.sin(m.pi / self.n) - m.cos(m.pi / self.n))
+        return self.length * 2 * self.n * self.r_b * ( ((self.r_int / self.r_b) ** 2 - sin(pi / self.n) ** 2)**0.5 + sin(pi / self.n) - cos(pi / self.n))
 
     def regress(self, ox_flow, a, n, m, dt):
 
@@ -625,12 +625,12 @@ class NBranchRectangleStarPort(Geometry):
 
     def draw_geometry(self):
 
-        p1_0 = [self.r_b / 2 * m.sin(m.pi / self.n), self.r_b * m.cos(m.pi / self.n)]
-        p2_0 = [- self.r_b / 2 * m.sin(m.pi / self.n), - self.r_b * m.cos(m.pi / self.n)]
+        p1_0 = [self.r_b / 2 * sin(pi / self.n), self.r_b * cos(pi / self.n)]
+        p2_0 = [- self.r_b / 2 * sin(pi / self.n), - self.r_b * cos(pi / self.n)]
         p3_0 = [0, - self.r_int]
 
         for i in range(0, self.n):
-            rotation_angle = m.pi / self.n * i
+            rotation_angle = pi / self.n * i
             draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle)
 
         # Ajust axis and show
@@ -640,4 +640,4 @@ class NBranchRectangleStarPort(Geometry):
 
     def get_fuel_mass(self, fuel_density):
 
-        return fuel_density * (cylinder_volume(self.length, self.r_ext) – n_star_volume(self.length, self.r_b, self.r_int, self.n) )
+        return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n) )
