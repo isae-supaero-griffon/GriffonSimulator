@@ -38,7 +38,7 @@ def test_simulation_initializer():
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': NBranchRectangleStarPort, 'L': 0.2, 'rint0': 0.03,
-                                                            'rext0': 0.05, 'rb0': 0.02, 'n0': 5},
+                                                            'rext0': 0.05, 'rb0': 0.02, 'n0': 3},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
@@ -98,6 +98,7 @@ def test_simulation_initializer():
     simulation_object.results_collection.elements_list[0].trajectory.plot_results()
 
 # ----------------------------- MAIN ------------------------------
+
 
 if __name__ == '__main__':
 
