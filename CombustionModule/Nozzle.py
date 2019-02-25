@@ -42,7 +42,7 @@ class Nozzle:
                                                                 val=value) for prop, value in vars(self).items()))
 
     @staticmethod
-    def set_design_static(gamma, p_chamber, p_exit, c_star, isp, thrust):
+    def set_design_static(gamma, p_chamber, p_exit, c_star, OF, ox_flow):
         """
         Static method, return the main nozzle parameters for de given design conditions.
         :param gamma: flow isentropic parameter
@@ -55,7 +55,7 @@ class Nozzle:
 
         # Determination of parameters based on isentropic flow and c* definition
 
-        throat_area = c_star * thrust / isp / 9.81 / p_chamber
+        throat_area = c_star * ox_flow* (1 + 1/OF) / p_chamber
 
         exit_mach = iso.mach_via_pressure(gamma, p_chamber, p_exit)
 
@@ -65,7 +65,7 @@ class Nozzle:
 
         return throat_area, expansion_ratio, exit_area
 
-    def set_design(self, gamma, p_chamber, p_exit, c_star, isp, thrust):
+    def set_design(self, gamma, p_chamber, p_exit, c_star, OF, ox_flow):
         """
         Set the nozzle parameters as those defined by the previous static method. Inputs are identical.
         :param gamma: flow isentropic parameter
