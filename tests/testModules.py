@@ -5,6 +5,7 @@
 # --------------------------- IMPORT MODULES ---------------------------
 
 from DataLayer.JsonInterpreter import JsonInterpreter           # Import the json interpreter
+import CombustionModule.RegressionModel as Reg                  # Import the RegressionModel module
 import CombustionModule.Geometries as Geom                      # Import the Geometry module
 import CombustionModule.Nozzle as Noz                           # Import the Nozzle module
 from CombustionModule.Combustion import CombustionObject        # Import the CombustionObject
@@ -35,17 +36,21 @@ def test_combustion():
 
     # ------------ Define parameters:
 
+    model_params = {'a': 0.0000327, 'n': 0.84, 'm': -0.2}
+
     geometric_params = {'L': 0.5, 'rintInitial': 0.04, 'rext0': 0.1}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
     design_params = {'gamma': 1.27, 'p_chamber': 4000000, 'p_exit': 100000,
-                     'c_star': 1500, 'isp': 230, 'thrust': 30000}
+                     'c_star': 1500, 'ox_flow': 6, 'OF': 5}
 
     simulation_params = {'ox_flow': 6, 'safety_thickness': 0.005, 'dt': 0.05}
 
     # ------------- Generate objects:
 
+    model_obj = Reg.SingleRegimeMarxmanModel(**model_params)
+    geometric_params['regressionModel'] = model_obj
     geometry_obj = Geom.OneCircularPort(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     nozzle_obj.set_design(**design_params)
@@ -209,8 +214,8 @@ def test_trajectory():
 if __name__ == '__main__':
 
     # Call on test_combustion method
-    # test_combustion()
+    test_combustion()
     # test_combustion_three_port_geometry()
     # test_mass_simulator()
     # test_trajectory()
-    test_combustion_onera_data()
+    # test_combustion_onera_data()

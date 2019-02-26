@@ -76,7 +76,7 @@ class Nozzle:
         :param thrust: expected rocket thrust
         """
 
-        self.throat_area, self.expansion_ratio, self.exit_area = Nozzle.set_design_static(gamma, p_chamber, p_exit, c_star, isp, thrust)
+        self.throat_area, self.expansion_ratio, self.exit_area = Nozzle.set_design_static(gamma, p_chamber, p_exit, c_star, OF, ox_flow)
 
     def get_throat_area(self):
         """
