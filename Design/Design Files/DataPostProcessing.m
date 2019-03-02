@@ -12,7 +12,7 @@ addpath(genpath(pwd))
 
 %% Get the file names and import their data
 
-directory = [pwd '\ThreePortGeometry_OXFlow\'];                        % Set the directory
+directory = [pwd '\ThreePortGeometry\'];                        % Set the directory
 csv_list = dir(directory);                                              % Get files in directory
 csv_list([1 2]) = [];                                                   % Remove initial non-representative values
 is_csv = cellfun(@(str) strcmp(str(end-3:end),'.csv'), ...              % Get only those files who have a csv extension
@@ -49,7 +49,7 @@ close all
 figure('name', 'Global Magnitudes', 'units', 'normalized', ...
        'outerposition', [0 0 1 1])
    
-xdata = arrayfun(@(str) str.geometry.r_int, results);
+xdata = arrayfun(@(str) str.geometry.r_ext, results);
 ydata = arrayfun(@(str) str.average_values.ox_flow, results);
 
 %%%%%%%% Thrust Plot
@@ -63,7 +63,7 @@ plot3(xdata, ydata, zdata, 'color', 'b', 'DisplayName', 'Mean Thrust [N]', ...
 set(gca, 'XGrid', 'on', 'YGrid', 'on', 'ZGrid', 'on');
 lg = legend(gca);
 set(lg, 'box', 'off', 'location', 'southoutside', 'orientation', 'horizontal');
-xlabel(gca, 'Chamber Int Radius [m]', 'fontsize', 11);
+xlabel(gca, 'Chamber Ext Radius [m]', 'fontsize', 11);
 ylabel(gca, 'Ox Flow [kg/sec]', 'fontsize', 11);
 zlabel(gca, 'Mean Thrust [N]', 'fontsize', 11);
 title(gca, 'Mean Thrust', 'fontsize', 12);
@@ -79,7 +79,7 @@ plot3(xdata, ydata, zdata, 'color', 'r', 'DisplayName', 'Mean Thrust [N]', ...
 set(gca, 'XGrid', 'on', 'YGrid', 'on', 'ZGrid', 'on');
 lg = legend(gca);
 set(lg, 'box', 'off', 'location', 'southoutside', 'orientation', 'horizontal');
-xlabel(gca, 'Chamber Int Radius [m]', 'fontsize', 11);
+xlabel(gca, 'Chamber Ext Radius [m]', 'fontsize', 11);
 ylabel(gca, 'Ox Flow [kg/sec]', 'fontsize', 11);
 zlabel(gca, 'Isp [secs]', 'fontsize', 11);
 title(gca, 'Isp', 'fontsize', 12);
@@ -88,23 +88,23 @@ title(gca, 'Isp', 'fontsize', 12);
 
 subplot(2, 2, 3);
 
-zdata = arrayfun(@(str) str.trajectory.max_altitude, results);
+zdata = arrayfun(@(str) str.average_values.burn_time, results);
 plot3(xdata, ydata, zdata, 'color', 'g', 'DisplayName', 'Mean Thrust [N]', ...
      'LineStyle', 'none', 'Marker', 'o', 'MarkerSize', 6, 'MarkerFaceColor', ...
      'g', 'MarkerEdgeColor', 'g')
 set(gca, 'XGrid', 'on', 'YGrid', 'on', 'ZGrid', 'on');
 lg = legend(gca);
 set(lg, 'box', 'off', 'location', 'southoutside', 'orientation', 'horizontal');
-xlabel(gca, 'Chamber Int Radius [m]', 'fontsize', 11);
+xlabel(gca, 'Chamber Ext Radius [m]', 'fontsize', 11);
 ylabel(gca, 'Ox Flow [kg/sec]', 'fontsize', 11);
-zlabel(gca, 'Max Altitude [m]', 'fontsize', 11);
-title(gca, 'Max Altitude', 'fontsize', 12);
+zlabel(gca, 'Burn Time [secs]', 'fontsize', 11);
+title(gca, 'Burn Time', 'fontsize', 12);
 
 %%%%%%%%%% Max Velocity
 
 subplot(2, 2, 4);
 
-zdata = arrayfun(@(str) str.trajectory.max_velocity, results);
+zdata = arrayfun(@(str) str.average_values.of, results);
 
 plot3(xdata, ydata, zdata, 'color', 'k', 'DisplayName', 'Mean Thrust [N]', ...
      'LineStyle', 'none', 'Marker', 'o', 'MarkerSize', 6, 'MarkerFaceColor', ...
@@ -112,10 +112,10 @@ plot3(xdata, ydata, zdata, 'color', 'k', 'DisplayName', 'Mean Thrust [N]', ...
 set(gca, 'XGrid', 'on', 'YGrid', 'on', 'ZGrid', 'on');
 lg = legend(gca);
 set(lg, 'box', 'off', 'location', 'southoutside', 'orientation', 'horizontal');
-xlabel(gca, 'Chamber Int Radius [m]', 'fontsize', 11);
+xlabel(gca, 'Chamber Ext Radius [m]', 'fontsize', 11);
 ylabel(gca, 'Ox Flow [kg/sec]', 'fontsize', 11);
-zlabel(gca, 'Max Velocity [m/sec]', 'fontsize', 11);
-title(gca, 'Max Velocity', 'fontsize', 12);
+zlabel(gca, 'OF', 'fontsize', 11);
+title(gca, 'OF', 'fontsize', 12);
 
 
 % --------------- Plot the flight envelopes

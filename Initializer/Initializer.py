@@ -199,6 +199,8 @@ class Initializer:
 
         # Geometry
         geometry_obj = combustion_init_dict['geometric_params'].pop('type')
+        regression_obj = combustion_init_dict['geometric_params']['regressionModel'](**json_interpreter.return_combustion_table())
+        combustion_init_dict['geometric_params']['regressionModel'] = regression_obj
         geometry_obj = geometry_obj(**combustion_init_dict['geometric_params'])
 
         # Nozzle

@@ -307,9 +307,6 @@ class TrajectoryObject:
         axs[2].grid(b=True, axis='both')
         axs[2].set_xlim(left=time[0])
 
-        # Show the plot
-        plt.show()
-
     def return_results(self):
         """ return the results from the simulation """
         return self.results

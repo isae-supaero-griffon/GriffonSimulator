@@ -7,7 +7,8 @@
 
 from Initializer.Initializer import *                               # Import the Initializer object
 from IntegrationModule.SimulationObject import SimulationObject     # Import the SimulationObject
-
+import CombustionModule.RegressionModel as Reg                      # Import RegressionModel classes
+import matplotlib.pyplot as plt                                     # Import matplotlib
 
 # -------------------- FUNCTIONS DEFINITIONS ------------------
 
@@ -37,8 +38,11 @@ def test_simulation_initializer():
 
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': ThreeCircularPorts, 'L': 0.6, 'portsIntialRadius': 0.015,
-                                                            'r_ext': 0.07},
+                                       'geometric_params': {'type': OneCircularPort,
+                                                            'L': 0.6,
+                                                            'rintInitial': 0.015,
+                                                            'rext0': 0.07,
+                                                            'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
@@ -46,7 +50,7 @@ def test_simulation_initializer():
                                        'set_nozzle_design': True,
 
                                        'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
-                                                         'c_star': 1500, 'isp': 230, 'thrust': 30000},
+                                                         'c_star': 1500, 'ox_flow': 1.0, 'OF': 5},
                                       },
 
 
@@ -84,18 +88,19 @@ def test_simulation_initializer():
 
     # --------------- Export results to csv files:
 
-    # data directory
-    data_directory = "../data/data_tests"
-
-    file_name_expression = "Griffon Output Test {number}.csv"
-
-    simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
-                                                                            file_name_expression]))
+    # # data directory
+    # data_directory = "../data/data_tests"
+    #
+    # file_name_expression = "Griffon Output Test {number}.csv"
+    #
+    # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
+    #                                                                         file_name_expression]))
 
     # --------------- Plot the results
 
     simulation_object.results_collection.elements_list[0].combustion.plot_results()
     simulation_object.results_collection.elements_list[0].trajectory.plot_results()
+
 
 # ----------------------------- MAIN ------------------------------
 
@@ -103,3 +108,6 @@ if __name__ == '__main__':
 
     # Call the test functions
     test_simulation_initializer()
+
+    # Show any plots
+    plt.show()

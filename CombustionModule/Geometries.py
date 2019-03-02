@@ -183,7 +183,8 @@ class OneCircularPort(Geometry):
         """
         class initializer
         """
-        super().__init__(L, 1, regressionModel)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        super().__init__(L, 1, regressionModel)
+        # N parameter is set as 1 in Geometry initializer as there is a single combustion port
         self.r_int = rintInitial
         self.r_ext = rext0
 
@@ -264,16 +265,16 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
         class initializer
         """
 
-        if (N < 4):
+        if N < 4:
 
             raise ValueError("Geometry must have at least 3 ring ports")
 
-        super().__init__(L,N, regressionModel)
+        super().__init__(L, N, regressionModel)
 
-        c = m.sin( m.pi / (N-1) ) # Shape parameter linked to the number of ring ports (= N-1)
+        c = m.sin(m.pi / (N-1))  # Shape parameter linked to the number of ring ports (= N-1)
 
         self.r_ext = r_ext
-        self.ring_ports = OneCircularPort(L, regressionModel, ringPortsIntialRadius, r_ext * c / (1+c) )
+        self.ring_ports = OneCircularPort(L, regressionModel, ringPortsIntialRadius, r_ext * c / (1+c))
         self.central_port = OneCircularPort(L, regressionModel, centralPortInitialRadius, r_ext - self.ring_ports.r_ext - ringPortsIntialRadius)
 
     # Methods specific to this geometry
@@ -344,7 +345,7 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
 
             draw_circular_port(ax, (R*m.cos(2*k*m.pi/n), R*m.sin(2*k*m.pi/n)), self.ring_ports)
 
-        # Ajust axis and show
+        # Adjust axis and show
         plt.axis("scaled")
         plt.show()
 
@@ -373,7 +374,7 @@ class ThreeCircularPorts(Geometry):
         class initializer
         """
 
-        super().__init__(L, 3)
+        super().__init__(L, 3, regressionModel)
 
         self.r_ext = r_ext
         self.ports = OneCircularPort(L, regressionModel, portsIntialRadius, r_ext / (1 + 2/m.sqrt(3)))
@@ -431,7 +432,7 @@ class ThreeCircularPorts(Geometry):
 
             draw_circular_port(ax, (R*m.cos(2*k*m.pi/3), R*m.sin(2*k*m.pi/3)), self.ports)
 
-        # Ajust axis and show
+        # Adjust axis and show
         plt.axis("scaled")
         plt.show()
 

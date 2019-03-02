@@ -222,8 +222,9 @@ class SimulationObject:
         # ------------------------ RUN MASS ESTIMATION ------------------------
 
         # Update the burn time
-        self.initialization_object.simulation_parameters['mass_simulator']['burn_time'] = \
-            self.combustion_module.results['magnitudes']['burn_time']
+        if self.initialization_object.simulation_parameters['mass_simulator']['burn_time'] == 'TBD':
+            self.initialization_object.simulation_parameters['mass_simulator']['burn_time'] = \
+                self.combustion_module.results['magnitudes']['burn_time']
 
         # Update the mass simulator parameters
         self.initialization_object.update_mass_simulator_parameters()

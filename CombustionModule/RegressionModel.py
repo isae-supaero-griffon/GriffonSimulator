@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
+
 class RegressionModel(ABC):
 
     """
@@ -19,7 +20,7 @@ class RegressionModel(ABC):
     There are no master attributes for increased generality.
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         class initializer
         """
@@ -32,6 +33,15 @@ class RegressionModel(ABC):
         Return the instantenous solid fuel regression rate
         """
         pass
+
+    def __str__(self):
+        """ return a string of the objects representation """
+
+        # Return the objects type
+        class_name = self.__class__.__name__
+        # Loop through the objects properties and values
+        return "{0}, ".format(class_name) + \
+               ", ".join(("{prop}, {val}".format(prop=prop, val=value) for prop, value in vars(self).items()))
 
 
 class SingleRegimeMarxmanModel(RegressionModel):
@@ -48,12 +58,12 @@ class SingleRegimeMarxmanModel(RegressionModel):
         3. m: Length exponent dependant on fuel choice (experimental, around -0.2)
     """
 
-    def __init__(self, a, n, m):
+    def __init__(self, a, n, m, **kwargs):
         """
         class initializer
         """
 
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.a = a
         self.n = n
@@ -83,14 +93,14 @@ class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
         2. threshold: Threshold oxidizer mass flux
     """
 
-    def __init__(self, a, n, m, maxGo):
+    def __init__(self, a, n, m, maxGo, **kwargs):
         """
         class initializer
         """
 
-        super().__init__()
+        super().__init__(**kwargs)
 
-        self.marxman = SingleRegimeMarxmanModel(a,n,m)
+        self.marxman = SingleRegimeMarxmanModel(a, n, m)
         self.threshold = maxGo
 
     def getMaxRegressionRate(self, geometry):
@@ -98,8 +108,7 @@ class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
         Return the maximum regression rate possible
         within this model
         """
-
-        return self.marxman.a * (geometry.get_length ** self.marxman.m) * (self.threshold ** self.marxman.n)
+        return self.marxman.a * (geometry.get_length() ** self.marxman.m) * (self.threshold ** self.marxman.n)
 
     def computeRegressionRate(self, geometry, ox_flow):
         """
@@ -109,12 +118,9 @@ class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
 
         oxidizer_mass_flux = ox_flow / geometry.totalCrossSectionArea()
 
-        if(oxidizer_mass_flux < self.threshold):
-
-            return self.marxman.ComputeRegressionRate(geometry, ox_flow)
-
+        if oxidizer_mass_flux < self.threshold:
+            return self.marxman.computeRegressionRate(geometry, ox_flow)
         else:
-
             return self.getMaxRegressionRate(geometry)
 
 
@@ -135,18 +141,18 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         goes from one regime to the other
     """
 
-    def __init__(self, a1, n1, m1, n2, m2, maxGo):
+    def __init__(self, a1, n1, m1, n2, m2, maxGo, **kwargs):
         """
         class initializer
         Warning : it is insufficient by itself, as the
         makeContinuous() has to be run before using this model.
         """
 
-        super().__init__()
+        super().__init__(**kwargs)
 
-        self.marxman = SingleRegimeMarxmanModel(a1,n1,m1)
+        self.marxman = SingleRegimeMarxmanModel(a1, n1, m1)
         self.threshold = maxGo
-        self.flooded = SingleRegimeMarxmanModel(0,n2,m2)
+        self.flooded = SingleRegimeMarxmanModel(0, n2, m2)
         self.continuous = False
 
     def makeContinuous(self, geometry):
@@ -157,7 +163,8 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         so continuity has to take fuel geometry into account.
         """
 
-        a2 = self.marxman.a * (geometry.get_length() ** (self.marxman.m - self.flooded.m)) * (self.threshold ** self.marxman.n - self.flooded.n)
+        a2 = self.marxman.a * (geometry.get_length() ** (self.marxman.m - self.flooded.m)) * \
+             (self.threshold ** self.marxman.n - self.flooded.n)
 
         self.flooded.a = a2
         self.continuous = True
@@ -168,17 +175,16 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         depending on the current regime
         """
 
-        if(not self.continuous):
+        if not self.continuous:
 
             print("WARNING model is not continuous, use at your own risk")
 
         oxidizer_mass_flux = ox_flow / geometry.totalCrossSectionArea()
 
-        if(oxidizer_mass_flux < self.threshold):
+        if oxidizer_mass_flux < self.threshold:
 
             return self.marxman.ComputeRegressionRate(geometry, ox_flow)
 
         else:
 
             return self.flooded.ComputeRegressionRate(geometry, ox_flow)
-

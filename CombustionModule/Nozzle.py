@@ -49,13 +49,12 @@ class Nozzle:
         :param p_chamber: chamber pressure in Pascals
         :param p_exit: desired exit pressure (ie atmospheric pressure) in Pascals
         :param c_star: expected combustion c*
-        :param isp: expected rocket specific impulse in seconds
-        :param thrust: expected rocket thrust
+        :param ox_flow: flow of oxidizer into the chamber
         """
 
-        # Determination of parameters based on isentropic flow and c* definition
+        # Determination of parameters based on isoentropic flow and c* definition
 
-        throat_area = c_star * ox_flow* (1 + 1/OF) / p_chamber
+        throat_area = c_star * ox_flow * (1 + 1/OF) / p_chamber
 
         exit_mach = iso.mach_via_pressure(gamma, p_chamber, p_exit)
 
@@ -72,11 +71,11 @@ class Nozzle:
         :param p_chamber: chamber pressure in Pascals
         :param p_exit: desired exit pressure (ie atmospheric pressure) in Pascals
         :param c_star: expected combustion c*
-        :param isp: expected rocket specific impulse in seconds
-        :param thrust: expected rocket thrust
+        :param ox_flow: flow of oxidizer into the chamber
         """
 
-        self.throat_area, self.expansion_ratio, self.exit_area = Nozzle.set_design_static(gamma, p_chamber, p_exit, c_star, OF, ox_flow)
+        self.throat_area, self.expansion_ratio, self.exit_area = Nozzle.set_design_static(gamma, p_chamber,
+                                                                                          p_exit, c_star, OF, ox_flow)
 
     def get_throat_area(self):
         """
@@ -112,6 +111,3 @@ class Nozzle:
         radius += self.erosion_rate*dt
         self.throat_area = math.pi * (radius**2)
         self.expansion_ratio = self.exit_area / self.throat_area
-
-
-

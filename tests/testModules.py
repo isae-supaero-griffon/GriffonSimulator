@@ -14,6 +14,7 @@ from TrajectoryModule.Drag import *                             # Import the Dra
 from TrajectoryModule.Density import DensityLaw                 # Import the density-law library
 from TrajectoryModule.Trajectory import TrajectoryObject        # Import the trajectory object
 import numpy as np                                              # Import numpy
+import matplotlib.pyplot as plt                                 # Import matplotlib
 
 # ------------------------ FUNCTION DEFINITIONS ------------------------
 
@@ -34,11 +35,17 @@ def generate_data_layer(data_file="Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 
 def test_combustion():
     """ perform the test over the combustion module """
 
+    # ------------ Generate Data Layer:
+
+    json_interpreter = generate_data_layer()
+    combustion_table = json_interpreter.return_combustion_table()
+
     # ------------ Define parameters:
 
-    model_params = {'a': 0.0000327, 'n': 0.84, 'm': -0.2}
-
-    geometric_params = {'L': 0.5, 'rintInitial': 0.04, 'rext0': 0.1}
+    geometric_params = {'L': 0.5,
+                        'rintInitial': 0.04,
+                        'rext0': 0.1,
+                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -49,8 +56,6 @@ def test_combustion():
 
     # ------------- Generate objects:
 
-    model_obj = Reg.SingleRegimeMarxmanModel(**model_params)
-    geometric_params['regressionModel'] = model_obj
     geometry_obj = Geom.OneCircularPort(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     nozzle_obj.set_design(**design_params)
@@ -112,9 +117,17 @@ def test_combustion_three_port_geometry():
 def test_combustion_onera_data():
     """ perform the test over the combustion module but with Onera Test Data """
 
+    # ------------ Generate the data layer:
+
+    json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
+    combustion_table = json_interpreter.return_combustion_table()
+
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.235, 'rintInitial': 0.0186658954, 'rext0': 0.2}
+    geometric_params = {'L': 0.235,
+                        'rintInitial': 0.0186658954,
+                        'rext0': 0.2,
+                        'regressionModel': Reg.SingleRegimeMarxmanModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -214,8 +227,11 @@ def test_trajectory():
 if __name__ == '__main__':
 
     # Call on test_combustion method
-    test_combustion()
+    # test_combustion()
     # test_combustion_three_port_geometry()
     # test_mass_simulator()
     # test_trajectory()
-    # test_combustion_onera_data()
+    test_combustion_onera_data()
+
+    # Show any plots
+    plt.show()

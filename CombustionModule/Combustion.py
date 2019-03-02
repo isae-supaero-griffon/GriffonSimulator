@@ -68,7 +68,8 @@ class CombustionObject:
                                        "pressure": [],
                                        "temperature": [],
                                        "radius": [],
-                                       "of": []},
+                                       "of": [],
+                                       "Go": []},
                         "magnitudes": {}
                        }
 
@@ -179,6 +180,7 @@ class CombustionObject:
             fuel_flow = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
             total_mass_flow = ox_flow + fuel_flow
             of_ratio = ox_flow / fuel_flow
+            Go = ox_flow / self.geometry.totalCrossSectionArea()
 
             # Data extraction using the interpolator and OF ratio from already defined variables
             # Check lookup_from_cea method which variables have been chosen
@@ -207,6 +209,7 @@ class CombustionObject:
             self.results["run_values"]["pressure"].append(pression_chambre)
             self.results["run_values"]["temperature"].append(t_chamber)
             self.results["run_values"]["of"].append(of_ratio)
+            self.results["run_values"]["Go"].append(Go)
 
             # Verify it is a single port_number before updating the port number
             if isinstance(self.geometry, OneCircularPort):
@@ -249,6 +252,7 @@ class CombustionObject:
             isp = self.results["run_values"]["isp"]
             radius = self.results["run_values"]["radius"]
             of_ratio = self.results["run_values"]["of"]
+            Go = self.results["run_values"]["Go"]
         else:
             raise ValueError("No values found for time, check results before plotting. \n")
 
@@ -264,11 +268,11 @@ class CombustionObject:
         axs[0].grid(b=True, axis='both')
         axs[0].set_xlim(left=time[0])
 
-        # Port radius-plot
-        axs[1].plot(time, radius, linestyle='--', label='Port Radius', color='red')
+        # Go-plot
+        axs[1].plot(time, Go, linestyle='--', label='Go', color='red')
         axs[1].set_title('')
         axs[1].set_xlabel('time (s)')
-        axs[1].set_ylabel('Port Radius (m)')
+        axs[1].set_ylabel('Go [kg/m^2/sec]')
         axs[1].grid(b=True, axis='both')
         axs[1].set_xlim(left=time[0])
 
@@ -287,9 +291,6 @@ class CombustionObject:
         axs[3].set_ylabel('O/F ratio')
         axs[3].grid(b=True, axis='both')
         axs[3].set_xlim(left=time[0])
-
-        # Show the plot
-        plt.show()
 
     @staticmethod
     def initialize_variables():
