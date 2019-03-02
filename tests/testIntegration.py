@@ -37,7 +37,7 @@ def test_simulation_initializer():
 
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': NBranchRectangleStarPort, 'L': 0.2, 'rint0': 0.03,
+                                       'geometric_params': {'type': NBranchStarPort, 'L': 0.2, 'rint0': 0.03,
                                                             'rext0': 0.05, 'rb0': 0.02, 'n0': 3},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
