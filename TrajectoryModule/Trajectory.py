@@ -279,8 +279,13 @@ class TrajectoryObject:
             raise ValueError("No values found for time, check results before plotting. \n")
 
         # Generate the plots
-        fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(20, 15), squeeze=True, facecolor='w')
+        fig = plt.figure(facecolor='w', figsize=(20, 20))
         fig.suptitle('Simulation results', fontsize=14)
+        axs = [plt.subplot2grid((3, 2), (0, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((3, 2), (1, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((3, 2), (2, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((3, 2), (0, 1), rowspan=3, colspan=1)]
+        # fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(20, 15), squeeze=True, facecolor='w')
 
         # Altitude-plot
         axs[0].plot(time, altitude, label='Altitude', color='green')
@@ -306,6 +311,17 @@ class TrajectoryObject:
         axs[2].set_ylabel('Acceleration (m/s^2)')
         axs[2].grid(b=True, axis='both')
         axs[2].set_xlim(left=time[0])
+
+        # Lift off-plot
+        axs[3].plot(altitude, velocity, label='Lift off', color='black')
+        axs[3].set_title('')
+        axs[3].set_xlabel('Altitude (m)')
+        axs[3].set_ylabel('Speed (m/s)')
+        axs[3].grid(b=True, axis='both')
+        axs[3].set_xlim(left=0, right=10)
+        axs[3].set_ylim(bottom=velocity[0], top=100)
+        axs[3].set_xticks(np.linspace(0, 10, 11))
+        axs[3].set_yticks(np.linspace(0, 100, 11))
 
     def return_results(self):
         """ return the results from the simulation """
