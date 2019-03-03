@@ -62,7 +62,8 @@ class InitializerCalculator:
         """
 
         # Return the pressure at the oxidiser tank
-        return chamber_pressure + (ox_flow / area_injection) ** 2 / (2 * ox_density * (1 - injection_loss))
+        return chamber_pressure / (1 - injection_loss) + (ox_flow / area_injection) ** 2 / \
+                                                         (2 * ox_density * (1 - injection_loss))
 
     @staticmethod
     def calculate_oxidiser_mass_based_on_tank(tank_radius, tank_height, oxidiser_density, tank_filling=1):
