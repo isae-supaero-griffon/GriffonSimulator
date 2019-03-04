@@ -155,6 +155,52 @@ def test_combustion_onera_data():
     combustion_obj.plot_results()
 
 
+def test_onera_physical_test_2():
+    """ Study the potential evolution of the geometry associated to the 2nd physical test
+        to be performed at ONERA. The characteristics of the Test are:
+        1. Single Port Geometry
+        2. Go range: [100, 500] kg/m^2/sec
+        3. Chamber pressure: 36 bar, closest possible to the target pressure of Griffon.
+    """
+
+    # ------------ Generate the data layer:
+
+    json_interpreter = generate_data_layer()                    # Use same data-layer used for Griffon (same pressure)
+    combustion_table = json_interpreter.return_combustion_table()
+
+    # ------------ Define parameters:
+
+    geometric_params = {'L': 0.157,
+                        'rintInitial': 0.007465,
+                        'rext0': 0.041,
+                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+
+    nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
+
+    simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
+
+    # ------------- Generate objects:
+
+    geometry_obj = Geom.OneCircularPort(**geometric_params)
+    nozzle_obj = Noz.Nozzle(**nozzle_params)
+    json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
+
+    # Instantiate the combustion module
+    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+                                      geometry_object=geometry_obj,
+                                      nozzle_object=nozzle_obj)
+
+    # -------------- Run simulation & Plot:
+
+    combustion_obj.run_simulation_constant_fuel_sliver(**simulation_params)
+
+    # Print the module
+    print(combustion_obj)
+
+    # Plot the results
+    combustion_obj.plot_results()
+
+
 def test_mass_simulator():
     """ test the mass simulator module with a simple test-case """
 
@@ -231,7 +277,7 @@ if __name__ == '__main__':
     # test_combustion_three_port_geometry()
     # test_mass_simulator()
     # test_trajectory()
-    test_combustion_onera_data()
-
+    # test_combustion_onera_data()
+    test_onera_physical_test_2()
     # Show any plots
     plt.show()
