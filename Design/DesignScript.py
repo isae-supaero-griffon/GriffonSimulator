@@ -41,12 +41,12 @@ def single_case_analysis_one_port():
 
     # ---------- Pack the inputs:
 
-    ox_flow = 0.8
+    ox_flow = 1.09
 
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': OneCircularPort,
-                                                            'L': 0.4,
+                                                            'L': 0.325,
                                                             'rintInitial': 0.03,
                                                             'rext0': 0.05,
                                                             'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
@@ -63,14 +63,14 @@ def single_case_analysis_one_port():
 
                       }
     simulation_parameters = {
-                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.05,
-                                             'max_burn_time': 6},
+                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.01,
+                                             'max_burn_time': 4.5},
 
                               'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.1,
                                                  'injection_loss': 0.5, 'area_injection': 0.000105},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                             'simulation_time': 100}
+                                             'simulation_time': 60}
                             }
 
     # -------------- Generate the initializer:
@@ -97,6 +97,19 @@ def single_case_analysis_one_port():
 
     simulation_object.results_collection.elements_list[0].combustion.plot_results()
     simulation_object.results_collection.elements_list[0].trajectory.plot_results()
+
+    # # data directory
+    # data_directory = "../data/data_tests"
+    #
+    # file_name_expression = "Tentative Design Single Port {number}.csv"
+    #
+    # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
+    #                                                                         file_name_expression]))
+    #
+    # # Save to json the mass simulator dict
+    # output_file = "Tentative Design Single Port 1.json"
+    # with open("/".join([data_directory, output_file]), 'w') as f:
+    #     json.dump(simulation_object.mass_simulator_module.dict, f)
 
     # Show any plots
     plt.show()
@@ -136,14 +149,14 @@ def single_case_analysis_three_circular_ports():
 
                       }
     simulation_parameters = {
-                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.05,
+                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.01,
                                              'max_burn_time': 5},
 
                               'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.1,
                                                  'injection_loss': 0.5, 'area_injection': 0.000105},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                             'simulation_time': 100}
+                                             'simulation_time': 60}
                             }
 
     # -------------- Generate the initializer:
@@ -186,7 +199,6 @@ def single_case_analysis_three_circular_ports():
 
     # Show any plots
     plt.show()
-
 
 
 def generate_analysis_cases_three_port_geometry():
@@ -246,7 +258,7 @@ def generate_analysis_cases_three_port_geometry():
                                                      'injection_loss': 0.5, 'area_injection': 0.000105},
 
                                   'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                                 'simulation_time': 100}
+                                                 'simulation_time': 60}
                                 }
 
         # Add initializer to the collection
@@ -315,7 +327,7 @@ def generate_analysis_cases_port_geometry():
                                                      'injection_loss': 0.5, 'area_injection': 0.000105},
 
                                   'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                                 'simulation_time': 100}
+                                                 'simulation_time': 60}
                                 }
 
         # Add initializer to the collection
@@ -390,7 +402,7 @@ def generate_analysis_cases_multi_port_geometry():
                                                      'injection_loss': 0.5, 'area_injection': 0.000105},
 
                                   'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                                 'simulation_time': 100}
+                                                 'simulation_time': 60}
                                 }
 
         # Add initializer to the collection

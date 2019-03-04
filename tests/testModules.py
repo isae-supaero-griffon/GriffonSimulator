@@ -127,7 +127,7 @@ def test_combustion_onera_data():
     geometric_params = {'L': 0.235,
                         'rintInitial': 0.0186658954,
                         'rext0': 0.2,
-                        'regressionModel': Reg.SingleRegimeMarxmanModel(**combustion_table)}
+                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -173,7 +173,7 @@ def test_onera_physical_test_2():
     geometric_params = {'L': 0.157,
                         'rintInitial': 0.007465,
                         'rext0': 0.041,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+                        'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
