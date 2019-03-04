@@ -11,6 +11,7 @@ from IntegrationModule.SimulationObject import SimulationObject     # Import the
 import numpy as np                                                  # Import numpy
 import itertools                                                    # Import itertools
 import CombustionModule.RegressionModel as Reg                      # Import the RegressionModel class
+import json                                                         # Import the json library
 
 # -------------------- FUNCTIONS DEFINITIONS ------------------
 
@@ -114,12 +115,12 @@ def single_case_analysis_three_circular_ports():
     # ---------- Pack the inputs:
 
     # Set the ox_flow
-    ox_flow = 1.0
+    ox_flow = 1.12
 
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': ThreeCircularPorts, 'L': 0.35,
-                                                                'portsIntialRadius': 0.015,
+                                       'geometric_params': {'type': ThreeCircularPorts, 'L': 0.325,
+                                                                'portsIntialRadius': 0.016,
                                                                 'r_ext': 0.07,
                                                                 'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
 
@@ -165,13 +166,18 @@ def single_case_analysis_three_circular_ports():
     # Print the splitted masses
     print(simulation_object.mass_simulator_module)
 
-    # data directory
+    # # data directory
     # data_directory = "../data/data_tests"
     #
     # file_name_expression = "Tentative Design {number}.csv"
     #
     # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
     #                                                                         file_name_expression]))
+    #
+    # # Save to json the mass simulator dict
+    # output_file = "Tentative Design 1.json"
+    # with open("/".join([data_directory, output_file]), 'w') as f:
+    #     json.dump(simulation_object.mass_simulator_module.dict, f)
 
     # --------------- Plot the results
 
@@ -180,6 +186,7 @@ def single_case_analysis_three_circular_ports():
 
     # Show any plots
     plt.show()
+
 
 
 def generate_analysis_cases_three_port_geometry():
