@@ -256,39 +256,52 @@ class CombustionObject:
         else:
             raise ValueError("No values found for time, check results before plotting. \n")
 
+        # Set the font dictionaries (for plot title and axis titles)
+        title_font = {'size': '20', 'color': 'black', 'weight': 'normal',
+                      'verticalalignment': 'bottom'}  # Bottom vertical alignment for more space
+        axis_font = {'size': '16'}
+
         # Generate the plots
-        fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(20, 15), squeeze=True, facecolor='w')
-        fig.suptitle('Simulation results', fontsize=14)
+        fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(30, 15), squeeze=True, facecolor='w')
+        fig.suptitle('Simulation results', **title_font)
+
+        # Set the tick labels font
+        for ax in axs:
+            for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+                label.set_fontname('Arial')
+                label.set_fontsize(14)
 
         # Thrust-plot
-        axs[0].plot(time, thrust, label='Thrust', color='blue')
+        axs[0].plot(time, thrust, label='Thrust', color='blue', linewidth=2.0)
         axs[0].set_title('')
-        axs[0].set_xlabel('time (s)')
-        axs[0].set_ylabel('Thrust (N)')
+        # axs[0].set_xlabel('time (s)', **axis_font)
+        axs[0].set_ylabel('Thrust (N)', **axis_font)
         axs[0].grid(b=True, axis='both')
         axs[0].set_xlim(left=time[0])
+        # axs[0].set_ylim(bottom=150, top=max(thrust)*1.5)
 
         # Go-plot
         axs[1].plot(time, Go, linestyle='--', label='Go', color='red')
         axs[1].set_title('')
-        axs[1].set_xlabel('time (s)')
-        axs[1].set_ylabel('Go [kg/m^2/sec]')
+        # axs[1].set_xlabel('time (s)', **axis_font)
+        axs[1].set_ylabel('Go [kg/m^2/sec]', **axis_font)
         axs[1].grid(b=True, axis='both')
         axs[1].set_xlim(left=time[0])
 
         # Isp-plot
-        axs[2].plot(time, isp, label='Isp', color='r')
+        axs[2].plot(time, isp, label='Isp', color='r', linewidth=2.0)
         axs[2].set_title('')
-        axs[2].set_xlabel('time (s)')
-        axs[2].set_ylabel('Isp (s)')
+        # axs[2].set_xlabel('time (s)', **axis_font)
+        axs[2].set_ylabel('Isp (s)', **axis_font)
         axs[2].grid(b=True, axis='both')
         axs[2].set_xlim(left=time[0])
+        axs[2].set_ylim(bottom=0, top=max(isp)*1.5)
 
         # of_ratio-plot
-        axs[3].plot(time, of_ratio, linestyle='--', color='green', label='O/F ratio')
+        axs[3].plot(time, of_ratio, linestyle='--', color='green', label='O/F ratio', linewidth=2.0)
         axs[3].set_title('')
-        axs[3].set_xlabel('time (s)')
-        axs[3].set_ylabel('O/F ratio')
+        axs[3].set_xlabel('time (s)', **axis_font)
+        axs[3].set_ylabel('O/F ratio', **axis_font)
         axs[3].grid(b=True, axis='both')
         axs[3].set_xlim(left=time[0])
 

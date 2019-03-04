@@ -278,45 +278,55 @@ class TrajectoryObject:
         else:
             raise ValueError("No values found for time, check results before plotting. \n")
 
+        # Set the font dictionaries (for plot title and axis titles)
+        title_font = {'size': '20', 'color': 'black', 'weight': 'normal',
+                      'verticalalignment': 'bottom'}  # Bottom vertical alignment for more space
+        axis_font = {'size': '16'}
+
         # Generate the plots
-        fig = plt.figure(facecolor='w', figsize=(20, 20))
-        fig.suptitle('Simulation results', fontsize=14)
+        fig = plt.figure(facecolor='w', figsize=(30, 30))
+        fig.suptitle('Simulation results', **title_font)
         axs = [plt.subplot2grid((3, 2), (0, 0), rowspan=1, colspan=1),
                plt.subplot2grid((3, 2), (1, 0), rowspan=1, colspan=1),
                plt.subplot2grid((3, 2), (2, 0), rowspan=1, colspan=1),
                plt.subplot2grid((3, 2), (0, 1), rowspan=3, colspan=1)]
-        # fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(20, 15), squeeze=True, facecolor='w')
+
+        # Set the tick labels font
+        for ax in axs:
+            for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+                label.set_fontname('Arial')
+                label.set_fontsize(14)
 
         # Altitude-plot
-        axs[0].plot(time, altitude, label='Altitude', color='green')
+        axs[0].plot(time, altitude, label='Altitude', color='green', linewidth=2.0)
         axs[0].set_title('')
-        axs[0].set_xlabel('time (s)')
-        axs[0].set_ylabel('Altitude (m)')
+        # axs[0].set_xlabel('time (s)')
+        axs[0].set_ylabel('Altitude (m)', **axis_font)
         axs[0].grid(b=True, axis='both')
         axs[0].set_xlim(left=time[0])
         axs[0].set_ylim(bottom=altitude[0])
 
         # Port Velocity-plot
-        axs[1].plot(time, velocity, linestyle='--', label='Velocity', color='red')
+        axs[1].plot(time, velocity, linestyle='--', label='Velocity', color='red', linewidth=2.0)
         axs[1].set_title('')
-        axs[1].set_xlabel('time (s)')
-        axs[1].set_ylabel('Vertical-Velocity (m/seg)')
+        # axs[1].set_xlabel('time (s)')
+        axs[1].set_ylabel('Vertical-Velocity (m/seg)', **axis_font)
         axs[1].grid(b=True, axis='both')
         axs[1].set_xlim(left=time[0])
 
         # Acceleration-plot
-        axs[2].plot(time, acceleration, label='Acceleration', color='blue')
+        axs[2].plot(time, acceleration, label='Acceleration', color='blue', linewidth=2.0)
         axs[2].set_title('')
-        axs[2].set_xlabel('time (s)')
-        axs[2].set_ylabel('Acceleration (m/s^2)')
+        axs[2].set_xlabel('time (s)', **axis_font)
+        axs[2].set_ylabel('Acceleration (m/s^2)', **axis_font)
         axs[2].grid(b=True, axis='both')
         axs[2].set_xlim(left=time[0])
 
         # Lift off-plot
-        axs[3].plot(altitude, velocity, label='Lift off', color='black')
+        axs[3].plot(altitude, velocity, label='Lift off', color='black', linewidth=2.0)
         axs[3].set_title('')
-        axs[3].set_xlabel('Altitude (m)')
-        axs[3].set_ylabel('Speed (m/s)')
+        axs[3].set_xlabel('Altitude (m)', **axis_font)
+        axs[3].set_ylabel('Speed (m/s)', **axis_font)
         axs[3].grid(b=True, axis='both')
         axs[3].set_xlim(left=0, right=10)
         axs[3].set_ylim(bottom=velocity[0], top=100)
