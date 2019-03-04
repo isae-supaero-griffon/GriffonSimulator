@@ -185,6 +185,7 @@ class OneCircularPort(Geometry):
         """
         super().__init__(L, 1, regressionModel)
         # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        self.initial_r = rintInitial
         self.r_int = rintInitial
         self.r_ext = rext0
 
@@ -241,7 +242,7 @@ class OneCircularPort(Geometry):
 
     def get_fuel_mass(self, fuel_density):
 
-        return fuel_density * (cylinder_volume(self.length, self.r_ext) - cylinder_volume(self.length, self.r_int))
+        return fuel_density * (cylinder_volume(self.length, self.r_ext) - cylinder_volume(self.length, self.initial_r))
 
     def return_external_radius(self):
         return self.r_ext
@@ -352,8 +353,8 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
     def get_fuel_mass(self, fuel_density):
 
         return fuel_density * (cylinder_volume(self.length, self.get_total_outer_radius()) - (self.port_number - 1) *
-                               cylinder_volume(self.length, self.ring_ports.r_int) -
-                               cylinder_volume(self.length, self.central_port.r_int))
+                               cylinder_volume(self.length, self.ring_ports.initial_r) -
+                               cylinder_volume(self.length, self.central_port.initial_r))
 
     def return_external_radius(self):
         return self.r_ext
@@ -377,6 +378,7 @@ class ThreeCircularPorts(Geometry):
         super().__init__(L, 3, regressionModel)
 
         self.r_ext = r_ext
+        self.initial_r = portsIntialRadius
         self.ports = OneCircularPort(L, regressionModel, portsIntialRadius, r_ext / (1 + 2/m.sqrt(3)))
 
     # Methods specific to this geometry
@@ -439,7 +441,7 @@ class ThreeCircularPorts(Geometry):
     def get_fuel_mass(self, fuel_density):
 
         return fuel_density * (cylinder_volume(self.length, self.get_total_outer_radius()) -
-                                3 * cylinder_volume(self.length, self.ports.r_int))
+                                3 * cylinder_volume(self.length, self.ports.initial_r))
 
     def return_external_radius(self):
         return self.r_ext
