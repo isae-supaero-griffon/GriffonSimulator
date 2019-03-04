@@ -285,7 +285,7 @@ class TrajectoryObject:
 
         # Generate the plots
         fig = plt.figure(facecolor='w', figsize=(30, 30))
-        fig.suptitle('Simulation results', **title_font)
+        fig.suptitle('Trajectory results', **title_font)
         axs = [plt.subplot2grid((3, 2), (0, 0), rowspan=1, colspan=1),
                plt.subplot2grid((3, 2), (1, 0), rowspan=1, colspan=1),
                plt.subplot2grid((3, 2), (2, 0), rowspan=1, colspan=1),
