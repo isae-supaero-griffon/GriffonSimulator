@@ -185,6 +185,7 @@ class OneCircularPort(Geometry):
         """
         super().__init__(L, 1, regressionModel)
         # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        self.initial_r = rintInitial
         self.r_int = rintInitial
         self.r_ext = rext0
 
@@ -241,7 +242,7 @@ class OneCircularPort(Geometry):
 
     def get_fuel_mass(self, fuel_density):
 
-        return fuel_density * (cylinder_volume(self.length, self.r_ext) - cylinder_volume(self.length, self.r_int))
+        return fuel_density * (cylinder_volume(self.length, self.r_ext) - cylinder_volume(self.length, self.initial_r))
 
     def return_external_radius(self):
         return self.r_ext
@@ -352,8 +353,8 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
     def get_fuel_mass(self, fuel_density):
 
         return fuel_density * (cylinder_volume(self.length, self.get_total_outer_radius()) - (self.port_number - 1) *
-                               cylinder_volume(self.length, self.ring_ports.r_int) -
-                               cylinder_volume(self.length, self.central_port.r_int))
+                               cylinder_volume(self.length, self.ring_ports.initial_r) -
+                               cylinder_volume(self.length, self.central_port.initial_r))
 
     def return_external_radius(self):
         return self.r_ext
@@ -377,6 +378,7 @@ class ThreeCircularPorts(Geometry):
         super().__init__(L, 3, regressionModel)
 
         self.r_ext = r_ext
+        self.initial_r = portsIntialRadius
         self.ports = OneCircularPort(L, regressionModel, portsIntialRadius, r_ext / (1 + 2/m.sqrt(3)))
 
     # Methods specific to this geometry
@@ -439,12 +441,128 @@ class ThreeCircularPorts(Geometry):
     def get_fuel_mass(self, fuel_density):
 
         return fuel_density * (cylinder_volume(self.length, self.get_total_outer_radius()) -
-                                3 * cylinder_volume(self.length, self.ports.r_int))
+                                3 * cylinder_volume(self.length, self.ports.initial_r))
 
     def return_external_radius(self):
         return self.r_ext
 
 
+class SinglePortImageGeometry(Geometry):
+
+    def __init__(self, L, externalRadius, regressionModel, imagePixelSize, imageMeterSize):
+        """
+        class initializer
+        """
+
+        super().__init__(L, 1, regressionModel)
+
+        self.externalRadius = externalRadius
+        self.imagePixelSize = imagePixelSize
+        self.imageMeterSize = imageMeterSize
+        self.image = np.zeros((imagePixelSize, imagePixelSize, 1), np.uint8)
+        self.portGeometryIsGenerated = False
+        self.stepPixelRegression = 5
+
+        # kernel is tailored for 5 pixels/step regression
+        size = 12
+        R = size // 2
+        print("R = ", R)
+        kernel = np.zeros((size, size))
+        for i in range(size):
+            for j in range(size):
+                x = i - R
+                y = j - R
+                r = m.sqrt(x ** 2 + y ** 2)
+                kernel[i, j] = max(1 - m.sqrt(r / R), 0)
+
+        self.kernel = kernel
+
+    def getMetersPerPixel(self):
+
+        return self.imageMeterSize / self.imagePixelSize
+
+    def totalCrossSectionArea(self):
+
+        if (self.portGeometryIsGenerated):
+
+            contours, hierarchy = cv2.findContours(self.image, 1, 2)
+            cnt = contours[0]
+            return cv2.contourArea(cnt)
+
+        else:
+            raise ValueError("Image is black : please generate geometry")
+
+    def totalSurfaceArea(self):
+
+        if (self.portGeometryIsGenerated):
+
+            contours, hierarchy = cv2.findContours(self.image, 1, 2)
+            cnt = contours[0]
+            perimeter = cv2.arcLength(cnt, True)
+
+            return perimeter * 2 * m.pi() * self.get_length()
+
+        else:
+            raise ValueError("Image is black : please generate geometry")
+
+
+    def compute_fuel_rate(self, rho, ox_flow):
+        """
+        Return the instantaneous fuel mass flow rate for the geometry
+        :param rho: fuel density
+        """
+        regressionRate = self.regressionModel.computeRegressionRate(self, ox_flow)
+
+        return rho * regressionRate * self.totalSurfaceArea()
+
+    def regress(self, ox_flow, dt):
+        """
+        Apply regression to the geometry
+        :param ox_flow: instantaneous oxidizer flow
+        :param dt: time increment, ignored
+        """
+        # A 5 pixel radial regression is applied,
+        # regardless of dt
+
+        if (self.portGeometryIsGenerated):
+
+            blurred = cv2.filter2D(self.image, -1, self.kernel)
+            ret, self.image = cv2.threshold(blurred, 30, 255, cv2.THRESH_BINARY)
+
+        else:
+            raise ValueError("Image is black : please generate geometry")
+
+    def get_fuel_mass(self, fuel_density):
+        """
+        Return the initial fuel mass based on fuel_density
+        :param fuel_density: density of the fuel [kg/m^3]
+        """
+        volume = self.get_length() * (m.pi * (self.externalRadius**2) - self.totalCrossSectionArea())
+        return fuel_density * volume
+
+    def return_external_radius(self):
+        """
+        Return external radius of the geometry
+        :return: external radius of the geometry
+        """
+        return self.externalRadius
+
+    def min_bloc_thickness(self):
+        """
+        Return the smallest fuel space between ports or fuel edge.
+        Useful for setting an eburn termination safety margin.
+        """
+
+        if (self.portGeometryIsGenerated):
+
+            contours, hierarchy = cv2.findContours(self.image, 1, 2)
+            cnt = contours[0]
+            (x, y), radius = cv2.minEnclosingCircle(cnt)
+
+            return self.externalRadius - radius
+
+        else:
+            raise ValueError("Image is black : please generate geometry")
 
 class SinglePortImageGeometry(Geometry):
 

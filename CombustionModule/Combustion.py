@@ -6,15 +6,15 @@
 
 # -------------------------- IMPORT MODULES -------------------------------
 
-from CombustionModule.Geometries import *                   # Import the geometry classes
-from CombustionModule.Nozzle import *                       # Import the nozzle class
-import CombustionModule.Isentropic as iso                   # Import the isoentropic module
-import math                                                 # Import math
-import matplotlib.pyplot as plt                             # Import matplotlib to plot results
-from numpy import mean, trapz, asarray                      # Import mean from numpy for list arrays
-from Libraries.Interpolator import *                        # Import interpolator
-from DataLayer.JsonInterpreter import JsonInterpreter       # Import the JsonInterpreter
-
+from CombustionModule.Geometries import *                                           # Import the geometry classes
+from CombustionModule.Nozzle import *                                               # Import the nozzle class
+import CombustionModule.Isentropic as iso                                           # Import the isoentropic module
+import math                                                                         # Import math
+import matplotlib.pyplot as plt                                                     # Import matplotlib to plot results
+from matplotlib.ticker import FormatStrFormatter                                    # Import formatter
+from numpy import mean, trapz, asarray, nan, nanmean, nanmax, linspace, nanmin      # Import numpy functions
+from Libraries.Interpolator import *                                                # Import interpolator
+from DataLayer.JsonInterpreter import JsonInterpreter                               # Import the JsonInterpreter
 
 
 # -------------------------- CLASS DEFINITIONS -----------------------------
@@ -62,14 +62,20 @@ class CombustionObject:
         self.nozzle = nozzle_object
         # TODO: convert the results lists to numpy array to be consistent with format all across the program.
         self.results = {
-                        "run_values": {"time": [],
-                                       "thrust": [],
-                                       "isp": [],
-                                       "pressure": [],
-                                       "temperature": [],
-                                       "radius": [],
-                                       "of": [],
-                                       "Go": []},
+                        "run_values": {"time": [0],
+                                       "thrust": [0],
+                                       "isp": [0],
+                                       "pressure": [0],
+                                       "temperature": [0],
+                                       "radius": [self.geometry.get_port_radius() if
+                                                  isinstance(self.geometry,
+                                                             (OneCircularPort,
+                                                              ThreeCircularPorts,
+                                                              MultipleCircularPortsWithCircularCenter))
+                                                  else nan],
+                                       "regression_rate": [0],
+                                       "of": [0],
+                                       "Go": [0]},
                         "magnitudes": {}
                        }
 
@@ -127,7 +133,11 @@ class CombustionObject:
 
     def post_process_data(self, dt):
         """ Compute results averages and total impulse"""
-        self.results["magnitudes"] = {key: mean(value) for key, value in self.results["run_values"].items()
+
+        for key in self.results['run_values'].keys():
+            self.results['run_values'][key][0] = self.results['run_values'][key][1]
+
+        self.results["magnitudes"] = {key: nanmean(value) for key, value in self.results["run_values"].items()
                                       if key != "time"}
         self.results["magnitudes"]["impulse"] = trapz(self.results["run_values"]["thrust"],
                                                       self.results["run_values"]["time"],
@@ -169,7 +179,7 @@ class CombustionObject:
         # ---------------------------- MAIN SIMULATION LOOP -----------------------------
 
         # Set a counter to keep-track of the loop
-        k = 0
+        k = 1
 
         # Set the flag for the maximum burn-time
         flag_burn = True
@@ -212,11 +222,18 @@ class CombustionObject:
             self.results["run_values"]["Go"].append(Go)
 
             # Verify it is a single port_number before updating the port number
-            if isinstance(self.geometry, OneCircularPort):
+            if isinstance(self.geometry, (OneCircularPort,
+                                          ThreeCircularPorts,
+                                          MultipleCircularPortsWithCircularCenter)):
                 self.results["run_values"]["radius"].append(self.geometry.get_port_radius())
+
+                # Compute regression rate
+                delta_r = self.results["run_values"]["radius"][k] - self.results["run_values"]["radius"][k - 1]
+                self.results["run_values"]["regression_rate"].append(delta_r / dt)
             else:
                 # Append a 0 if there it is not a OneCircularPort geometry
-                self.results["run_values"]["radius"].append(0)
+                self.results["run_values"]["radius"].append(nan)
+                self.results["run_values"]["regression_rate"].append(nan)
 
             # Update the geometry and nozzle
             self.geometry.regress(ox_flow=ox_flow, dt=dt)
@@ -251,46 +268,80 @@ class CombustionObject:
             thrust = self.results["run_values"]["thrust"]
             isp = self.results["run_values"]["isp"]
             radius = self.results["run_values"]["radius"]
+            v_reg = self.results["run_values"]["regression_rate"]
             of_ratio = self.results["run_values"]["of"]
             Go = self.results["run_values"]["Go"]
         else:
             raise ValueError("No values found for time, check results before plotting. \n")
 
+        # Set the font dictionaries (for plot title and axis titles)
+        title_font = {'size': '20', 'color': 'black', 'weight': 'normal',
+                      'verticalalignment': 'bottom'}  # Bottom vertical alignment for more space
+        axis_font = {'size': '16'}
+
         # Generate the plots
-        fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(20, 15), squeeze=True, facecolor='w')
-        fig.suptitle('Simulation results', fontsize=14)
+        fig = plt.figure(facecolor='w', figsize=(30, 30))
+        fig.suptitle('Combustion Module results', **title_font)
+        axs = [plt.subplot2grid((4, 2), (0, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((4, 2), (1, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((4, 2), (2, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((4, 2), (3, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((4, 2), (0, 1), rowspan=2, colspan=1),
+               plt.subplot2grid((4, 2), (2, 1), rowspan=2, colspan=1)]
+
+        # Set the tick labels font
+        for ax in axs:
+            for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+                label.set_fontname('Arial')
+                label.set_fontsize(14)
 
         # Thrust-plot
-        axs[0].plot(time, thrust, label='Thrust', color='blue')
+        axs[0].plot(time, thrust, label='Thrust', color='blue', linewidth=2.0)
         axs[0].set_title('')
-        axs[0].set_xlabel('time (s)')
-        axs[0].set_ylabel('Thrust (N)')
+        axs[0].set_ylabel('Thrust (N)', **axis_font)
         axs[0].grid(b=True, axis='both')
         axs[0].set_xlim(left=time[0])
+        axs[0].set_ylim(bottom=0, top=max(thrust)*1.5)
 
-        # Go-plot
-        axs[1].plot(time, Go, linestyle='--', label='Go', color='red')
+        # R-plot
+        axs[1].plot(time, radius, linestyle='--', label='Radius', color='red')
         axs[1].set_title('')
-        axs[1].set_xlabel('time (s)')
-        axs[1].set_ylabel('Go [kg/m^2/sec]')
+        axs[1].set_ylabel('R (m)', **axis_font)
+        axs[1].yaxis.set_major_formatter(FormatStrFormatter('%.2E'))
         axs[1].grid(b=True, axis='both')
         axs[1].set_xlim(left=time[0])
 
         # Isp-plot
-        axs[2].plot(time, isp, label='Isp', color='r')
+        axs[2].plot(time, isp, label='Isp', color='r', linewidth=2.0)
         axs[2].set_title('')
-        axs[2].set_xlabel('time (s)')
-        axs[2].set_ylabel('Isp (s)')
+        axs[2].set_ylabel('Isp (s)', **axis_font)
         axs[2].grid(b=True, axis='both')
         axs[2].set_xlim(left=time[0])
+        axs[2].set_ylim(bottom=0, top=max(isp)*1.5)
 
         # of_ratio-plot
-        axs[3].plot(time, of_ratio, linestyle='--', color='green', label='O/F ratio')
+        axs[3].plot(time, of_ratio, linestyle='--', color='green', label='O/F ratio', linewidth=2.0)
         axs[3].set_title('')
-        axs[3].set_xlabel('time (s)')
-        axs[3].set_ylabel('O/F ratio')
+        axs[3].set_xlabel('Time (s)', **axis_font)
+        axs[3].set_ylabel('O/F ratio', **axis_font)
         axs[3].grid(b=True, axis='both')
         axs[3].set_xlim(left=time[0])
+
+        # Regression rate plot
+        axs[4].loglog(Go, v_reg, color='black', label='Regression Rate', linewidth=2.0)
+        axs[4].set_title('')
+        axs[4].set_ylabel('Regression Rate', **axis_font)
+        axs[4].grid(True, which='both', ls='-')
+        axs[4].set_ylim(bottom=1e-5, top=1e-2)
+        axs[4].set_xlim(left=nanmin(Go), right=nanmax(Go))
+
+        # Go-plot
+        axs[5].plot(Go, time, linestyle='--', label='Go', color='red')
+        axs[5].set_title('')
+        axs[5].set_ylabel('Time (s)', **axis_font)
+        axs[5].set_xlabel('Go [kg/m^2/sec]', **axis_font)
+        axs[5].grid(True, which='both', ls='-')
+        axs[5].set_xlim(left=nanmin(Go), right=nanmax(Go))
 
     @staticmethod
     def initialize_variables():

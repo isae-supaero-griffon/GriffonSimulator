@@ -141,7 +141,7 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         goes from one regime to the other
     """
 
-    def __init__(self, a1, n1, m1, n2, m2, maxGo, **kwargs):
+    def __init__(self, a, n, m, n2, m2, maxGo, **kwargs):
         """
         class initializer
         Warning : it is insufficient by itself, as the
@@ -150,7 +150,7 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
 
         super().__init__(**kwargs)
 
-        self.marxman = SingleRegimeMarxmanModel(a1, n1, m1)
+        self.marxman = SingleRegimeMarxmanModel(a, n, m)
         self.threshold = maxGo
         self.flooded = SingleRegimeMarxmanModel(0, n2, m2)
         self.continuous = False
@@ -164,7 +164,7 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         """
 
         a2 = self.marxman.a * (geometry.get_length() ** (self.marxman.m - self.flooded.m)) * \
-             (self.threshold ** self.marxman.n - self.flooded.n)
+             (self.threshold ** (self.marxman.n - self.flooded.n))
 
         self.flooded.a = a2
         self.continuous = True
@@ -173,18 +173,19 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         """
         Return the instantenous solid fuel regression rate
         depending on the current regime
+        :return regression rate
         """
 
         if not self.continuous:
-
-            print("WARNING model is not continuous, use at your own risk")
+            # Make the model continuous if it's not already continuous
+            self.makeContinuous(geometry)
 
         oxidizer_mass_flux = ox_flow / geometry.totalCrossSectionArea()
 
         if oxidizer_mass_flux < self.threshold:
-
-            return self.marxman.ComputeRegressionRate(geometry, ox_flow)
-
+            regression_rate = self.marxman.computeRegressionRate(geometry, ox_flow)
         else:
+            regression_rate = self.flooded.computeRegressionRate(geometry, ox_flow)
 
-            return self.flooded.ComputeRegressionRate(geometry, ox_flow)
+        # Return the regression rate
+        return regression_rate
