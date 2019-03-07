@@ -336,7 +336,7 @@ class CombustionObject:
         axs[4].set_xlim(left=nanmin(Go), right=nanmax(Go))
 
         # Go-plot
-        axs[5].semilogx(Go, time, linestyle='--', label='Go', color='red')
+        axs[5].plot(Go, time, linestyle='--', label='Go', color='red')
         axs[5].set_title('')
         axs[5].set_ylabel('Time (s)', **axis_font)
         axs[5].set_xlabel('Go [kg/m^2/sec]', **axis_font)

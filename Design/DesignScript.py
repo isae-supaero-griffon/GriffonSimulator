@@ -135,7 +135,7 @@ def single_case_analysis_three_circular_ports():
                                        'geometric_params': {'type': ThreeCircularPorts, 'L': 0.325,
                                                                 'portsIntialRadius': 0.016,
                                                                 'r_ext': 0.07,
-                                                                'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
+                                                                'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
