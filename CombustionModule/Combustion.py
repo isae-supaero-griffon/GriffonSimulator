@@ -75,7 +75,10 @@ class CombustionObject:
                                                   else nan],
                                        "regression_rate": [0],
                                        "of": [0],
-                                       "Go": [0]},
+                                       "Go": [0],
+                                       "nozzle_param": [0],
+                                       "c_star": [0],
+                                       "chamber_sound_speed": [0]},
                         "magnitudes": {}
                        }
 
@@ -92,7 +95,7 @@ class CombustionObject:
         # Generate a string for the results
         if self.results['magnitudes']:
             results_str = "\nAverages values: \n\t" + "\t\n\t".\
-                join(("{name}, {value:5.2f}".format(name=name, value=value) for
+                join(("{name}, {value:.2E}".format(name=name, value=value) for
                       name, value in self.results['magnitudes'].items()))
         else:
             results_str = "\nNo results have been yet calculated. \n"
@@ -108,7 +111,7 @@ class CombustionObject:
         """
 
         # Define the variables to interpolate
-        vars_ = ["t", "m", "gammas", "cstar"]
+        vars_ = ["t", "m", "gammas", "cstar", "sonvel"]
         # Call out the interpolator with the required variables and get the output
         output = self.interpolator.interpolate_data(o_f_desired_value=desired_of_ratio,
                                                     variables=vars_,
@@ -116,7 +119,8 @@ class CombustionObject:
 
         # Return the values
         return output['variables']['t']['CHAMBER'], output['variables']['gammas']['CHAMBER'],\
-               output['variables']['m']['CHAMBER']/1000, output['variables']['cstar']['THROAT']
+               output['variables']['m']['CHAMBER']/1000, output['variables']['cstar']['THROAT'], \
+               output['variables']['sonvel']['CHAMBER'],
 
     def unpack_data_dictionary(self):
         """ unpack the data dictionary into different variables to reduce code size
@@ -195,7 +199,7 @@ class CombustionObject:
             # Data extraction using the interpolator and OF ratio from already defined variables
             # Check lookup_from_cea method which variables have been chosen
 
-            t_chamber, gamma, gas_molar_mass, cea_c_star = self.lookup_from_cea(desired_of_ratio=of_ratio)
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel = self.lookup_from_cea(desired_of_ratio=of_ratio)
             r = R / gas_molar_mass  # Specific gaz constant
 
             # Calculate chamber conditions and motor performance
@@ -210,6 +214,10 @@ class CombustionObject:
             thrust = self.nozzle.get_nozzle_effeciency() * (total_mass_flow*v_exit + (exit_pressure-pression_atmo) *
                                                             self.nozzle.get_exit_area())
 
+            # Calculate the nozzle equation validation
+            nozzle_p = total_mass_flow * cea_c_star / (self.nozzle.get_throat_area() * initial_chamber_pressure)
+            print(nozzle_p)
+
             isp = thrust / total_mass_flow / g0
 
             # Results updates
@@ -220,6 +228,9 @@ class CombustionObject:
             self.results["run_values"]["temperature"].append(t_chamber)
             self.results["run_values"]["of"].append(of_ratio)
             self.results["run_values"]["Go"].append(Go)
+            self.results["run_values"]["nozzle_param"].append(nozzle_p)
+            self.results["run_values"]["c_star"].append(cea_c_star)
+            self.results["run_values"]["chamber_sound_speed"].append(son_vel)
 
             # Verify it is a single port_number before updating the port number
             if isinstance(self.geometry, (OneCircularPort,
@@ -271,6 +282,7 @@ class CombustionObject:
             v_reg = self.results["run_values"]["regression_rate"]
             of_ratio = self.results["run_values"]["of"]
             Go = self.results["run_values"]["Go"]
+            chamber_sound_speed = self.results["run_values"]["chamber_sound_speed"]
         else:
             raise ValueError("No values found for time, check results before plotting. \n")
 
@@ -287,7 +299,8 @@ class CombustionObject:
                plt.subplot2grid((4, 2), (2, 0), rowspan=1, colspan=1),
                plt.subplot2grid((4, 2), (3, 0), rowspan=1, colspan=1),
                plt.subplot2grid((4, 2), (0, 1), rowspan=2, colspan=1),
-               plt.subplot2grid((4, 2), (2, 1), rowspan=2, colspan=1)]
+               plt.subplot2grid((4, 2), (2, 1), rowspan=1, colspan=1),
+               plt.subplot2grid((4, 2), (3, 1), rowspan=1, colspan=1)]
 
         # Set the tick labels font
         for ax in axs:
@@ -342,6 +355,15 @@ class CombustionObject:
         axs[5].set_xlabel('Go [kg/m^2/sec]', **axis_font)
         axs[5].grid(True, which='both', ls='-')
         axs[5].set_xlim(left=nanmin(Go), right=nanmax(Go))
+
+        # Sonic Speed-plot
+        axs[6].plot(time, chamber_sound_speed, ls='-', label='Sound Speed', color='black')
+        axs[6].set_title('')
+        axs[6].set_ylabel('Chamber c (m/s^2)', **axis_font)
+        axs[6].set_xlabel('time (secs)', **axis_font)
+        axs[6].grid(True, which='both', ls='-')
+        axs[6].set_ylim(bottom=nanmin(chamber_sound_speed), top=nanmax(chamber_sound_speed))
+
 
     @staticmethod
     def initialize_variables():

@@ -57,7 +57,7 @@ def single_case_analysis_one_port():
                                        'set_nozzle_design': True,
 
                                        'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
-                                                         'c_star': 1500, 'ox_flow': ox_flow, 'OF': 5},
+                                                         'c_star': 1580, 'ox_flow': ox_flow, 'OF': 5.5},
                                       },
 
 
@@ -92,6 +92,9 @@ def single_case_analysis_one_port():
 
     # Print the splitted masses
     print(simulation_object.mass_simulator_module)
+
+    # Print combustion results
+    print(simulation_object.combustion_module)
 
     # --------------- Plot the results
 
@@ -449,5 +452,5 @@ if __name__ == '__main__':
 
     # Execute the program
     # run_design_cases()
-    single_case_analysis_three_circular_ports()
-    # single_case_analysis_one_port()
+    # single_case_analysis_three_circular_ports()
+    single_case_analysis_one_port()
