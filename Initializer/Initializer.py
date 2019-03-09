@@ -12,6 +12,7 @@ from CombustionModule.Nozzle import *                       # Import the nozzles
 from DataLayer.JsonInterpreter import JsonInterpreter       # Import the JsonInterpreter class
 from TrajectoryModule.Drag import *                         # Import the Drag Module (DensityLaw in it)
 from Libraries.Collections import Collections               # Import Collections class
+from MassEstimationModule.system import *                   # Import the Mass Module classes
 # ------------------ FUNCTIONS/STATIC CLASSES -------------------
 
 
@@ -214,21 +215,73 @@ class Initializer:
         # Return output
         return {'json_interpreter': json_interpreter, 'geometry_object': geometry_obj, 'nozzle_object': nozzle_obj}
 
-    @staticmethod
-    def generate_mass_simulator_parameters(json_interpreter):
+    def generate_mass_simulator_parameters(self, json_interpreter):
         """
         generate_mass_simulator_parameters simply outputs the system_dict
         :param json_interpreter: JsonInterpreter instance
         :return: mass estimation parameters dictionary
         """
-        return {'system_dict': json_interpreter.return_mass_simulator_table(),
-                'combustion_table': json_interpreter.return_combustion_table()}
+
+        # Generate the output dictionary based on the class of mass simulator module to be implemented
+        if self.simulation_parameters['mass_simulator']['system'] == SystemDynamic:
+            output = {'system_dict': json_interpreter.return_mass_simulator_table(),
+                      'combustion_table': json_interpreter.return_combustion_table()}
+        elif self.simulation_parameters['mass_simulator']['system'] == SystemStatic:
+            output = {'system_dict': self.simulation_parameters['mass_simulator']['system_dict'],
+                      'combustion_table': json_interpreter.return_combustion_table()}
+        else:
+            raise TypeError("System type not recognized, please define a correct system type. \n")
+
+        # Return the output
+        return output
 
     def update_mass_simulator_parameters(self):
         """
-        update_mass_simulator_parameters performs all of the necessary calculations (if there are) required to set
-        the inputs for the mass simulation module
-        :return: mass estimation parameters dictionary
+        update_mass_simulator_parameters calss the appropiate method depending on the mass simulator class
+        selected
+        """
+        # Generate the output dictionary based on the class of mass simulator module to be implemented
+        if self.simulation_parameters['mass_simulator']['system'] == SystemDynamic:
+            self.update_mass_simulator_parameters_dynamic()
+        elif self.simulation_parameters['mass_simulator']['system'] == SystemStatic:
+            self.update_mass_simulator_parameters_static()
+        else:
+            raise TypeError("System type not recognized, please define a correct system type. \n")
+
+    def update_mass_simulator_parameters_static(self):
+        """
+        update_mass_simulator_parameters_static performs all of the necessary calculations (if there are) required to
+        set the inputs for the mass simulation module when using a SystemStatic class for mass simulator
+        """
+
+        # Get the system dict
+        system_dict = self.mass_simulator_parameters['system_dict']
+
+        # Get combustion table
+        combustion_table = self.mass_simulator_parameters['combustion_table']
+
+        # ----------------------- Calculate propellant mass
+
+        propellant_mass = InitializerCalculator.calculate_fuel_mass(self.combustion_parameters['geometry_object'],
+                                                                    combustion_table['rho_fuel'])
+
+        # ----------------------- Calculate oxidiser mass
+
+        ox_flow = self.simulation_parameters['mass_simulator']['ox_flow']
+        burn_time = self.simulation_parameters['mass_simulator']['burn_time']
+        extra_filling = self.simulation_parameters['mass_simulator']['extra_filling']
+
+        ox_mass = InitializerCalculator.calculate_oxidiser_mass_based_on_burn(ox_flow, burn_time, extra_filling)
+
+        # ----------------------- Allocate the values into the dictionary
+
+        system_dict['oxidizer_mass'] = ox_mass
+        system_dict['fuel_mass'] = propellant_mass
+
+    def update_mass_simulator_parameters_dynamic(self):
+        """
+        update_mass_simulator_parameters_dynamic performs all of the necessary calculations (if there are) required to
+        set the inputs for the mass simulation module when using a SystemDynamic class for mass simulator
         """
 
         # Get the system dict

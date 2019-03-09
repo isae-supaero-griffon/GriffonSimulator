@@ -120,10 +120,13 @@ class SimulationObject:
         :return: MassSimulator object
         """
 
+        # Collect the object part
+        object_class = self.initialization_object.simulation_parameters['mass_simulator']['system']
+
         # Check the validity of the initializer
         if self.initialization_object:
             # Initialize the Mass Simulation module if initializer is present
-            obj = System(self.initialization_object.mass_simulator_parameters['system_dict'])
+            obj = object_class(self.initialization_object.mass_simulator_parameters['system_dict'])
         else:
             # Set the object to None value, issue warning
             warnings.warn("Set the System object (Mass Simulator) to None, not representative object. \n")
