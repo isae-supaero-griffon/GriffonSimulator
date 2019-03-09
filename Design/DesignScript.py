@@ -66,7 +66,8 @@ def single_case_analysis_one_port():
                               'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.01,
                                              'max_burn_time': 4.5},
 
-                              'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.1,
+                              'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
+                                                 'system': SystemDynamic, 'extra_filling': 0.1,
                                                  'injection_loss': 0.5, 'area_injection': 0.000105},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
@@ -118,6 +119,105 @@ def single_case_analysis_one_port():
     plt.show()
 
 
+def single_case_analysis_one_port_review():
+    """
+    Study the behavior of the rocket for a single case with OneCircularPort
+    :return: nothing
+    """
+
+    # ------------ Generate the data-layer:
+
+    json_interpreter = generate_data_layer("Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json")
+
+    # ---------- Pack the inputs:
+
+    ox_flow = 1.09
+
+    init_parameters = {
+                        'combustion': {
+                                       'geometric_params': {'type': OneCircularPort,
+                                                            'L': 0.325,
+                                                            'rintInitial': 0.03,
+                                                            'rext0': 0.05,
+                                                            'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
+
+                                       'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
+                                                         'erosion': 0},
+
+                                       'set_nozzle_design': True,
+
+                                       'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
+                                                         'c_star': 1580, 'ox_flow': ox_flow, 'OF': 5.5},
+                                      },
+
+
+                      }
+    simulation_parameters = {
+                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.01,
+                                             'max_burn_time': 4.75},
+
+                              'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
+                                                 'system': SystemStatic,
+                                                 'system_dict': {'dry_mass': 12.35 + 20 + 1.3,
+                                                                 'pressurizer_mass': 0.17,
+                                                                 'oxidizer_mass': 'TBD',
+                                                                 'fuel_mass': 'TBD'},
+                                                 'extra_filling': 0.1,
+                                                 'injection_loss': 0.5,
+                                                 'area_injection': 0.000105},
+
+                              'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
+                                             'simulation_time': 60}
+                            }
+
+    # -------------- Generate the initializer:
+
+    init_obj = Initializer(init_parameters=init_parameters,
+                           simulation_parameters=simulation_parameters,
+                           json_interpreter=json_interpreter)
+
+    # -------------- Generate the simulation object:
+
+    simulation_object = SimulationObject(initializer_collection=init_obj)
+
+    # --------------- Run the simulation:
+
+    simulation_object.run_simulation_in_batch()
+
+    # Print the total mass
+    print("\nRockets Total Mass: {0} kgs".format(simulation_object.mass_simulator_module.get_mass()))
+
+    # Print the splitted masses
+    print(simulation_object.mass_simulator_module)
+
+    # Print combustion results
+    print(simulation_object.combustion_module)
+
+    # Print Trajectory results
+    print(simulation_object.trajectory_module)
+
+    # --------------- Plot the results
+
+    simulation_object.results_collection.elements_list[0].combustion.plot_results()
+    simulation_object.results_collection.elements_list[0].trajectory.plot_results()
+
+    # # data directory
+    # data_directory = "../Design/Design Files/Proposed Designs/Single Port Geometry/"
+    #
+    # file_name_expression = "Tentative Design Single Port Reviewed {number}.csv"
+    # 
+    # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
+    #                                                                         file_name_expression]))
+    #
+    # # Save to json the mass simulator dict
+    # output_file = "Tentative Design Single Port Reviewed 1.json"
+    # with open("/".join([data_directory, output_file]), 'w') as f:
+    #     json.dump(simulation_object.mass_simulator_module.dict, f)
+
+    # Show any plots
+    plt.show()
+
+
 def single_case_analysis_three_circular_ports():
     """
     Study the behavior of the rocket for a single case with ThreeCircularPort
@@ -155,7 +255,8 @@ def single_case_analysis_three_circular_ports():
                               'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.01,
                                              'max_burn_time': 5},
 
-                              'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.1,
+                              'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
+                                                 'system': SystemDynamic,'extra_filling': 0.1,
                                                  'injection_loss': 0.5, 'area_injection': 0.000105},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
@@ -257,7 +358,8 @@ def generate_analysis_cases_three_port_geometry():
                                   'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.0025, 'dt': 0.05,
                                                  'max_burn_time': burn_time},
 
-                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.1,
+                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
+                                                     'system': SystemDynamic, 'extra_filling': 0.1,
                                                      'injection_loss': 0.5, 'area_injection': 0.000105},
 
                                   'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
@@ -326,7 +428,8 @@ def generate_analysis_cases_port_geometry():
                                   'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.05,
                                                  'max_burn_time': 8},
 
-                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.05,
+                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
+                                                     'system': SystemDynamic, 'extra_filling': 0.05,
                                                      'injection_loss': 0.5, 'area_injection': 0.000105},
 
                                   'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
@@ -401,7 +504,8 @@ def generate_analysis_cases_multi_port_geometry():
                                   'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.0025, 'dt': 0.05,
                                                  'max_burn_time': burn_time},
 
-                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.05,
+                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
+                                                     'system': SystemDynamic, 'extra_filling': 0.05,
                                                      'injection_loss': 0.5, 'area_injection': 0.000105},
 
                                   'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
@@ -453,4 +557,4 @@ if __name__ == '__main__':
     # Execute the program
     # run_design_cases()
     # single_case_analysis_three_circular_ports()
-    single_case_analysis_one_port()
+    single_case_analysis_one_port_review()
