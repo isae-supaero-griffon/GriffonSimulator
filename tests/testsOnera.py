@@ -240,7 +240,7 @@ def test_onera_three_port_geometry():
 
         nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-        simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
+        simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 5}
 
         # ------------- Generate objects:
 
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     # test_onera_physical_test_1()
     # test_onera_physical_test_1_2()
     # test_onera_physical_test_2()
-    test_onera_physical_test_3()
-    # test_onera_three_port_geometry()
+    #test_onera_physical_test_3()
+    test_onera_three_port_geometry()
     # Show any plots
     plt.show()

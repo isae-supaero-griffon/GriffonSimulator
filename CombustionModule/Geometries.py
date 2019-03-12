@@ -447,6 +447,212 @@ class ThreeCircularPorts(Geometry):
         return self.r_ext
 
 
+class NBranchStarPort(Geometry):
+    """
+    Implementation of the Geometry abstract class for a more simple, one centered
+    N branches star.
+    Total branches number must be between 3 and 8
+    Additional attributes:
+    r_b: base circonscrit circle radius
+    r_int :  complete star circonscrit circle radius
+    r_ext: total fuel slab radius
+    n : number of branches of the star geometry
+    """
+
+    def __init__(self, regressionModel, L, rint0, rext0, rb0, n0):
+        """
+        class initializer
+        """
+
+        if n0 < 3:
+
+            raise ValueError("Geometry must have at least 3 branches")
+
+        elif n0 > 8:
+
+            raise ValueError("Geometry must have at most 8 branches")
+
+
+        super().__init__(L, 1, regressionModel)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        self.r_b = rb0
+        self.r_ext = rext0
+        self.r_int = rint0
+        self.n = n0
+
+        # Methods specific to this geometry
+
+    def get_port_base_radius(self):
+        """
+        Return the current combustion port base radius
+        """
+        return self.r_b
+
+    def get_port_int_radius(self):
+        """
+        Return the current combustion port int radius
+        """
+        return self.r_int
+
+    def get_port_ext_radius(self):
+        """
+        Return the current combustion port ext radius
+        """
+        return self.r_ext
+
+    # Abstract methods implementation
+
+    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+        """
+        Return the instantaneous fuel regression rate of the geometry given flow properties.
+        :param ox_flow: instantaneous oxidizer flow
+        :param a: classical regression rate factor (depends on fuel choice)
+        :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
+        :param m: classical regression rate exponent for fuel length(usually set to -0.2)
+        """
+
+        return rho * self.regressionModel.computeRegressionRate(self, ox_flow) * self.totalSurfaceArea()
+
+    def totalCrossSectionArea(self):
+
+        return 2 * self.n * self.r_b * self.r_int * sin(pi / self.n)
+
+    def totalSurfaceArea(self):
+
+        return self.length * 2 * self.n * sqrt( (self.r_int - self.r_b * cos(pi / self.n)) ** 2 + (self.r_b * sin(pi / self.n)) ** 2)
+
+    def regress(self, ox_flow, dt):
+
+        self.r_int += self.regressionModel.computeRegressionRate(self, ox_flow) * dt
+        self.r_b += self.regressionModel.computeRegressionRate(self, ox_flow) * dt
+
+
+    def min_bloc_thickness(self):
+
+        return self.r_ext - self.r_int
+
+    def draw_geometry(self):
+
+        p1_0 = [self.r_b / 2 * sin(pi / self.n), self.r_b * cos(pi / self.n)]
+        p2_0 = [- self.r_b / 2 * sin(pi / self.n), - self.r_b * cos(pi / self.n)]
+        p3_0 = [0, - self.r_int]
+
+        for i in range(0, self.n):
+            rotation_angle = pi / self.n * i
+            draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle)
+
+        # Ajust axis and show
+        plt.axis("scaled")
+        plt.show()
+
+
+    def get_fuel_mass(self, fuel_density):
+
+        return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n))
+
+
+class NBranchRectangleStarPort(Geometry):
+    """
+    Implementation of the Geometry abstract class for a more simple, one centered
+    N branches star with rectangular branches.
+    Total branches number must be between 3 and 8
+    Additional attributes:
+    r_b: base circonscrit circle radius
+    r_int :  complete star circonscrit circle radius
+    r_ext: total fuel slab radius
+    n : number of branches of the star geometry
+    """
+
+    def __init__(self, regressionModel L, rint0, rext0, rb0, n0):
+        """
+        class initializer
+        """
+
+        if n0 < 3:
+
+            raise ValueError("Geometry must have at least 3 branches")
+
+        elif n0 > 8:
+
+            raise ValueError("Geometry must have at most 8 branches")
+
+
+        super().__init__(L, 1, regressionModel)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        self.r_b = rb0
+        self.r_ext = rext0
+        self.r_int = rint0
+        self.n = n0
+
+        # Methods specific to this geometry
+
+    def get_port_base_radius(self):
+        """
+        Return the current combustion port base radius
+        """
+        return self.r_b
+
+    def get_port_int_radius(self):
+        """
+        Return the current combustion port int radius
+        """
+        return self.r_int
+
+    def get_port_ext_radius(self):
+        """
+        Return the current combustion port ext radius
+        """
+        return self.r_ext
+
+    # Abstract methods implementation
+
+    def compute_fuel_rate(self, rho, ox_flow):
+        """
+        Return the instantaneous fuel regression rate of the geometry given flow properties.
+        :param ox_flow: instantaneous oxidizer flow
+        :param a: classical regression rate factor (depends on fuel choice)
+        :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
+        :param m: classical regression rate exponent for fuel length(usually set to -0.2)
+        """
+
+        return rho * self.regressionModel.computeRegressionRate(self, ox_flow) * self.totalSurfaceArea()
+
+    def totalCrossSectionArea(self):
+
+        return 2 * self.n * self.r_b * self.r_int * sin(pi / self.n) * sqrt (1 - (self.r_b / self.r_int * sin(pi / self.n)) ** 2)
+
+    def totalSurfaceArea(self):
+
+        return self.length * 2 * self.n * self.r_b * ( ((self.r_int / self.r_b) ** 2 - sin(pi / self.n) ** 2)**0.5 + sin(pi / self.n) - cos(pi / self.n))
+
+    def regress(self, ox_flow, dt):
+
+        self.r_int += self.regressionModel.computeRegressionRate(self, ox_flow) * dt
+        self.r_b += self.regressionModel.computeRegressionRate(self, ox_flow) * dt
+
+
+    def min_bloc_thickness(self):
+
+        return self.r_ext - self.r_int
+
+    def draw_geometry(self):
+
+        p1_0 = [self.r_b / 2 * sin(pi / self.n), self.r_b * cos(pi / self.n)]
+        p2_0 = [- self.r_b / 2 * sin(pi / self.n), - self.r_b * cos(pi / self.n)]
+        p3_0 = [0, - self.r_int]
+
+        for i in range(0, self.n):
+            rotation_angle = pi / self.n * i
+            draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle)
+
+        # Ajust axis and show
+        plt.axis("scaled")
+        plt.show()
+
+
+    def get_fuel_mass(self, fuel_density):
+
+        return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n) )
+
+
 class SinglePortImageGeometry(Geometry):
 
     def __init__(self, L, externalRadius, regressionModel, imagePixelSize, imageMeterSize):
@@ -681,3 +887,40 @@ class SinglePortImageGeometry(Geometry):
         else:
             raise ValueError("Image is black : please generate geometry")
 
+    def draw_geometry(self):
+
+        plt.imshow(self.image, cmap='gray')
+
+    def generatePolynom(self, polynom, baseRadius, n):
+
+        polynom[-1] = 0 # Make sure there is no term of order 0 in polynom
+        pixelBaseRadius = floor( radius / self.getMetersPerPixel() ) # Get the base radius in pixels
+
+        # Build the polygon
+
+        points = [ [self.imagePixelSize//2, self.imagePixelSize//2 + pixelBaseRadius] ]
+
+        for k in range(1, n):
+
+            modifier = 1 + np.polyval(polynom, k/n)
+            points.append( [ [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi * k / 2 / n) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * k / 2 / n) * modifier]])
+
+        for k in range(1, n):
+
+            modifier = 1 + np.polyval(polynom, k/n)
+            points.append( [ [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(0.5 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (0.5 + k / 2 / n)) * modifier]])
+
+        for k in range(1, n):
+
+            modifier = 1 + np.polyval(polynom, k/n)
+            points.append( [ [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(1 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (1 + k / 2 / n)) * modifier]])
+
+        for k in range(1, n):
+
+            modifier = 1 + np.polyval(polynom, k/n)
+            points.append( [ [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(1.5 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (1.5 + k / 2 / n)) * modifier]])
+
+
+        # Draw the shape
+
+        cv2.fillPoly(self.image, np.floor(np.int32([points])), 1, 255)
