@@ -142,13 +142,13 @@ def test_onera_physical_test_2():
     # ------------ Define parameters:
 
     geometric_params = {'L': 0.157,
-                        'rintInitial': 14.9e-3 / 2,
+                        'rintInitial': 14e-3 / 2,
                         'rext0': 82e-3 / 2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-    simulation_params = {'ox_flow': 0.07, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 5}
+    simulation_params = {'ox_flow': 0.061, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 5}
 
     # ------------- Generate objects:
 
@@ -187,13 +187,13 @@ def test_onera_physical_test_3():
     # ------------ Define parameters:
 
     geometric_params = {'L': 0.157,
-                        'rintInitial': 12.19e-3 / 2,
+                        'rintInitial': 11.5e-3 / 2,
                         'rext0': 82e-3 / 2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-    simulation_params = {'ox_flow': 0.07, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 7}
+    simulation_params = {'ox_flow': 0.063, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 7}
 
     # ------------- Generate objects:
 
@@ -264,16 +264,67 @@ def test_onera_three_port_geometry():
         combustion_obj.plot_results()
 
 
+def test_onera_star_geometry():
+    """ Study the potential evolution of the geometry associated to a Star Geometry
+        to be performed at ONERA. The characteristics of the Test are:
+        1. Star Geometry
+        2. Go range: TBD kg/m^2/sec
+        3. ox flow: same
+        4. Chamber pressure: 36 bar, closest possible to the target pressure of Griffon.
+    """
+
+    # ------------ Generate the data layer:
+
+    json_interpreter = generate_data_layer()  # Use same data-layer used for Griffon (same pressure)
+    combustion_table = json_interpreter.return_combustion_table()
+
+    # ------------ Define parameters:
+
+    geometric_params = {'L': 0.157,
+                        'rint0': 0.005,
+                        'rext0': 0.041,
+                        'rb0' : 0.005,
+                        'n0': 6,
+                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+
+    nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
+
+    simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 5}
+
+    # ------------- Generate objects:
+
+    geometry_obj = Geom.NBranchStarPort(**geometric_params)
+    nozzle_obj = Noz.Nozzle(**nozzle_params)
+    json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
+
+    # Instantiate the combustion module
+    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+                                      geometry_object=geometry_obj,
+                                      nozzle_object=nozzle_obj)
+
+    # -------------- Run simulation & Plot:
+
+
+    combustion_obj.run_simulation_constant_fuel_sliver(**simulation_params)
+
+    # Print the module
+    print(combustion_obj)
+
+    # Plot the results
+    combustion_obj.plot_results()
+
+
 # ---------------------------- MAIN  ---------------------------------
 
 if __name__ == '__main__':
 
     plt.close()
     # Call on desired test method
-    # test_onera_physical_test_1()
-    # test_onera_physical_test_1_2()
-    # test_onera_physical_test_2()
-    #test_onera_physical_test_3()
-    test_onera_three_port_geometry()
+    #test_onera_physical_test_1()
+    #test_onera_physical_test_1_2()
+    #test_onera_physical_test_2()
+    test_onera_physical_test_3()
+    #test_onera_three_port_geometry()
+    #test_onera_star_geometry()
     # Show any plots
     plt.show()

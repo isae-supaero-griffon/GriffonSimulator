@@ -7,6 +7,8 @@
 from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
 import math as m
+import numpy as np
+import cv2
 
 # ------------------------ FUNCTION DEFINITIONS -----------------
 
@@ -51,6 +53,20 @@ def draw_circular_port(ax, center, port):
 
     # Plot the combustion port
     ax.add_patch(plt.Circle(center, radius=port.r_int * 1000, color='w'))
+
+
+def draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle):
+
+    rot = [[m.cos(rotation_angle), - m.sin(rotation_angle)],
+           [m.sin(rotation_angle), m.cos(rotation_angle)]]
+
+    p1 = p1_0 * rot
+    p2 = p2_0 * rot
+    p3 = p3_0 * rot
+
+    # Plot the combustion port
+    plt.plot(p1, p3, 'w-', lw=2)
+    plt.plot(p2, p3, 'w - ', lw=2)
 
 
 # -------------------------- CLASS DEFINITIONS ------------------
@@ -501,7 +517,7 @@ class NBranchStarPort(Geometry):
 
     # Abstract methods implementation
 
-    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+    def compute_fuel_rate(self, rho, ox_flow):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
@@ -514,11 +530,11 @@ class NBranchStarPort(Geometry):
 
     def totalCrossSectionArea(self):
 
-        return 2 * self.n * self.r_b * self.r_int * sin(pi / self.n)
+        return 2 * self.n * self.r_b * self.r_int * m.sin(m.pi / self.n)
 
     def totalSurfaceArea(self):
 
-        return self.length * 2 * self.n * sqrt( (self.r_int - self.r_b * cos(pi / self.n)) ** 2 + (self.r_b * sin(pi / self.n)) ** 2)
+        return self.length * 2 * self.n * m.sqrt( (self.r_int - self.r_b *  m.cos(m.pi / self.n)) ** 2 + (self.r_b * m.sin(m.pi / self.n)) ** 2)
 
     def regress(self, ox_flow, dt):
 
@@ -532,12 +548,12 @@ class NBranchStarPort(Geometry):
 
     def draw_geometry(self):
 
-        p1_0 = [self.r_b / 2 * sin(pi / self.n), self.r_b * cos(pi / self.n)]
-        p2_0 = [- self.r_b / 2 * sin(pi / self.n), - self.r_b * cos(pi / self.n)]
+        p1_0 = [self.r_b / 2 * m.sin(m.pi / self.n), self.r_b * m.cos(m.pi / self.n)]
+        p2_0 = [- self.r_b / 2 * m.sin(m.pi / self.n), - self.r_b * m.cos(m.pi / self.n)]
         p3_0 = [0, - self.r_int]
 
         for i in range(0, self.n):
-            rotation_angle = pi / self.n * i
+            rotation_angle = m.pi / self.n * i
             draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle)
 
         # Ajust axis and show
@@ -548,6 +564,10 @@ class NBranchStarPort(Geometry):
     def get_fuel_mass(self, fuel_density):
 
         return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n))
+
+    def return_external_radius(self):
+
+        return self.r_ext
 
 
 class NBranchRectangleStarPort(Geometry):
@@ -562,7 +582,7 @@ class NBranchRectangleStarPort(Geometry):
     n : number of branches of the star geometry
     """
 
-    def __init__(self, regressionModel L, rint0, rext0, rb0, n0):
+    def __init__(self, regressionModel, L, rint0, rext0, rb0, n0):
         """
         class initializer
         """
@@ -653,122 +673,7 @@ class NBranchRectangleStarPort(Geometry):
         return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n) )
 
 
-class SinglePortImageGeometry(Geometry):
 
-    def __init__(self, L, externalRadius, regressionModel, imagePixelSize, imageMeterSize):
-        """
-        class initializer
-        """
-
-        super().__init__(L, 1, regressionModel)
-
-        self.externalRadius = externalRadius
-        self.imagePixelSize = imagePixelSize
-        self.imageMeterSize = imageMeterSize
-        self.image = np.zeros((imagePixelSize, imagePixelSize, 1), np.uint8)
-        self.portGeometryIsGenerated = False
-        self.stepPixelRegression = 5
-
-        # kernel is tailored for 5 pixels/step regression
-        size = 12
-        R = size // 2
-        print("R = ", R)
-        kernel = np.zeros((size, size))
-        for i in range(size):
-            for j in range(size):
-                x = i - R
-                y = j - R
-                r = m.sqrt(x ** 2 + y ** 2)
-                kernel[i, j] = max(1 - m.sqrt(r / R), 0)
-
-        self.kernel = kernel
-
-    def getMetersPerPixel(self):
-
-        return self.imageMeterSize / self.imagePixelSize
-
-    def totalCrossSectionArea(self):
-
-        if (self.portGeometryIsGenerated):
-
-            contours, hierarchy = cv2.findContours(self.image, 1, 2)
-            cnt = contours[0]
-            return cv2.contourArea(cnt)
-
-        else:
-            raise ValueError("Image is black : please generate geometry")
-
-    def totalSurfaceArea(self):
-
-        if (self.portGeometryIsGenerated):
-
-            contours, hierarchy = cv2.findContours(self.image, 1, 2)
-            cnt = contours[0]
-            perimeter = cv2.arcLength(cnt, True)
-
-            return perimeter * 2 * m.pi() * self.get_length()
-
-        else:
-            raise ValueError("Image is black : please generate geometry")
-
-
-    def compute_fuel_rate(self, rho, ox_flow):
-        """
-        Return the instantaneous fuel mass flow rate for the geometry
-        :param rho: fuel density
-        """
-        regressionRate = self.regressionModel.computeRegressionRate(self, ox_flow)
-
-        return rho * regressionRate * self.totalSurfaceArea()
-
-    def regress(self, ox_flow, dt):
-        """
-        Apply regression to the geometry
-        :param ox_flow: instantaneous oxidizer flow
-        :param dt: time increment, ignored
-        """
-        # A 5 pixel radial regression is applied,
-        # regardless of dt
-
-        if (self.portGeometryIsGenerated):
-
-            blurred = cv2.filter2D(self.image, -1, self.kernel)
-            ret, self.image = cv2.threshold(blurred, 30, 255, cv2.THRESH_BINARY)
-
-        else:
-            raise ValueError("Image is black : please generate geometry")
-
-    def get_fuel_mass(self, fuel_density):
-        """
-        Return the initial fuel mass based on fuel_density
-        :param fuel_density: density of the fuel [kg/m^3]
-        """
-        volume = self.get_length() * (m.pi * (self.externalRadius**2) - self.totalCrossSectionArea())
-        return fuel_density * volume
-
-    def return_external_radius(self):
-        """
-        Return external radius of the geometry
-        :return: external radius of the geometry
-        """
-        return self.externalRadius
-
-    def min_bloc_thickness(self):
-        """
-        Return the smallest fuel space between ports or fuel edge.
-        Useful for setting an eburn termination safety margin.
-        """
-
-        if (self.portGeometryIsGenerated):
-
-            contours, hierarchy = cv2.findContours(self.image, 1, 2)
-            cnt = contours[0]
-            (x, y), radius = cv2.minEnclosingCircle(cnt)
-
-            return self.externalRadius - radius
-
-        else:
-            raise ValueError("Image is black : please generate geometry")
 
 class SinglePortImageGeometry(Geometry):
 
@@ -782,7 +687,7 @@ class SinglePortImageGeometry(Geometry):
         self.externalRadius = externalRadius
         self.imagePixelSize = imagePixelSize
         self.imageMeterSize = imageMeterSize
-        self.image = np.zeros((imagePixelSize, imagePixelSize, 1), np.uint8)
+        self.image = img = np.zeros((4096,4096), np.uint8)
         self.portGeometryIsGenerated = False
         self.stepPixelRegression = 5
 
@@ -890,11 +795,12 @@ class SinglePortImageGeometry(Geometry):
     def draw_geometry(self):
 
         plt.imshow(self.image, cmap='gray')
+        plt.show()
 
     def generatePolynom(self, polynom, baseRadius, n):
 
         polynom[-1] = 0 # Make sure there is no term of order 0 in polynom
-        pixelBaseRadius = floor( radius / self.getMetersPerPixel() ) # Get the base radius in pixels
+        pixelBaseRadius = m.floor( baseRadius / self.getMetersPerPixel() ) # Get the base radius in pixels
 
         # Build the polygon
 
@@ -903,24 +809,26 @@ class SinglePortImageGeometry(Geometry):
         for k in range(1, n):
 
             modifier = 1 + np.polyval(polynom, k/n)
-            points.append( [ [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi * k / 2 / n) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * k / 2 / n) * modifier]])
+            points.append( [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi * k / 2 / n) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * k / 2 / n) * modifier])
 
         for k in range(1, n):
 
             modifier = 1 + np.polyval(polynom, k/n)
-            points.append( [ [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(0.5 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (0.5 + k / 2 / n)) * modifier]])
+            points.append( [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(0.5 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (0.5 + k / 2 / n)) * modifier])
 
         for k in range(1, n):
 
             modifier = 1 + np.polyval(polynom, k/n)
-            points.append( [ [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(1 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (1 + k / 2 / n)) * modifier]])
+            points.append( [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(1 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (1 + k / 2 / n)) * modifier])
 
         for k in range(1, n):
 
             modifier = 1 + np.polyval(polynom, k/n)
-            points.append( [ [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(1.5 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (1.5 + k / 2 / n)) * modifier]])
+            points.append( [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(1.5 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (1.5 + k / 2 / n)) * modifier])
 
+        points = np.floor(np.array(points))
+        print(points)
 
         # Draw the shape
 
-        cv2.fillPoly(self.image, np.floor(np.int32([points])), 1, 255)
+        cv2.fillPoly(self.image, np.int32([points]), 1, 255)
