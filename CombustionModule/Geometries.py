@@ -687,7 +687,7 @@ class SinglePortImageGeometry(Geometry):
         self.externalRadius = externalRadius
         self.imagePixelSize = imagePixelSize
         self.imageMeterSize = imageMeterSize
-        self.image = img = np.zeros((4096,4096), np.uint8)
+        self.image = img = np.zeros((imagePixelSize,imagePixelSize), np.uint8)
         self.portGeometryIsGenerated = False
         self.stepPixelRegression = 5
 
@@ -713,9 +713,11 @@ class SinglePortImageGeometry(Geometry):
 
         if (self.portGeometryIsGenerated):
 
-            contours, hierarchy = cv2.findContours(self.image, 1, 2)
+            proxy_image = self.image
+
+            contours, hierarchy = cv2.findContours(proxy_image, 1, 2)
             cnt = contours[0]
-            return cv2.contourArea(cnt)
+            return cv2.contourArea(cnt) * (self.getMetersPerPixel() **2)
 
         else:
             raise ValueError("Image is black : please generate geometry")
@@ -724,11 +726,13 @@ class SinglePortImageGeometry(Geometry):
 
         if (self.portGeometryIsGenerated):
 
-            contours, hierarchy = cv2.findContours(self.image, 1, 2)
-            cnt = contours[0]
-            perimeter = cv2.arcLength(cnt, True)
+            proxy_image = self.image
 
-            return perimeter * 2 * m.pi() * self.get_length()
+            contours, hierarchy = cv2.findContours(proxy_image, 1, 2)
+            cnt = contours[0]
+            perimeter = cv2.arcLength(cnt, True) * self.getMetersPerPixel()
+
+            return perimeter * 2 * m.pi * self.get_length()
 
         else:
             raise ValueError("Image is black : please generate geometry")
@@ -746,7 +750,7 @@ class SinglePortImageGeometry(Geometry):
     def regress(self, ox_flow, dt):
         """
         Apply regression to the geometry
-        :param ox_flow: instantaneous oxidizer flow
+        :param ox_flow: instantaneous oxidizer flow, ignored
         :param dt: time increment, ignored
         """
         # A 5 pixel radial regression is applied,
@@ -754,8 +758,8 @@ class SinglePortImageGeometry(Geometry):
 
         if (self.portGeometryIsGenerated):
 
-            blurred = cv2.filter2D(self.image, -1, self.kernel)
-            ret, self.image = cv2.threshold(blurred, 30, 255, cv2.THRESH_BINARY)
+            self.image = cv2.filter2D(self.image, -1, self.kernel)
+            ret, self.image = cv2.threshold(self.image, 20, 255, cv2.THRESH_BINARY)
 
         else:
             raise ValueError("Image is black : please generate geometry")
@@ -783,11 +787,12 @@ class SinglePortImageGeometry(Geometry):
 
         if (self.portGeometryIsGenerated):
 
-            contours, hierarchy = cv2.findContours(self.image, 1, 2)
+            proxy_image = self.image
+            contours, hierarchy = cv2.findContours(proxy_image, 1, 2)
             cnt = contours[0]
             (x, y), radius = cv2.minEnclosingCircle(cnt)
 
-            return self.externalRadius - radius
+            return self.externalRadius - radius*self.getMetersPerPixel()
 
         else:
             raise ValueError("Image is black : please generate geometry")
@@ -830,5 +835,7 @@ class SinglePortImageGeometry(Geometry):
         print(points)
 
         # Draw the shape
-
         cv2.fillPoly(self.image, np.int32([points]), 1, 255)
+
+        # Indicate that a shape has been generated
+        self.portGeometryIsGenerated = True

@@ -143,9 +143,9 @@ class CombustionObject:
 
         self.results["magnitudes"] = {key: nanmean(value) for key, value in self.results["run_values"].items()
                                       if key != "time"}
-        self.results["magnitudes"]["impulse"] = trapz(self.results["run_values"]["thrust"],
-                                                      self.results["run_values"]["time"],
-                                                      dt)
+        self.results["magnitudes"]["impulse"] = nan if dt==0 else trapz(self.results["run_values"]["thrust"],
+                                                                        self.results["run_values"]["time"],
+                                                                        dt)
 
         self.results["magnitudes"]["burn_time"] = self.results["run_values"]["time"][-1]
 
@@ -239,8 +239,7 @@ class CombustionObject:
                 self.results["run_values"]["radius"].append(self.geometry.get_port_radius())
 
                 # Compute regression rate
-                delta_r = self.results["run_values"]["radius"][k] - self.results["run_values"]["radius"][k - 1]
-                self.results["run_values"]["regression_rate"].append(delta_r / dt)
+                self.results["run_values"]["regression_rate"].append(geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow))
             else:
                 # Append a 0 if there it is not a OneCircularPort geometry
                 self.results["run_values"]["radius"].append(nan)
@@ -264,6 +263,130 @@ class CombustionObject:
 
         # Post-process the data
         self.post_process_data(dt=dt)
+
+    def run_simulation_constant_fuel_sliver_image_geometry(self, ox_flow, safety_thickness, max_burn_time=None):
+        """
+        Simulate the hybrid rocket burn.
+        Every value is expressed in ISU unless specified otherwise. Simulation is only valid for normal ground
+        atmosphere conditions (1 bar, 293 K).
+        :param ox_flow: value of input oxidizer flow
+        :param safety_thickness: minimum allowed thickness for fuel slivers, which conditions burn termination
+        :param max_burn_time: maximum burn time (if inputted)
+        :return: TBD
+        """
+
+        # Check the inputs
+        assert ox_flow > 0, "Oxidizer flow not greater than 0, check your inputs to CombustionModule. \n"
+        assert safety_thickness > 0, "Safety thickness not greater than 0, check your inputs to CombustionModule. \n"
+
+        # Call for workspace definition methods
+        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure = self.unpack_data_dictionary()
+
+        # -------------------- Initialize simulation_variables if required -------------
+
+        # regression_rate, fuel_flow, total_mass_flow, OF, T_chambre, gamma, masse_molaire_gaz, c_star = \
+        #     self.initialize_variables()
+
+        pression_chambre = initial_chamber_pressure
+
+        # ---------------------------- MAIN SIMULATION LOOP -----------------------------
+
+        # Set the flag for the maximum burn-time
+        flag_burn = True
+        time = 0
+
+        # Get the thickness equivalent to 5 pixels
+        dr = self.geometry.getMetersPerPixel() * 5
+
+        k = 0
+
+        while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
+
+            print(self.geometry.min_bloc_thickness())
+
+            # Regression rate and mass flow calculations
+            fuel_flow = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
+            total_mass_flow = ox_flow + fuel_flow
+            of_ratio = ox_flow / fuel_flow
+            Go = ox_flow / self.geometry.totalCrossSectionArea()
+            dt = dr / self.geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow)
+
+            # Data extraction using the interpolator and OF ratio from already defined variables
+            # Check lookup_from_cea method which variables have been chosen
+
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel = self.lookup_from_cea(desired_of_ratio=of_ratio)
+            r = R / gas_molar_mass  # Specific gaz constant
+
+            # Calculate chamber conditions and motor performance
+            # Chamber pressure is not recalculated as it is assumed constant
+
+            mach_exit = iso.exit_mach_via_expansion(gamma=gamma, expansion=self.nozzle.get_expansion_ratio(),
+                                                    supersonic=True)
+            exit_pressure = pression_chambre / iso.pressure_ratio(gamma, mach_exit)
+            t_exit = t_chamber / iso.temperature_ratio(gamma, mach_exit)
+            v_exit = math.sqrt(gamma * r * t_exit) * mach_exit
+
+            thrust = self.nozzle.get_nozzle_effeciency() * (total_mass_flow*v_exit + (exit_pressure-pression_atmo) *
+                                                            self.nozzle.get_exit_area())
+
+            # Calculate the nozzle equation validation
+            nozzle_p = total_mass_flow * cea_c_star / (self.nozzle.get_throat_area() * initial_chamber_pressure)
+            #print(nozzle_p)
+
+            isp = thrust / total_mass_flow / g0
+
+            # Results updates
+            self.results['run_values']['time'].append(time)
+            self.results["run_values"]["thrust"].append(thrust)
+            self.results["run_values"]["isp"].append(isp)
+            self.results["run_values"]["pressure"].append(pression_chambre)
+            self.results["run_values"]["temperature"].append(t_chamber)
+            self.results["run_values"]["of"].append(of_ratio)
+            self.results["run_values"]["Go"].append(Go)
+            self.results["run_values"]["nozzle_param"].append(nozzle_p)
+            self.results["run_values"]["c_star"].append(cea_c_star)
+            self.results["run_values"]["chamber_sound_speed"].append(son_vel)
+
+            # Verify it is a single port_number before updating the port number
+            if isinstance(self.geometry, (OneCircularPort,
+                                          ThreeCircularPorts,
+                                          MultipleCircularPortsWithCircularCenter)):
+                self.results["run_values"]["radius"].append(self.geometry.get_port_radius())
+
+                # Compute regression rate
+                self.results["run_values"]["regression_rate"].append(dr / dt)
+            else:
+                # Append a 0 if there it is not a OneCircularPort geometry
+                self.results["run_values"]["radius"].append(nan)
+                self.results["run_values"]["regression_rate"].append(nan)
+
+            # Update the geometry and nozzle
+            self.geometry.regress(ox_flow=ox_flow, dt=dt)
+            self.nozzle.erode(dt)
+
+
+            # Update the flag for burn-time
+            if max_burn_time:
+                flag_burn = time <= max_burn_time
+
+            # Increment time
+            time += dt
+
+            if (k%10 == 0):
+
+                self.geometry.draw_geometry()
+
+            k +=1
+
+        self.geometry.draw_geometry()
+
+        # ------------------------ POST-PROCESS ------------------------
+
+        # Convert to numpy arrays
+        self.results['run_values'] = {key: asarray(value) for key, value in self.results["run_values"].items()}
+
+        # Post-process the data
+        self.post_process_data(dt=0)
 
     def plot_results(self):
         """

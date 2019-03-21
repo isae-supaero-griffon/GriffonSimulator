@@ -77,6 +77,58 @@ def test_combustion():
     combustion_obj.plot_results()
 
 
+def test_combustion_image_geometry():
+    """ perform the test over the combustion module """
+
+    # ------------ Generate Data Layer:
+
+    json_interpreter = generate_data_layer()
+    combustion_table = json_interpreter.return_combustion_table()
+
+    # ------------ Define parameters:
+
+    geometric_params = {'L': 0.5,
+                        'externalRadius': 0.1,
+                        'imagePixelSize': 2048,
+                        'imageMeterSize': 0.2,
+                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+
+    shape_params = {'polynom': [-.4, .8, .3, -.3, .2, -.3],
+                    'baseRadius': 0.01,
+                    'n': 10}
+
+    nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
+
+    design_params = {'gamma': 1.27, 'p_chamber': 4000000, 'p_exit': 100000,
+                     'c_star': 1500, 'ox_flow': 6, 'OF': 5}
+
+    simulation_params = {'ox_flow': 6, 'safety_thickness': 0.005}
+
+    # ------------- Generate objects:
+
+    geometry_obj = Geom.SinglePortImageGeometry(**geometric_params)
+    geometry_obj.generatePolynom(**shape_params)
+    #geometry_obj.draw_geometry()
+    nozzle_obj = Noz.Nozzle(**nozzle_params)
+    nozzle_obj.set_design(**design_params)
+    json_interpreter = generate_data_layer()
+
+    # Instantiate the combustion module
+    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+                                      geometry_object=geometry_obj,
+                                      nozzle_object=nozzle_obj)
+
+    # -------------- Run simulation & Plot:
+
+    combustion_obj.run_simulation_constant_fuel_sliver_image_geometry(**simulation_params)
+
+    # Print the module
+    print(combustion_obj)
+
+    # Plot the results
+    combustion_obj.plot_results()
+
+
 def test_combustion_three_port_geometry():
     """ perform the test over the combustion module """
 
@@ -278,6 +330,7 @@ if __name__ == '__main__':
     # test_mass_simulator()
     # test_trajectory()
     # test_combustion_onera_data()
-    test_onera_physical_test_2()
+    #test_onera_physical_test_2()
+    test_combustion_image_geometry()
     # Show any plots
     plt.show()
