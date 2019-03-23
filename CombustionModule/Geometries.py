@@ -48,6 +48,22 @@ def compute_regression_rate(geometry, ox_flow, max_regression_rate, a, n, m):
 
     return regression_rate
 
+def evaluate_fourier(a, b, x):
+
+    assert(0 <= x <= 1)
+
+    sum = 0
+
+    for k in range(len(a)):
+
+        sum += a[k] * m.cos(x * (k+1) * 2 * m.pi)
+
+    for k in range(len(b)):
+
+        sum += b[k] * m.sin(x * (k+1) * 2 * m.pi)
+
+    return sum
+
 
 def draw_circular_port(ax, center, port):
 
@@ -715,9 +731,7 @@ class SinglePortImageGeometry(Geometry):
 
             proxy_image = self.image
 
-            contours, hierarchy = cv2.findContours(proxy_image, 1, 2)
-            cnt = contours[0]
-            return cv2.contourArea(cnt) * (self.getMetersPerPixel() **2)
+            return cv2.countNonZero(self.image) * (self.getMetersPerPixel() **2)
 
         else:
             raise ValueError("Image is black : please generate geometry")
@@ -730,6 +744,7 @@ class SinglePortImageGeometry(Geometry):
 
             contours, hierarchy = cv2.findContours(proxy_image, 1, 2)
             cnt = contours[0]
+
             perimeter = cv2.arcLength(cnt, True) * self.getMetersPerPixel()
 
             return perimeter * 2 * m.pi * self.get_length()
@@ -802,7 +817,7 @@ class SinglePortImageGeometry(Geometry):
         plt.imshow(self.image, cmap='gray')
         plt.show()
 
-    def generatePolynom(self, polynom, baseRadius, n):
+    def generatePolynom(self, polynom, baseRadius, branches, n):
 
         polynom[-1] = 0 # Make sure there is no term of order 0 in polynom
         pixelBaseRadius = m.floor( baseRadius / self.getMetersPerPixel() ) # Get the base radius in pixels
@@ -811,28 +826,40 @@ class SinglePortImageGeometry(Geometry):
 
         points = [ [self.imagePixelSize//2, self.imagePixelSize//2 + pixelBaseRadius] ]
 
-        for k in range(1, n):
+        for i in range(branches):
 
-            modifier = 1 + np.polyval(polynom, k/n)
-            points.append( [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi * k / 2 / n) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * k / 2 / n) * modifier])
-
-        for k in range(1, n):
-
-            modifier = 1 + np.polyval(polynom, k/n)
-            points.append( [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(0.5 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (0.5 + k / 2 / n)) * modifier])
-
-        for k in range(1, n):
-
-            modifier = 1 + np.polyval(polynom, k/n)
-            points.append( [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(1 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (1 + k / 2 / n)) * modifier])
-
-        for k in range(1, n):
-
-            modifier = 1 + np.polyval(polynom, k/n)
-            points.append( [self.imagePixelSize//2 + pixelBaseRadius * m.sin(m.pi *(1.5 + k / 2 / n)) * modifier, self.imagePixelSize//2 + pixelBaseRadius * m.cos(m.pi * (1.5 + k / 2 / n)) * modifier])
+            for k in range(n+1):
+                modifier = 1 + np.polyval(polynom, k / n)
+                points.append([self.imagePixelSize // 2 + pixelBaseRadius * m.sin(2*m.pi/branches *(i + k/n)) * modifier,
+                               self.imagePixelSize // 2 + pixelBaseRadius * m.cos(2*m.pi/branches *(i + k/n)) * modifier])
 
         points = np.floor(np.array(points))
-        print(points)
+
+        # Draw the shape
+        cv2.fillPoly(self.image, np.int32([points]), 1, 255)
+
+        # Indicate that a shape has been generated
+        self.portGeometryIsGenerated = True
+
+
+    def generateFourier(self, a, b, baseRadius, branches, impact, n):
+
+        pixelBaseRadius = m.floor(baseRadius / self.getMetersPerPixel())  # Get the base radius in pixels
+
+        # Build the polygon
+
+        points = []
+
+        points = []
+
+        for i in range(branches):
+
+            for k in range(n):
+                modifier = 1 + impact * evaluate_fourier(a, b, k / n)
+                points.append([self.imagePixelSize // 2 + pixelBaseRadius * m.sin(2*m.pi/branches *(i + k/n)) * modifier,
+                               self.imagePixelSize // 2 + pixelBaseRadius * m.cos(2*m.pi/branches *(i + k/n)) * modifier])
+
+        points = np.floor(np.array(points))
 
         # Draw the shape
         cv2.fillPoly(self.image, np.int32([points]), 1, 255)

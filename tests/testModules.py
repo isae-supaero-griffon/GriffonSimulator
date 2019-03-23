@@ -93,9 +93,12 @@ def test_combustion_image_geometry():
                         'imageMeterSize': 0.2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
-    shape_params = {'polynom': [-.4, .8, .3, -.3, .2, -.3],
-                    'baseRadius': 0.01,
-                    'n': 10}
+    shape_params = {'a': [-.4, .8, .3, 0.3, -0.1],
+                    'b': [0, -.3, .1, 0, -0.3],
+                    'baseRadius': 0.05,
+                    'branches': 5,
+                    'impact': 0.2,
+                    'n': 20}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -107,7 +110,7 @@ def test_combustion_image_geometry():
     # ------------- Generate objects:
 
     geometry_obj = Geom.SinglePortImageGeometry(**geometric_params)
-    geometry_obj.generatePolynom(**shape_params)
+    geometry_obj.generateFourier(**shape_params)
     #geometry_obj.draw_geometry()
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     nozzle_obj.set_design(**design_params)
