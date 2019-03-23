@@ -7,12 +7,15 @@
 # --------------------------- IMPORT MODULES ---------------------------
 
 from DataLayer.JsonInterpreter import JsonInterpreter           # Import the json interpreter
+from tests.testModules import generate_data_layer
 import CombustionModule.RegressionModel as Reg                  # Import the RegressionModel module
 import CombustionModule.Geometries as Geom                      # Import the Geometry module
 import CombustionModule.Nozzle as Noz                           # Import the Nozzle module
 from CombustionModule.Combustion import CombustionObject        # Import the CombustionObject
 
 # ------------------------ FUNCTION DEFINITIONS ------------------------
+
+
 
 def test_combustion_image_geometry(polynom, baseRadius, branches, ox_flow):
     """ perform the test over the combustion module """
