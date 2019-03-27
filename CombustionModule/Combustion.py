@@ -300,6 +300,8 @@ class CombustionObject:
 
         k = 0
 
+        self.geometry.draw_geometry()
+
         while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
 
             # Regression rate and mass flow calculations
@@ -308,8 +310,9 @@ class CombustionObject:
             of_ratio = ox_flow / fuel_flow
             Go = ox_flow / self.geometry.totalCrossSectionArea()
             dt = dr / self.geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow)
-            print('Cross-sction:', self.geometry.totalCrossSectionArea())
+            #print('Cross-sction:', self.geometry.totalCrossSectionArea())
             print('Surface:', self.geometry.totalSurfaceArea())
+            #self.geometry.draw_geometry()
 
             # Data extraction using the interpolator and OF ratio from already defined variables
             # Check lookup_from_cea method which variables have been chosen

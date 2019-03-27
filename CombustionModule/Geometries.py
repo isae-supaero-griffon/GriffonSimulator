@@ -742,7 +742,7 @@ class SinglePortImageGeometry(Geometry):
 
             proxy_image = self.image
 
-            contours, hierarchy = cv2.findContours(proxy_image, 1, 2)
+            contours, hierarchy = cv2.findContours(proxy_image, 0, 2)
             cnt = contours[0]
 
             perimeter = cv2.arcLength(cnt, True) * self.getMetersPerPixel()

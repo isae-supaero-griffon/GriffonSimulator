@@ -48,7 +48,6 @@ def test_combustion_image_geometry(polynom, baseRadius, branches, ox_flow):
     geometry_obj.generatePolynom(**shape_params)
     #geometry_obj.draw_geometry()
     nozzle_obj = Noz.Nozzle(**nozzle_params)
-    nozzle_obj.set_design(**design_params)
     json_interpreter = generate_data_layer()
 
     # Instantiate the combustion module
@@ -69,3 +68,10 @@ def test_combustion_image_geometry(polynom, baseRadius, branches, ox_flow):
     mean_isp = mean_isp / combustion_obj.results['time'][-1]
 
     return mean_isp
+
+
+# ---------------------------- MAIN  ---------------------------------
+
+if __name__ == '__main__':
+
+    test_combustion_image_geometry([0.1,0.1,0.1], 0.02, 4, 1)

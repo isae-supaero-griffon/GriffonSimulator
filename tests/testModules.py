@@ -97,7 +97,7 @@ def test_combustion_image_geometry():
                     'b': [0, -.3, .1, 0, -0.3],
                     'baseRadius': 0.05,
                     'branches': 5,
-                    'impact': 0.2,
+                    'impact': 0.5,
                     'n': 20}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
