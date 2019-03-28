@@ -747,7 +747,7 @@ class SinglePortImageGeometry(Geometry):
 
             perimeter = cv2.arcLength(cnt, True) * self.getMetersPerPixel()
 
-            return perimeter * 2 * m.pi * self.get_length()
+            return perimeter * self.get_length()
 
         else:
             raise ValueError("Image is black : please generate geometry")

@@ -239,7 +239,7 @@ class CombustionObject:
                 self.results["run_values"]["radius"].append(self.geometry.get_port_radius())
 
                 # Compute regression rate
-                self.results["run_values"]["regression_rate"].append(geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow))
+                self.results["run_values"]["regression_rate"].append(self.geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow))
             else:
                 # Append a 0 if there it is not a OneCircularPort geometry
                 self.results["run_values"]["radius"].append(nan)
@@ -304,6 +304,8 @@ class CombustionObject:
 
         while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
 
+            print( self.geometry.totalSurfaceArea() / self.geometry.get_length() / 2 / math.pi)
+
             # Regression rate and mass flow calculations
             fuel_flow = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
             total_mass_flow = ox_flow + fuel_flow
@@ -311,7 +313,7 @@ class CombustionObject:
             Go = ox_flow / self.geometry.totalCrossSectionArea()
             dt = dr / self.geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow)
             #print('Cross-sction:', self.geometry.totalCrossSectionArea())
-            print('Surface:', self.geometry.totalSurfaceArea())
+            #print('Surface:', self.geometry.totalSurfaceArea())
             #self.geometry.draw_geometry()
 
             # Data extraction using the interpolator and OF ratio from already defined variables

@@ -50,9 +50,9 @@ def test_combustion():
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
     design_params = {'gamma': 1.27, 'p_chamber': 4000000, 'p_exit': 100000,
-                     'c_star': 1500, 'ox_flow': 6, 'OF': 5}
+                     'c_star': 1500, 'ox_flow': 2, 'OF': 5}
 
-    simulation_params = {'ox_flow': 6, 'safety_thickness': 0.005, 'dt': 0.05}
+    simulation_params = {'ox_flow': 2, 'safety_thickness': 0.005, 'dt': 0.05}
 
     # ------------- Generate objects:
 
@@ -93,19 +93,19 @@ def test_combustion_image_geometry():
                         'imageMeterSize': 0.2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
-    shape_params = {'a': [-.4, .8, .3, 0.3, -0.1],
-                    'b': [0, -.3, .1, 0, -0.3],
-                    'baseRadius': 0.05,
-                    'branches': 5,
-                    'impact': 0.5,
-                    'n': 20}
+    shape_params = {'a': [0],
+                    'b': [0],
+                    'baseRadius': 0.04,
+                    'branches': 10,
+                    'impact': 0.1,
+                    'n': 50}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
     design_params = {'gamma': 1.27, 'p_chamber': 4000000, 'p_exit': 100000,
-                     'c_star': 1500, 'ox_flow': 6, 'OF': 5}
+                     'c_star': 1500, 'ox_flow': 2, 'OF': 5}
 
-    simulation_params = {'ox_flow': 6, 'safety_thickness': 0.005}
+    simulation_params = {'ox_flow': 2, 'safety_thickness': 0.005}
 
     # ------------- Generate objects:
 
@@ -328,7 +328,7 @@ def test_trajectory():
 if __name__ == '__main__':
 
     # Call on test_combustion method
-    # test_combustion()
+    #test_combustion()
     # test_combustion_three_port_geometry()
     # test_mass_simulator()
     # test_trajectory()
