@@ -61,11 +61,11 @@ def test_combustion_image_geometry_polynom(polynom, baseRadius, branches, ox_flo
 
     mean_isp = 0
 
-    for k in range(1, len(combustion_obj.results['isp'])):
+    for k in range(1, len(combustion_obj.results["run_values"]['isp'])):
 
-        mean_isp += combustion_obj.results['isp'][k] * (combustion_obj.results['time'][k] - combustion_obj.results['time'][k-1])
+        mean_isp += combustion_obj.results["run_values"]['isp'][k] * (combustion_obj.results["run_values"]['time'][k] - combustion_obj.results["run_values"]['time'][k-1])
 
-    mean_isp = mean_isp / combustion_obj.results['time'][-1]
+    mean_isp = mean_isp / combustion_obj.results["run_values"]['time'][-1]
 
     return mean_isp
 
@@ -115,11 +115,11 @@ def test_combustion_image_geometry_fourier(a, b, baseRadius, branches, ox_flow):
 
     mean_isp = 0
 
-    for k in range(1, len(combustion_obj.results['isp'])):
+    for k in range(1, len(combustion_obj.results["run_values"]['isp'])):
 
-        mean_isp += combustion_obj.results['isp'][k] * (combustion_obj.results['time'][k] - combustion_obj.results['time'][k-1])
+        mean_isp += combustion_obj.results["run_values"]['isp'][k] * (combustion_obj.results["run_values"]['time'][k] - combustion_obj.results["run_values"]['time'][k-1])
 
-    mean_isp = mean_isp / combustion_obj.results['time'][-1]
+    mean_isp = mean_isp / combustion_obj.results["run_values"]['time'][-1]
 
     return mean_isp
 
