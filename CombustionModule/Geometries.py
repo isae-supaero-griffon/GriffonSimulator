@@ -39,7 +39,6 @@ def compute_regression_rate(geometry, ox_flow, a, n, m):
 
     return a * (geometry.length ** m) * (Go ** n)
 
-
 def draw_circular_port(ax, center, port):
 
     # Plot the combustion port
