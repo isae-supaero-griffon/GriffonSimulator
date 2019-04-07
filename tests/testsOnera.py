@@ -53,6 +53,7 @@ def test_onera_physical_test_1():
     geometric_params = {'L': 0.157,
                         'rintInitial': 0.02,
                         'rext0': 0.041,
+                        'rb0': 0.025,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
@@ -61,7 +62,7 @@ def test_onera_physical_test_1():
 
     # ------------- Generate objects:
 
-    geometry_obj = Geom.OneCircularPort(**geometric_params)
+    geometry_obj = Geom.NBranchRectangleStarPort(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
@@ -152,7 +153,7 @@ def test_onera_physical_test_2():
 
     # ------------- Generate objects:
 
-    geometry_obj = Geom.OneCircularPort(**geometric_params)
+    geometry_obj = Geom.NBranchRectangleStarPort(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
@@ -244,7 +245,7 @@ def test_onera_three_port_geometry():
 
         # ------------- Generate objects:
 
-        geometry_obj = Geom.OneCircularPort(**geometric_params)
+        geometry_obj = Geom.NBranchRectangleStarPort(**geometric_params)
         nozzle_obj = Noz.Nozzle(**nozzle_params)
         json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
 
@@ -280,16 +281,16 @@ def test_onera_star_geometry():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.157,
+    geometric_params = {'L': 0.130,
                         'rint0': 0.005,
                         'rext0': 0.041,
                         'rb0' : 0.005,
-                        'n0': 6,
+                        'n0': 4,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-    simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 5}
+    simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
 
     # ------------- Generate objects:
 

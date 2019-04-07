@@ -17,6 +17,9 @@ def cylinder_volume(length, radius):
 
     return length * m.pi * (radius**2)
 
+def n_star_volume(length, base_radius, int_radius, number_branches) :
+
+    return 2 * length * number_branches * base_radius * int_radius * sin (pi / number_branches)
 
 def compute_regression_rate(geometry, ox_flow, max_regression_rate, a, n, m):
     """
@@ -73,8 +76,8 @@ def draw_circular_port(ax, center, port):
 
 def draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle):
 
-    rot = [[m.cos(rotation_angle), - m.sin(rotation_angle)],
-           [m.sin(rotation_angle), m.cos(rotation_angle)]]
+    rot = [[cos(rotation_angle), - sin(rotation_angle)],
+           [sin(rotation_angle), cos(rotation_angle)]]
 
     p1 = p1_0 * rot
     p2 = p2_0 * rot
@@ -83,7 +86,6 @@ def draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle):
     # Plot the combustion port
     plt.plot(p1, p3, 'w-', lw=2)
     plt.plot(p2, p3, 'w - ', lw=2)
-
 
 # -------------------------- CLASS DEFINITIONS ------------------
 
@@ -471,19 +473,18 @@ class ThreeCircularPorts(Geometry):
         plt.show()
 
     def get_fuel_mass(self, fuel_density):
-
         return fuel_density * (cylinder_volume(self.length, self.get_total_outer_radius()) -
-                                3 * cylinder_volume(self.length, self.ports.initial_r))
+                               3 * cylinder_volume(self.length, self.ports.initial_r))
 
     def return_external_radius(self):
         return self.r_ext
-
 
 class NBranchStarPort(Geometry):
     """
     Implementation of the Geometry abstract class for a more simple, one centered
     N branches star.
     Total branches number must be between 3 and 8
+
     Additional attributes:
     r_b: base circonscrit circle radius
     r_int :  complete star circonscrit circle radius
@@ -491,7 +492,7 @@ class NBranchStarPort(Geometry):
     n : number of branches of the star geometry
     """
 
-    def __init__(self, regressionModel, L, rint0, rext0, rb0, n0):
+    def __init__(self, L, rint0, rext0, rb0, n0):
         """
         class initializer
         """
@@ -505,7 +506,7 @@ class NBranchStarPort(Geometry):
             raise ValueError("Geometry must have at most 8 branches")
 
 
-        super().__init__(L, 1, regressionModel)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        super().__init__(L, 1)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
         self.r_b = rb0
         self.r_ext = rext0
         self.r_int = rint0
@@ -533,7 +534,7 @@ class NBranchStarPort(Geometry):
 
     # Abstract methods implementation
 
-    def compute_fuel_rate(self, rho, ox_flow):
+    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
@@ -542,20 +543,20 @@ class NBranchStarPort(Geometry):
         :param m: classical regression rate exponent for fuel length(usually set to -0.2)
         """
 
-        return rho * self.regressionModel.computeRegressionRate(self, ox_flow) * self.totalSurfaceArea()
+        return rho * compute_regression_rate(self, ox_flow, a, n, m) * self.totalSurfaceArea()
 
     def totalCrossSectionArea(self):
 
-        return 2 * self.n * self.r_b * self.r_int * m.sin(m.pi / self.n)
+        return 2 * self.n * self.r_b * self.r_int * sin(pi / self.n)
 
     def totalSurfaceArea(self):
 
-        return self.length * 2 * self.n * m.sqrt( (self.r_int - self.r_b *  m.cos(m.pi / self.n)) ** 2 + (self.r_b * m.sin(m.pi / self.n)) ** 2)
+        return self.length * 2 * self.n * sqrt( (self.r_int - self.r_b * cos(pi / self.n)) ** 2 + (self.r_b * sin(pi / self.n)) ** 2)
 
-    def regress(self, ox_flow, dt):
+    def regress(self, ox_flow, a, n, m, dt):
 
-        self.r_int += self.regressionModel.computeRegressionRate(self, ox_flow) * dt
-        self.r_b += self.regressionModel.computeRegressionRate(self, ox_flow) * dt
+        self.r_int += compute_regression_rate(self, ox_flow, a, n, m) * dt
+        self.r_b += compute_regression_rate(self, ox_flow, a, n, m) * dt
 
 
     def min_bloc_thickness(self):
@@ -564,12 +565,12 @@ class NBranchStarPort(Geometry):
 
     def draw_geometry(self):
 
-        p1_0 = [self.r_b / 2 * m.sin(m.pi / self.n), self.r_b * m.cos(m.pi / self.n)]
-        p2_0 = [- self.r_b / 2 * m.sin(m.pi / self.n), - self.r_b * m.cos(m.pi / self.n)]
+        p1_0 = [self.r_b / 2 * sin(pi / self.n), self.r_b * cos(pi / self.n)]
+        p2_0 = [- self.r_b / 2 * sin(pi / self.n), - self.r_b * cos(pi / self.n)]
         p3_0 = [0, - self.r_int]
 
         for i in range(0, self.n):
-            rotation_angle = m.pi / self.n * i
+            rotation_angle = pi / self.n * i
             draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle)
 
         # Ajust axis and show
@@ -581,16 +582,13 @@ class NBranchStarPort(Geometry):
 
         return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n))
 
-    def return_external_radius(self):
-
-        return self.r_ext
-
 
 class NBranchRectangleStarPort(Geometry):
     """
     Implementation of the Geometry abstract class for a more simple, one centered
     N branches star with rectangular branches.
     Total branches number must be between 3 and 8
+
     Additional attributes:
     r_b: base circonscrit circle radius
     r_int :  complete star circonscrit circle radius
@@ -598,7 +596,7 @@ class NBranchRectangleStarPort(Geometry):
     n : number of branches of the star geometry
     """
 
-    def __init__(self, regressionModel, L, rint0, rext0, rb0, n0):
+    def __init__(self, L, rint0, rext0, rb0, n0):
         """
         class initializer
         """
@@ -612,7 +610,7 @@ class NBranchRectangleStarPort(Geometry):
             raise ValueError("Geometry must have at most 8 branches")
 
 
-        super().__init__(L, 1, regressionModel)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        super().__init__(L, 1)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
         self.r_b = rb0
         self.r_ext = rext0
         self.r_int = rint0
@@ -640,7 +638,7 @@ class NBranchRectangleStarPort(Geometry):
 
     # Abstract methods implementation
 
-    def compute_fuel_rate(self, rho, ox_flow):
+    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
@@ -649,7 +647,7 @@ class NBranchRectangleStarPort(Geometry):
         :param m: classical regression rate exponent for fuel length(usually set to -0.2)
         """
 
-        return rho * self.regressionModel.computeRegressionRate(self, ox_flow) * self.totalSurfaceArea()
+        return rho * compute_regression_rate(self, ox_flow, a, n, m) * self.totalSurfaceArea()
 
     def totalCrossSectionArea(self):
 
@@ -659,10 +657,10 @@ class NBranchRectangleStarPort(Geometry):
 
         return self.length * 2 * self.n * self.r_b * ( ((self.r_int / self.r_b) ** 2 - sin(pi / self.n) ** 2)**0.5 + sin(pi / self.n) - cos(pi / self.n))
 
-    def regress(self, ox_flow, dt):
+    def regress(self, ox_flow, a, n, m, dt):
 
-        self.r_int += self.regressionModel.computeRegressionRate(self, ox_flow) * dt
-        self.r_b += self.regressionModel.computeRegressionRate(self, ox_flow) * dt
+        self.r_int += compute_regression_rate(self, ox_flow, a, n, m) * dt
+        self.r_b += compute_regression_rate(self, ox_flow, a, n, m) * dt
 
 
     def min_bloc_thickness(self):
@@ -687,9 +685,6 @@ class NBranchRectangleStarPort(Geometry):
     def get_fuel_mass(self, fuel_density):
 
         return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n) )
-
-
-
 
 class SinglePortImageGeometry(Geometry):
 
