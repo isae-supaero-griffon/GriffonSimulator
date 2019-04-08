@@ -7,8 +7,7 @@
 
 from Initializer.Initializer import *                               # Import the Initializer object
 from IntegrationModule.SimulationObject import SimulationObject     # Import the SimulationObject
-import CombustionModule.RegressionModel as Reg                      # Import RegressionModel classes
-import matplotlib.pyplot as plt                                     # Import matplotlib
+
 
 # -------------------- FUNCTIONS DEFINITIONS ------------------
 
@@ -38,11 +37,8 @@ def test_simulation_initializer():
 
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': OneCircularPort,
-                                                            'L': 0.6,
-                                                            'rintInitial': 0.015,
-                                                            'rext0': 0.07,
-                                                            'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
+                                       'geometric_params': {'type': NBranchRectangleStarPort, 'L': 0.2, 'rint0': 0.03,
+                                                            'rext0': 0.05, 'rb0': 0.02, 'n0': 8},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
@@ -50,16 +46,16 @@ def test_simulation_initializer():
                                        'set_nozzle_design': True,
 
                                        'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
-                                                         'c_star': 1500, 'ox_flow': 1.0, 'OF': 5},
+                                                         'c_star': 1500, 'isp': 230, 'thrust': 30000},
                                       },
 
 
                       }
     simulation_parameters = {
-                              'combustion': {'ox_flow': 1.0, 'safety_thickness': 0.0025, 'dt': 0.05,
-                                             'max_burn_time': 5},
+                              'combustion': {'ox_flow': 1, 'safety_thickness': 0.005, 'dt': 0.05,
+                                             'max_burn_time': None},
 
-                              'mass_simulator': {'ox_flow': 1.0, 'burn_time': 'TBD', 'extra_filling': 0.05,
+                              'mass_simulator': {'ox_flow': 1, 'burn_time': 'TBD', 'extra_filling': 0.05,
                                                  'injection_loss': 0.5, 'area_injection': 0.000105},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
@@ -88,26 +84,23 @@ def test_simulation_initializer():
 
     # --------------- Export results to csv files:
 
-    # # data directory
-    # data_directory = "../data/data_tests"
-    #
-    # file_name_expression = "Griffon Output Test {number}.csv"
-    #
-    # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
-    #                                                                         file_name_expression]))
+    # data directory
+    data_directory = "../data/data_tests"
+
+    file_name_expression = "Griffon Output Test {number}.csv"
+
+    simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
+                                                                            file_name_expression]))
 
     # --------------- Plot the results
 
     simulation_object.results_collection.elements_list[0].combustion.plot_results()
     simulation_object.results_collection.elements_list[0].trajectory.plot_results()
 
-
 # ----------------------------- MAIN ------------------------------
+
 
 if __name__ == '__main__':
 
     # Call the test functions
     test_simulation_initializer()
-
-    # Show any plots
-    plt.show()
