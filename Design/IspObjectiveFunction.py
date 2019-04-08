@@ -61,6 +61,7 @@ def test_combustion_image_geometry_polynom(polynom, baseRadius, branches, ox_flo
 
     mean_isp = 0
 
+
     for k in range(1, len(combustion_obj.results["run_values"]['isp'])):
 
         mean_isp += combustion_obj.results["run_values"]['isp'][k] * (combustion_obj.results["run_values"]['time'][k] - combustion_obj.results["run_values"]['time'][k-1])
@@ -80,16 +81,17 @@ def test_combustion_image_geometry_fourier(a, b, baseRadius, branches, ox_flow):
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.23,
+    geometric_params = {'L': 0.13,
                         'externalRadius': 88.5 / 2000,
                         'imagePixelSize': 2048,
                         'imageMeterSize': 0.09,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
-    shape_params = {'a': polynom,
-                    'b': baseRadius,
+    shape_params = {'a': a,
+                    'b': b,
                     'impact' : 0.5,
                     'branches': branches,
+                    'baseRadius': baseRadius,
                     'n': 20}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
@@ -115,11 +117,13 @@ def test_combustion_image_geometry_fourier(a, b, baseRadius, branches, ox_flow):
 
     mean_isp = 0
 
-    for k in range(1, len(combustion_obj.results["run_values"]['isp'])):
+    if(len(combustion_obj.results["run_values"]['isp']) > 5):
 
-        mean_isp += combustion_obj.results["run_values"]['isp'][k] * (combustion_obj.results["run_values"]['time'][k] - combustion_obj.results["run_values"]['time'][k-1])
+        for k in range(1, len(combustion_obj.results["run_values"]['isp'])):
 
-    mean_isp = mean_isp / combustion_obj.results["run_values"]['time'][-1]
+            mean_isp += combustion_obj.results["run_values"]['isp'][k] * (combustion_obj.results["run_values"]['time'][k] - combustion_obj.results["run_values"]['time'][k-1])
+
+        mean_isp = mean_isp / combustion_obj.results["run_values"]['time'][-1]
 
     return mean_isp
 
@@ -131,7 +135,7 @@ def test_geom_validity(polynomn, baseRadius, branches):
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.23,
+    geometric_params = {'L': 0.13,
                         'externalRadius': 88.5 / 2000,
                         'imagePixelSize': 2048,
                         'imageMeterSize': 0.09,
@@ -153,4 +157,4 @@ def test_geom_validity(polynomn, baseRadius, branches):
 
 if __name__ == '__main__':
 
-    test_combustion_image_geometry([0.1,0.1,0.1], 0.02, 4, 1)
+    print(test_combustion_image_geometry_fourier([0.6145833333333334, 0.005208333333333333, -0.3333333333333333], [-0.06770833333333333, -0.5677083333333334, 0.3697916666666667], 0.02828125, 6, 0.0921875))

@@ -93,10 +93,10 @@ def test_combustion_image_geometry():
                         'imageMeterSize': 0.2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
-    shape_params = {'a': [0],
-                    'b': [0],
+    shape_params = {'a': [0.2, 0.4, -0.3, 0.3, 0],
+                    'b': [-0.1, 0.4, 0.2, -0.02],
                     'baseRadius': 0.04,
-                    'branches': 10,
+                    'branches': 12,
                     'impact': 0.1,
                     'n': 50}
 
