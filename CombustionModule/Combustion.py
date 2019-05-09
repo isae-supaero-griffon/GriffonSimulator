@@ -70,8 +70,7 @@ class CombustionObject:
                                        "radius": [self.geometry.get_port_radius() if
                                                   isinstance(self.geometry,
                                                              (OneCircularPort,
-                                                              ThreeCircularPorts,
-                                                              MultipleCircularPortsWithCircularCenter))
+                                                              ThreeCircularPorts))
                                                   else nan],
                                        "regression_rate": [0],
                                        "of": [0],
@@ -143,7 +142,7 @@ class CombustionObject:
 
         self.results["magnitudes"] = {key: nanmean(value) for key, value in self.results["run_values"].items()
                                       if key != "time"}
-        self.results["magnitudes"]["impulse"] = nan if dt==0 else trapz(self.results["run_values"]["thrust"],
+        self.results["magnitudes"]["impulse"] = trapz(self.results["run_values"]["thrust"],
                                                                         self.results["run_values"]["time"],
                                                                         dt)
 
@@ -216,7 +215,6 @@ class CombustionObject:
 
             # Calculate the nozzle equation validation
             nozzle_p = total_mass_flow * cea_c_star / (self.nozzle.get_throat_area() * initial_chamber_pressure)
-            print(nozzle_p)
 
             isp = thrust / total_mass_flow / g0
 
@@ -234,12 +232,12 @@ class CombustionObject:
 
             # Verify it is a single port_number before updating the port number
             if isinstance(self.geometry, (OneCircularPort,
-                                          ThreeCircularPorts,
-                                          MultipleCircularPortsWithCircularCenter)):
+                                          ThreeCircularPorts)):
                 self.results["run_values"]["radius"].append(self.geometry.get_port_radius())
 
                 # Compute regression rate
-                self.results["run_values"]["regression_rate"].append(self.geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow))
+                delta_r = self.results["run_values"]["radius"][k] - self.results["run_values"]["radius"][k - 1]
+                self.results["run_values"]["regression_rate"].append(delta_r / dt)
             else:
                 # Append a 0 if there it is not a OneCircularPort geometry
                 self.results["run_values"]["radius"].append(nan)

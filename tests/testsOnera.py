@@ -53,7 +53,6 @@ def test_onera_physical_test_1():
     geometric_params = {'L': 0.157,
                         'rintInitial': 0.02,
                         'rext0': 0.041,
-                        'rb0': 0.025,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
@@ -62,7 +61,7 @@ def test_onera_physical_test_1():
 
     # ------------- Generate objects:
 
-    geometry_obj = Geom.NBranchRectangleStarPort(**geometric_params)
+    geometry_obj = Geom.OneCircularPort(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
@@ -97,9 +96,9 @@ def test_onera_physical_test_1_2():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.157,
+    geometric_params = {'L': 0.130,
                         'rintInitial': 0.015,
-                        'rext0': 0.041,
+                        'rext0': 94.5e-3 / 2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
@@ -131,7 +130,7 @@ def test_onera_physical_test_2():
     """ Study the potential evolution of the geometry associated to the 2nd physical test
         to be performed at ONERA. The characteristics of the Test are:
         1. Single Port Geometry
-        2. Go range: [150, 400] kg/m^2/sec
+        2. Go range: [100, 300] kg/m^2/sec
         3. Chamber pressure: 36 bar, closest possible to the target pressure of Griffon.
     """
 
@@ -142,18 +141,18 @@ def test_onera_physical_test_2():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.157,
-                        'rintInitial': 14e-3 / 2,
-                        'rext0': 82e-3 / 2,
+    geometric_params = {'L': 0.130,
+                        'rintInitial': 17.23e-3 / 2,
+                        'rext0': 94.5e-3 / 2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-    simulation_params = {'ox_flow': 0.061, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 5}
+    simulation_params = {'ox_flow': 0.07, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
 
     # ------------- Generate objects:
 
-    geometry_obj = Geom.NBranchRectangleStarPort(**geometric_params)
+    geometry_obj = Geom.OneCircularPort(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
@@ -176,7 +175,7 @@ def test_onera_physical_test_3():
     """ Study the potential evolution of the geometry associated to the 2nd physical test
         to be performed at ONERA. The characteristics of the Test are:
         1. Single Port Geometry
-        2. Go range: [400, 600] kg/m^2/sec
+        2. Go range: [400, 500] kg/m^2/sec
         3. Chamber pressure: 36 bar, closest possible to the target pressure of Griffon.
     """
 
@@ -187,14 +186,14 @@ def test_onera_physical_test_3():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.157,
-                        'rintInitial': 11.5e-3 / 2,
-                        'rext0': 82e-3 / 2,
+    geometric_params = {'L': 0.130,
+                        'rintInitial': 13.33e-3 / 2,
+                        'rext0': 94.5e-3 / 2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-    simulation_params = {'ox_flow': 0.063, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 7}
+    simulation_params = {'ox_flow': 0.07, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 7}
 
     # ------------- Generate objects:
 
@@ -234,18 +233,18 @@ def test_onera_three_port_geometry():
 
         # ------------ Define parameters:
 
-        geometric_params = {'L': 0.157,
-                            'rintInitial': 0.007465,
-                            'rext0': 0.041,
+        geometric_params = {'L': 0.130,
+                            'portsIntialRadius': 12e-3 / 2,
+                            'r_ext': 94.5e-3 / 2,
                             'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
         nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-        simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 5}
+        simulation_params = {'ox_flow': 0.069, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
 
         # ------------- Generate objects:
 
-        geometry_obj = Geom.NBranchRectangleStarPort(**geometric_params)
+        geometry_obj = Geom.ThreeCircularPorts(**geometric_params)
         nozzle_obj = Noz.Nozzle(**nozzle_params)
         json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
 
@@ -265,10 +264,10 @@ def test_onera_three_port_geometry():
         combustion_obj.plot_results()
 
 
-def test_onera_star_geometry():
-    """ Study the potential evolution of the geometry associated to a Star Geometry
+def test_onera_three_port_geometry_with_center_port():
+    """ Study the potential evolution of the geometry associated to a Three Port Geometry
         to be performed at ONERA. The characteristics of the Test are:
-        1. Star Geometry
+        1. Three Port Geometry
         2. Go range: TBD kg/m^2/sec
         3. ox flow: same
         4. Chamber pressure: 36 bar, closest possible to the target pressure of Griffon.
@@ -281,20 +280,24 @@ def test_onera_star_geometry():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.130,
-                        'rint0': 0.005,
-                        'rext0': 0.041,
-                        'rb0' : 0.005,
-                        'n0': 4,
+    # MultipleCircularPortsWithCircularCenter
+    # N, L, regressionModel, ringPortsIntialRadius, centralPortInitialRadius, r_ext
+
+    geometric_params = {'N': 4,
+                        'L': 0.130,
+                        'ringPortsIntialRadius': 9e-3 / 2,
+                        'centralPortInitialRadius': 9e-3 / 2,
+                        'r_ext': 94.5e-3 / 2,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-    simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
+    simulation_params = {'ox_flow': 0.065, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
 
     # ------------- Generate objects:
 
-    geometry_obj = Geom.NBranchStarPort(**geometric_params)
+    geometry_obj = Geom.MultipleCircularPortsWithCircularCenter(**geometric_params)
+    geometry_obj.draw_geometry()
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
 
@@ -315,6 +318,51 @@ def test_onera_star_geometry():
     combustion_obj.plot_results()
 
 
+def compute_sampling_frequency_for_hycomm():
+    """
+    compute_sampling_frequency_for_hycomm determines the sampling frequency required based
+    on the sonic speed expected at 36 bar at different O/F ratios.
+    :return: nothing
+    """
+
+    # Define the parameters for the engine
+    L = 240e-3                          # Length of the engine in m
+    n = 4                               # Coefficient associated to the acoustic mode to be observe
+    uncertainty = 0.30                  # Uncertainty coefficient
+    sampling_coefficient = 9           # Ratio between the sampling frequency and the nyquist frequency
+
+    # Collect the data from the data layer generated for 36 bars
+    json_interpreter = generate_data_layer()
+    cea_data = json_interpreter.return_cea_data(CombustionObject.simulation_type)
+    of_data = np.asarray([record['state']['o/f'] for record in cea_data])
+    sonic_velocity = np.asarray([record['variables']['sonvel']['CHAMBER'] for record in cea_data])
+    c_star = np.asarray([record['variables']['cstar']['THROAT'] for record in cea_data])
+
+    # Get the max value of the sonic velocity
+    max_c = max(sonic_velocity)
+
+    # Determine the max frequency that we'll have
+    max_freq = (1 + uncertainty) * max_c / (n * L)
+    nyquist_frequency = 2*max_freq
+    sampling_frequency = sampling_coefficient * nyquist_frequency
+
+    # Print the results
+    print("The maximum Speed of Sound observed is {0} m/s".format(max_c))
+    print("The maximum estimated frequency for the mode is {0:.2E} Hz".format(max_freq))
+    print("The Nyquist Frequency for the mode is {0:.2E} Hz".format(nyquist_frequency))
+    print("The Sampling Frequency Suggested is {0:.2E} Hz".format(sampling_frequency))
+
+    # Plot the of and the sonic velocity
+    fig = plt.figure(facecolor='w', figsize=(10, 10))
+    fig.suptitle('OF vs. C')
+    ax = plt.axes()
+    ax.plot(of_data, sonic_velocity, label='Sonic Velocity', color='black', linewidth=2.0)
+    ax.set_title('')
+    ax.set_ylabel('Sonic Velocity (m/s)')
+    ax.set_xlabel('O/F ratio')
+    ax.grid(b=True, axis='both')
+
+
 # ---------------------------- MAIN  ---------------------------------
 
 if __name__ == '__main__':
@@ -324,8 +372,9 @@ if __name__ == '__main__':
     #test_onera_physical_test_1()
     #test_onera_physical_test_1_2()
     #test_onera_physical_test_2()
-    test_onera_physical_test_3()
+    # test_onera_physical_test_3()
     #test_onera_three_port_geometry()
-    #test_onera_star_geometry()
+    # test_onera_three_port_geometry_with_center_port()
+    compute_sampling_frequency_for_hycomm()
     # Show any plots
     plt.show()

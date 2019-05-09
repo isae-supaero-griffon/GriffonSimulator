@@ -609,7 +609,6 @@ class NBranchRectangleStarPort(Geometry):
 
             raise ValueError("Geometry must have at most 8 branches")
 
-
         super().__init__(L, 1)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
         self.r_b = rb0
         self.r_ext = rext0

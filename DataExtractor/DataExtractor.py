@@ -249,9 +249,60 @@ def generate_trajectory_table():
     # Return the dict
     return table
 
-# ---------------------------- MAIN ---------------------------------
 
-if __name__ == '__main__':
+def generate_propellants_table():
+    """
+    generate_propellants_table generates the table associated to the propellant that will be input
+    into the RocketCEA wrapper
+    :return: dict with propellants table
+    """
+
+    # Introduce the dictionary by hand and output it later (all in SI Units)
+    table = {
+                # Define the oxidizer/s table
+                'oxidizer': {
+                                'name': "H2O2GriffonOxidizer",
+                                'components':   [{
+                                                    'oxid': "H2O2(L)",                                # Name of the oxidizer
+                                                    'wt': 87.5,                                       # Mass weight percentage of the Oxidizer
+                                                    't': {'value': 298, 'units': '(k)'}               # Reference Temperature in Kelvin
+                                                  },
+                                                {
+                                                    'oxid': "H2O(L)",                                 # Name of the oxidizer
+                                                    'wt': 12.5,                                       # Mass weight percentage of the Oxidiser
+                                                    't': {'value': 298, 'units': '(k)'},              # Reference Temperature in Kelvin
+                                                }]},
+
+                # Define the fuel/s table
+                'fuel': {
+                            'name': "3DPrintedABSGriffon",
+                            'components':
+
+                                                [{
+                                                     'fuel': "Air",  # Name of the fuel
+                                                     'wt': 0.01,  # Mass weight percentage of the Fuel
+                                                     't': {'value': 298, 'units': '(k)'}
+                                                 # Reference Temperature in Kelvin
+                                                 },
+
+                                                 {
+                                                     'fuel': "ABS",  # Name of the fuel
+                                                     'wt': 99.9,  # Mass weight percentage of the Fuel
+                                                     't': {'value': 298, 'units': '(k)'},
+                                                 # Reference Temperature in Kelvin
+                                                     'h': {'value': 62.63, 'units': 'kj/mol'},
+                                                 # Reference Enthalpy in kj/mol
+                                                     'composition': {'C': 3.85, 'H': 4.85, 'N': 0.43}
+                                                 # Composition of the fuel
+                                                 }]}
+    }
+
+    # Return the output
+    return table
+
+
+def generate_file_from_scratch():
+    """ Generate the json file from scratch """
 
     # Generate the combustion_table
     combustion_table = generate_combustion_table()
@@ -261,6 +312,9 @@ if __name__ == '__main__':
 
     # Generate the trajectory_table
     trajectory_table = generate_trajectory_table()
+
+    # Generate the propellant_table
+    propellant_table = generate_propellants_table()
 
     # Get the data repository
     data_directory = "../data"
@@ -272,9 +326,43 @@ if __name__ == '__main__':
     values_dictionary = {'combustion_table': combustion_table,
                          'mass_simulator_table': mass_simulator_table,
                          'trajectory_table': trajectory_table,
+                         'propellant_table': propellant_table,
                          'CEA_Data': CEA_Data}
 
     # Store the generated dictionary to a json file
-    output_file = "Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json"
+    output_file = "Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5 V2.json"
     with open("/".join([data_directory, output_file]), 'w') as f:
         json.dump(values_dictionary, f)
+
+
+def append_table_to_file():
+    """ Append the propellants table to the already existing file"""
+
+    # Generate the table to append
+    new_table = generate_propellants_table()
+
+    # File name & Data Directory
+    data_directory = "../data"
+    file_name = "Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json"
+
+    # Read the dictionary from the json file
+    with open("/".join([data_directory, file_name]), 'r') as f:
+        # Read the file
+        json_str = f.read()
+        json_data = json.loads(json_str)
+
+    # Add the new table to the extracted dictionary
+    json_data['propellant_table'] = new_table
+
+    # Overwrite the file
+    with open("/".join([data_directory, file_name]), 'w') as f:
+        # Dump the data into the json file
+        json.dump(json_data, f)
+
+
+# ---------------------------- MAIN ---------------------------------
+
+if __name__ == '__main__':
+
+    # Call the corresponding method
+    append_table_to_file()

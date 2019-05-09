@@ -9,6 +9,7 @@ import CombustionModule.RegressionModel as Reg                  # Import the Reg
 import CombustionModule.Geometries as Geom                      # Import the Geometry module
 import CombustionModule.Nozzle as Noz                           # Import the Nozzle module
 from CombustionModule.Combustion import CombustionObject        # Import the CombustionObject
+from CombustionModule.Fuel import *                             # Import the Fuel class
 from MassEstimationModule.system import System                  # Import the system class
 from TrajectoryModule.Drag import *                             # Import the Drag library
 from TrajectoryModule.Density import DensityLaw                 # Import the density-law library
@@ -323,6 +324,28 @@ def test_trajectory():
     # Plot the results
     trajectory_obj.plot_results()
 
+
+def test_fuel():
+    """ Test the Fuel Module first definition """
+
+    # ------------ Generate Data Layer:
+
+    json_interpreter = generate_data_layer()
+
+    # ------------ Instantiate Fuel
+
+    my_fuel = Fuel(json_interpreter)
+
+    # ------------ Test the object
+
+    # Obtain the output
+    params = {'Pc': bar2psia(36), 'eps': 36, 'MR': 5.5, 'short_output': 1}
+    s = my_fuel.ispObj.get_full_cea_output(**params)
+
+    # Print the result
+    print(s)
+
+
 # ---------------------------- MAIN  ---------------------------------
 
 if __name__ == '__main__':
@@ -334,6 +357,7 @@ if __name__ == '__main__':
     # test_trajectory()
     # test_combustion_onera_data()
     #test_onera_physical_test_2()
-    test_combustion_image_geometry()
+    # test_combustion_image_geometry()
+    test_fuel()
     # Show any plots
     plt.show()

@@ -28594,5 +28594,58 @@
         }
       }
     ]
+  },
+  "propellant_table": {
+    "oxidizer": {
+      "name": "GriffonOxydizer_H2O2",
+      "components": [
+        {
+          "oxid": "H2O2(L)",
+          "wt": 87.5,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          }
+        },
+        {
+          "oxid": "H2O(L)",
+          "wt": 12.5,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          }
+        }
+      ]
+    },
+    "fuel": {
+      "name": "3DPrinted_ABS",
+      "components": [
+        {
+          "fuel": "Air",
+          "wt": 0.01,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          }
+        },
+        {
+          "fuel": "ABS",
+          "wt": 99.9,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          },
+          "h": {
+            "value": 62.63,
+            "units": "kj/mol"
+          },
+          "composition": {
+            "C": 3.85,
+            "H": 4.85,
+            "N": 0.43
+          }
+        }
+      ]
+    }
   }
 }

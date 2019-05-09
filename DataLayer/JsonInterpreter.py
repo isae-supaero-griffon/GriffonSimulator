@@ -72,6 +72,13 @@ class JsonInterpreter:
             """
             return self.json_data['trajectory_table']
 
+        def return_propellant_table(self):
+            """
+            return_propellant_table returns the propellants data to be used to initialize the RocketCEA wrapper
+            :return: propellant table as a dict
+            """
+            return self.json_data['propellant_table']
+
     # ------------------- Instance:
 
     instance = None
