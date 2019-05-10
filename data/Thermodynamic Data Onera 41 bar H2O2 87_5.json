@@ -5821,5 +5821,50 @@
         }
       }
     ]
+  },
+  "propellant_table": {
+    "oxidizer": {
+      "name": "OneraTestOxydizer_H2O2",
+      "components": [
+        {
+          "oxid": "H2O2(L)",
+          "wt": 87.5,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          }
+        },
+        {
+          "oxid": "H2O(L)",
+          "wt": 12.5,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          }
+        }
+      ]
+    },
+    "fuel": {
+      "name": "ABS",
+      "components": [
+        {
+          "fuel": "ABS",
+          "wt": 100,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          },
+          "h": {
+            "value": 62.63,
+            "units": "kj/mol"
+          },
+          "composition": {
+            "C": 3.85,
+            "H": 4.85,
+            "N": 0.43
+          }
+        }
+      ]
+    }
   }
 }
