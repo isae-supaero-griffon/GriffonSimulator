@@ -351,13 +351,13 @@ def test_fuel():
 if __name__ == '__main__':
 
     # Call on test_combustion method
-    #test_combustion()
+    # test_combustion()
     # test_combustion_three_port_geometry()
     # test_mass_simulator()
     # test_trajectory()
-    # test_combustion_onera_data()
-    #test_onera_physical_test_2()
+    test_combustion_onera_data()
+    # test_onera_physical_test_2()
     # test_combustion_image_geometry()
-    test_fuel()
+    # test_fuel()
     # Show any plots
     plt.show()
