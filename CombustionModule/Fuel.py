@@ -20,6 +20,33 @@ def bar2psia(a):
     """
     return (a + 1.013) * 14.50377
 
+
+def rankine2kelvin(a):
+    """
+    rankine2Kelvin converts from Rankine to Kelvin
+    :param a: float with temperature in Rankine
+    :return: temperature in Kelvin
+    """
+    return a / 1.8
+
+
+def pascal2bar(a):
+    """
+        pascal2bar converts from pascals to bars
+        :param a: float with pressure in pascals
+        :return: pressure in bars
+        """
+    return a / 10 ** 5
+
+def feet2meters(a):
+    """
+        feet2meters converts from feet to meters
+        :param a: float with length/speed in feet
+        :return: length/speed in meters
+        """
+    return a / 3.28083
+
+
 # ------------------------- CLASS DEFINITIONS ------------------------
 
 class Fuel:
@@ -128,6 +155,40 @@ class Fuel:
             # Add the fuel to the cea_obj
             cea_obj.add_new_oxidizer(oxidizer_table['name'], card)
 
+
+        def return_chamber_c_star(self, Pc, MR):
+            """
+            get_c_star_values returns the c_star values
+            :param Pc: Chamber Pressure (in bars)
+            :param MR: Mixture Ratio
+            :return: float c_star value in SI units
+            """
+
+            # Get from the ispObj the c_star request
+            return self.ispObj.get_Cstar(Pc=bar2psia(Pc), MR=MR)
+
+        def return_combustion_variables(self, Pc, MR, eps):
+            """
+            return_combustion_variables returns the variables requested by
+            the combustion module.
+            :param Pc: Chamber Pressure (in bars)
+            :param MR: Mixture Ratio
+            :param eps: Expansion Ratio of the burn.
+            :return: Tcomb, M, Gamma, Cstar, sonvel
+            """
+
+            # Call the process from cea_obj
+            _, c_star, t_comb, mw, gam = self.ispObj.get_IvacCstrTc_ChmMwGam(Pc=bar2psia(Pc),
+                                                                             MR=MR,
+                                                                             eps=eps)
+
+            # Get the sonvel
+            sonvel = self.ispObj.get_Chamber_SonicVel(Pc=bar2psia(Pc),
+                                                      MR=MR,
+                                                      eps=eps)
+
+            # Return the output
+            return rankine2kelvin(t_comb), gam, mw/1000, feet2meters(c_star), feet2meters(sonvel)
 
     # ------------------- Instance:
 
