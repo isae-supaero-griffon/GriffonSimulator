@@ -9,6 +9,7 @@
 from CombustionModule.Geometries import *                                           # Import the geometry classes
 from CombustionModule.Nozzle import *                                               # Import the nozzle class
 import CombustionModule.Isentropic as iso                                           # Import the isoentropic module
+from CombustionModule.Fuel import *                                                 # Import the RocketCEA wrapper
 import math                                                                         # Import math
 import matplotlib.pyplot as plt                                                     # Import matplotlib to plot results
 from matplotlib.ticker import FormatStrFormatter                                    # Import formatter
@@ -60,6 +61,7 @@ class CombustionObject:
                                          json_interpreter=json_interpreter)
         self.geometry = geometry_object
         self.nozzle = nozzle_object
+        self.fuel = Fuel(json_interpreter)
         # TODO: convert the results lists to numpy array to be consistent with format all across the program.
         self.results = {
                         "run_values": {"time": [0],
@@ -120,6 +122,22 @@ class CombustionObject:
         return output['variables']['t']['CHAMBER'], output['variables']['gammas']['CHAMBER'],\
                output['variables']['m']['CHAMBER']/1000, output['variables']['cstar']['THROAT'], \
                output['variables']['sonvel']['CHAMBER'],
+
+    def run_thermochemical_analysis(self, of_ratio):
+        """
+        run_thermochemical_analysis returns the thermochemical variables at CHAMBER conditions as obtained from
+        CEA.
+        :param of_ratio: mixture ratio
+        :return: tuple with the variables of interest in their right locations ()
+        """
+
+        # Determine the expansion ratio from Pamb and  Pc
+        eps = self.data_dictionary['P_chamber_bar'] / pascal2bar(self.data_dictionary['Pa'])
+
+        # Return the output
+        return self.fuel.return_combustion_variables(Pc=self.data_dictionary['P_chamber_bar'],
+                                                     MR=of_ratio,
+                                                     eps=eps)
 
     def unpack_data_dictionary(self):
         """ unpack the data dictionary into different variables to reduce code size
@@ -195,10 +213,8 @@ class CombustionObject:
             of_ratio = ox_flow / fuel_flow
             Go = ox_flow / self.geometry.totalCrossSectionArea()
 
-            # Data extraction using the interpolator and OF ratio from already defined variables
-            # Check lookup_from_cea method which variables have been chosen
-
-            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel = self.lookup_from_cea(desired_of_ratio=of_ratio)
+            # Call CEA process to obtain thermochemical variables
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel = self.run_thermochemical_analysis(of_ratio)
             r = R / gas_molar_mass  # Specific gaz constant
 
             # Calculate chamber conditions and motor performance
@@ -284,7 +300,6 @@ class CombustionObject:
 
         # regression_rate, fuel_flow, total_mass_flow, OF, T_chambre, gamma, masse_molaire_gaz, c_star = \
         #     self.initialize_variables()
-
         pression_chambre = initial_chamber_pressure
 
         # ---------------------------- MAIN SIMULATION LOOP -----------------------------
@@ -314,10 +329,8 @@ class CombustionObject:
             #print('Surface:', self.geometry.totalSurfaceArea())
             #self.geometry.draw_geometry()
 
-            # Data extraction using the interpolator and OF ratio from already defined variables
-            # Check lookup_from_cea method which variables have been chosen
-
-            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel = self.lookup_from_cea(desired_of_ratio=of_ratio)
+            # Call CEA process to obtain thermochemical variables
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel = self.run_thermochemical_analysis(of_ratio)
             r = R / gas_molar_mass  # Specific gaz constant
 
             # Calculate chamber conditions and motor performance
