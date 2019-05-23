@@ -14,12 +14,12 @@ import cv2
 
 
 def cylinder_volume(length, radius):
-
     return length * m.pi * (radius**2)
 
-def n_star_volume(length, base_radius, int_radius, number_branches) :
 
+def n_star_volume(length, base_radius, int_radius, number_branches) :
     return 2 * length * number_branches * base_radius * int_radius * sin (pi / number_branches)
+
 
 def compute_regression_rate(geometry, ox_flow, max_regression_rate, a, n, m):
     """
@@ -49,36 +49,56 @@ def compute_regression_rate(geometry, ox_flow, max_regression_rate, a, n, m):
               "to: {1:.2E} m/seg".format(regression_rate, max_regression_rate))
         regression_rate = max_regression_rate
 
+    # Return the output
     return regression_rate
 
+
 def evaluate_fourier(a, b, x):
+    """
+    evaluate_fourier gets the value of the fourier series for x, given the
+    coefficients of the series.
+    :param a: array of coefficients which multiply cos(x)
+    :param b: array of coefficients which multiply sin(x)
+    :param x: point where we want to evaluate the series
+    :return: value of the sum
+    """
+    assert 0 <= x <= 1, "x variable not contained in [0, 1] \n"
 
-    assert(0 <= x <= 1)
+    # Generate the sum for both arrays
+    sum_a = sum((a[k] * m.cos(2 * m.pi * (k+1) * x) for k in range(len(a))))
+    sum_b = sum((b[k] * m.sin(2 * m.pi * (k+1) * x) for k in range(len(b))))
 
-    sum = 0
-
-    for k in range(len(a)):
-
-        sum += a[k] * m.cos(x * (k+1) * 2 * m.pi)
-
-    for k in range(len(b)):
-
-        sum += b[k] * m.sin(x * (k+1) * 2 * m.pi)
-
-    return sum
+    # Return the output
+    return sum_a + sum_b
 
 
 def draw_circular_port(ax, center, port):
-
+    """
+    draw_circular_port plots the circular port into an axes
+    :param ax: axes object where to plot the port image
+    :param center: coordinates of the center of the port
+    :param port: Geometry instance associated to the port
+    :return: nothing
+    """
     # Plot the combustion port
     ax.add_patch(plt.Circle(center, radius=port.r_int * 1000, color='w'))
 
 
 def draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle):
+    """
+    draw_n_star_branch draws a star
+    :param p1_0: first vertices coordinate
+    :param p2_0: 2nd vertices coordinate
+    :param p3_0: 3rd vertices coordinate
+    :param rotation_angle: angle we want to rotate the branch
+    :return: nothing
+    """
 
+    # Define the rotation matrix
     rot = [[cos(rotation_angle), - sin(rotation_angle)],
            [sin(rotation_angle), cos(rotation_angle)]]
 
+    # Rotate each of the points
     p1 = p1_0 * rot
     p2 = p2_0 * rot
     p3 = p3_0 * rot
@@ -202,6 +222,14 @@ class Geometry(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_hydraulic_diameter(self):
+        """
+        Return the hydraulic diameter calculation of the geometry
+        :return: hydraulic diameter of the geometry
+        """
+        pass
+
 
 class OneCircularPort(Geometry):
     """
@@ -281,6 +309,9 @@ class OneCircularPort(Geometry):
     def return_external_radius(self):
         return self.r_ext
 
+    def get_hydraulic_diameter(self):
+        return 2 * self.r_int
+
 
 class MultipleCircularPortsWithCircularCenter(Geometry):
     """
@@ -326,6 +357,7 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
+        :param rho: density of the fuel [kg/m^3]
         """
 
         # Compute oxidizer flow in each port
@@ -392,6 +424,9 @@ class MultipleCircularPortsWithCircularCenter(Geometry):
 
     def return_external_radius(self):
         return self.r_ext
+
+    def get_hydraulic_diameter(self):
+        return 2 * self.central_port.get_port_radius()
 
 
 class ThreeCircularPorts(Geometry):
@@ -479,6 +514,10 @@ class ThreeCircularPorts(Geometry):
     def return_external_radius(self):
         return self.r_ext
 
+    def get_hydraulic_diameter(self):
+        return 2 * self.get_port_radius()
+
+
 class NBranchStarPort(Geometry):
     """
     Implementation of the Geometry abstract class for a more simple, one centered
@@ -492,27 +531,31 @@ class NBranchStarPort(Geometry):
     n : number of branches of the star geometry
     """
 
-    def __init__(self, L, rint0, rext0, rb0, n0):
+    def __init__(self, L, regressionModel,rint0, rext0, rb0, n0):
         """
         class initializer
+        :param L: length of the block in [mm]
+        :param regressionModel: RegressionModel instance to account for the regression law
+        of the fuel
+        :param rint0: internal radius of the star [mm]
+        :param rext0: external redius of the geometry [mm]
+        :param rb0: external radius which circunscribes de branches of the stars
+        :param n0: number of branches in the star
         """
 
         if n0 < 3:
-
             raise ValueError("Geometry must have at least 3 branches")
-
         elif n0 > 8:
-
             raise ValueError("Geometry must have at most 8 branches")
 
-
-        super().__init__(L, 1)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        super().__init__(L, 1, regressionModel)
         self.r_b = rb0
         self.r_ext = rext0
         self.r_int = rint0
         self.n = n0
 
-        # Methods specific to this geometry
+        # ------------------ Methods specific to this geometry ----------------------
 
     def get_port_base_radius(self):
         """
@@ -532,39 +575,32 @@ class NBranchStarPort(Geometry):
         """
         return self.r_ext
 
-    # Abstract methods implementation
+    # -------------------- Abstract methods implementation ---------------------
 
-    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+    def compute_fuel_rate(self, rho, ox_flow):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
-        :param a: classical regression rate factor (depends on fuel choice)
-        :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
-        :param m: classical regression rate exponent for fuel length(usually set to -0.2)
+        :param rho: density of the fuel [kg/m^3]
+        :return calculated fuel rate from regression law [kg/s]
         """
-
-        return rho * compute_regression_rate(self, ox_flow, a, n, m) * self.totalSurfaceArea()
+        return rho * self.regressionModel.computeRegressionRate(ox_flow) * self.totalSurfaceArea()
 
     def totalCrossSectionArea(self):
-
         return 2 * self.n * self.r_b * self.r_int * sin(pi / self.n)
 
     def totalSurfaceArea(self):
-
         return self.length * 2 * self.n * sqrt( (self.r_int - self.r_b * cos(pi / self.n)) ** 2 + (self.r_b * sin(pi / self.n)) ** 2)
 
-    def regress(self, ox_flow, a, n, m, dt):
-
-        self.r_int += compute_regression_rate(self, ox_flow, a, n, m) * dt
-        self.r_b += compute_regression_rate(self, ox_flow, a, n, m) * dt
+    def regress(self, ox_flow, dt):
+        self.r_int += self.regressionModel.computeRegressionRate(ox_flow) * dt
+        self.r_b += self.regressionModel.computeRegressionRate(ox_flow) * dt
 
 
     def min_bloc_thickness(self):
-
         return self.r_ext - self.r_int
 
     def draw_geometry(self):
-
         p1_0 = [self.r_b / 2 * sin(pi / self.n), self.r_b * cos(pi / self.n)]
         p2_0 = [- self.r_b / 2 * sin(pi / self.n), - self.r_b * cos(pi / self.n)]
         p3_0 = [0, - self.r_int]
@@ -582,6 +618,9 @@ class NBranchStarPort(Geometry):
 
         return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n))
 
+    def get_hydraulic_diameter(self):
+        return np.nan
+
 
 class NBranchRectangleStarPort(Geometry):
     """
@@ -596,7 +635,7 @@ class NBranchRectangleStarPort(Geometry):
     n : number of branches of the star geometry
     """
 
-    def __init__(self, L, rint0, rext0, rb0, n0):
+    def __init__(self, L, regressionModel, rint0, rext0, rb0, n0):
         """
         class initializer
         """
@@ -609,7 +648,7 @@ class NBranchRectangleStarPort(Geometry):
 
             raise ValueError("Geometry must have at most 8 branches")
 
-        super().__init__(L, 1)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
+        super().__init__(L, regressionModel, 1)  # N parameter is set as 1 in Geometry initializer as there is a single combustion port
         self.r_b = rb0
         self.r_ext = rext0
         self.r_int = rint0
@@ -637,30 +676,25 @@ class NBranchRectangleStarPort(Geometry):
 
     # Abstract methods implementation
 
-    def compute_fuel_rate(self, rho, ox_flow, a, n, m):
+    def compute_fuel_rate(self, rho, ox_flow):
         """
         Return the instantaneous fuel regression rate of the geometry given flow properties.
         :param ox_flow: instantaneous oxidizer flow
-        :param a: classical regression rate factor (depends on fuel choice)
-        :param n: classical regression rate exponent for oxidizer flux (depends on fuel choice)
-        :param m: classical regression rate exponent for fuel length(usually set to -0.2)
+        :param rho: density of the fuel [kg/m^3]
+        :return fuel mass flow that's regressed [kg/s]
         """
 
-        return rho * compute_regression_rate(self, ox_flow, a, n, m) * self.totalSurfaceArea()
+        return rho * self.regressionModel.computeRegressionRate(ox_flow) * self.totalSurfaceArea()
 
     def totalCrossSectionArea(self):
-
         return 2 * self.n * self.r_b * self.r_int * sin(pi / self.n) * sqrt (1 - (self.r_b / self.r_int * sin(pi / self.n)) ** 2)
 
     def totalSurfaceArea(self):
-
         return self.length * 2 * self.n * self.r_b * ( ((self.r_int / self.r_b) ** 2 - sin(pi / self.n) ** 2)**0.5 + sin(pi / self.n) - cos(pi / self.n))
 
-    def regress(self, ox_flow, a, n, m, dt):
-
-        self.r_int += compute_regression_rate(self, ox_flow, a, n, m) * dt
-        self.r_b += compute_regression_rate(self, ox_flow, a, n, m) * dt
-
+    def regress(self, ox_flow, dt):
+        self.r_int += self.regressionModel.computeRegressionRate(ox_flow) * dt
+        self.r_b += self.regressionModel.computeRegressionRate(ox_flow) * dt
 
     def min_bloc_thickness(self):
 
@@ -680,31 +714,35 @@ class NBranchRectangleStarPort(Geometry):
         plt.axis("scaled")
         plt.show()
 
-
     def get_fuel_mass(self, fuel_density):
-
         return fuel_density * (cylinder_volume(self.length, self.r_ext) - n_star_volume(self.length, self.r_b, self.r_int, self.n) )
+
 
 class SinglePortImageGeometry(Geometry):
 
     def __init__(self, L, externalRadius, regressionModel, imagePixelSize, imageMeterSize):
         """
         class initializer
+        :param externalRadius: external radius of the geometry [mm]
+        :param regressionModel: RegressionModel instance that characterizes the regression
+        of the geometry
+        :param imagePixelSize: pixel size of the image
+        :param imageMeterSize: size in meters of the image
         """
 
+        # Call superclass initializer
         super().__init__(L, 1, regressionModel)
 
         self.externalRadius = externalRadius
         self.imagePixelSize = imagePixelSize
         self.imageMeterSize = imageMeterSize
-        self.image = img = np.zeros((imagePixelSize,imagePixelSize), np.uint8)
+        self.image = np.zeros((imagePixelSize,imagePixelSize), np.uint8)
         self.portGeometryIsGenerated = False
         self.stepPixelRegression = 5
 
         # kernel is tailored for 5 pixels/step regression
         size = 12
         R = size // 2
-        print("R = ", R)
         kernel = np.zeros((size, size))
         for i in range(size):
             for j in range(size):
@@ -715,46 +753,56 @@ class SinglePortImageGeometry(Geometry):
 
         self.kernel = kernel
 
-    def getMetersPerPixel(self):
+    def __str__(self):
+        """ return a string of the objects representation """
 
+        # Return the objects type
+        class_name = self.__class__.__name__
+        # Variables to avoid printing
+        var_print = ('image', 'portGeometryIsGenerated', 'kernel')
+        # Loop through the objects properties and values
+        return "Geometry" + "\t\n\ttype, {0}\t\n\t".format(class_name) + \
+               "\t\n\t".join(("{prop}, {val}".format(prop=prop, val=value) for prop, value in vars(self).items()
+                              if prop not in var_print))
+
+    def getMetersPerPixel(self):
         return self.imageMeterSize / self.imagePixelSize
 
     def totalCrossSectionArea(self):
-
-        if (self.portGeometryIsGenerated):
-
-            proxy_image = self.image
-
+        if self.portGeometryIsGenerated:
             return cv2.countNonZero(self.image) * (self.getMetersPerPixel() **2)
-
         else:
             raise ValueError("Image is black : please generate geometry")
 
     def totalSurfaceArea(self):
+        return self.get_length() * self.get_perimeter()
 
-        if (self.portGeometryIsGenerated):
+    def get_perimeter(self):
+        """ return the perimeter of the image """
+        if self.portGeometryIsGenerated:
 
             proxy_image = self.image
-
             contours, hierarchy = cv2.findContours(proxy_image, 0, 2)
             cnt = contours[0]
-
             perimeter = cv2.arcLength(cnt, True) * self.getMetersPerPixel()
-
-            return perimeter * self.get_length()
-
+            return perimeter
         else:
             raise ValueError("Image is black : please generate geometry")
 
+    def get_hydraulic_diameter(self):
+
+        # Calculate the perimeter and the cross-section, then compute hydraulic diameter
+        return 4 * self.totalCrossSectionArea() / self.get_perimeter()
 
     def compute_fuel_rate(self, rho, ox_flow):
         """
         Return the instantaneous fuel mass flow rate for the geometry
+        :param ox_flow: total oxidizer flow [kg/s]
         :param rho: fuel density
+        :return mass flow of fuel [kg/s]
         """
-        regressionRate = self.regressionModel.computeRegressionRate(self, ox_flow)
-
-        return rho * regressionRate * self.totalSurfaceArea()
+        regression_rate = self.regressionModel.computeRegressionRate(self, ox_flow)
+        return rho * regression_rate * self.totalSurfaceArea()
 
     def regress(self, ox_flow, dt):
         """
@@ -765,11 +813,9 @@ class SinglePortImageGeometry(Geometry):
         # A 5 pixel radial regression is applied,
         # regardless of dt
 
-        if (self.portGeometryIsGenerated):
-
+        if self.portGeometryIsGenerated:
             self.image = cv2.filter2D(self.image, -1, self.kernel)
             ret, self.image = cv2.threshold(self.image, 20, 255, cv2.THRESH_BINARY)
-
         else:
             raise ValueError("Image is black : please generate geometry")
 
@@ -794,7 +840,7 @@ class SinglePortImageGeometry(Geometry):
         Useful for setting an eburn termination safety margin.
         """
 
-        if (self.portGeometryIsGenerated):
+        if self.portGeometryIsGenerated:
 
             proxy_image = self.image
             contours, hierarchy = cv2.findContours(proxy_image, 1, 2)
@@ -841,9 +887,6 @@ class SinglePortImageGeometry(Geometry):
         pixelBaseRadius = m.floor(baseRadius / self.getMetersPerPixel())  # Get the base radius in pixels
 
         # Build the polygon
-
-        points = []
-
         points = []
 
         for i in range(branches):
