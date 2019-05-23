@@ -46,6 +46,14 @@ def feet2meters(a):
         """
     return a / 3.28083
 
+def lbmfeet2kgm(a):
+    """
+    convert from lbm/ft^3 to kg/m^3
+    :param a: float with lbm/ft^3
+    :return: density in kg/m^3
+    """
+    return a * 16.0185
+
 
 # ------------------------- CLASS DEFINITIONS ------------------------
 
@@ -187,8 +195,12 @@ class Fuel:
                                                       MR=MR,
                                                       eps=eps)
 
+            # Get the chamber density
+            rho = self.ispObj.get_Chamber_Density(Pc=bar2psia(Pc), MR=MR, eps=eps)
+
             # Return the output
-            return rankine2kelvin(t_comb), gam, mw/1000, feet2meters(c_star), feet2meters(sonvel)
+            return rankine2kelvin(t_comb), gam, mw/1000, feet2meters(c_star), \
+                   feet2meters(sonvel), lbmfeet2kgm(rho)
 
     # ------------------- Instance:
 
