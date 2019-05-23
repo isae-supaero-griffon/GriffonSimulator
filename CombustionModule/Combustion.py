@@ -18,6 +18,19 @@ from Libraries.Interpolator import *                                            
 from DataLayer.JsonInterpreter import JsonInterpreter                               # Import the JsonInterpreter
 
 
+# ------------------------- FUNCTION DEFINITIONS ---------------------------
+
+def calculate_flow_speed(cross_section, mass_flow, density):
+    """
+    calculate_flow_speed determines the average speed of the port flow at the
+    exit.
+    :param cross_section: float with cross section area of the port [m^2]
+    :param mass_flow: mass flow of mixture [kg/s]
+    :param density: density of the flow [kg/m^3]
+    :return: flow speed in m/s
+    """
+    return mass_flow / (density * cross_section)
+
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
 class CombustionObject:
@@ -57,12 +70,9 @@ class CombustionObject:
 
         # Allocate the attributes
         self.data_dictionary = json_interpreter.return_combustion_table()
-        self.interpolator = Interpolator(simulation_type=self.simulation_type,
-                                         json_interpreter=json_interpreter)
         self.geometry = geometry_object
         self.nozzle = nozzle_object
         self.fuel = Fuel(json_interpreter)
-        # TODO: convert the results lists to numpy array to be consistent with format all across the program.
         self.results = {
                         "run_values": {"time": [0],
                                        "thrust": [0],
@@ -75,11 +85,15 @@ class CombustionObject:
                                                               ThreeCircularPorts))
                                                   else nan],
                                        "regression_rate": [0],
+                                       "mass_flow": [0],
                                        "of": [0],
                                        "Go": [0],
                                        "nozzle_param": [0],
                                        "c_star": [0],
-                                       "chamber_sound_speed": [0]},
+                                       "chamber_sound_speed": [0],
+                                       "chamber_rho": [0],
+                                       "chamber_speed": [0],
+                                       "hydraulic_port_diameter": [0]},
                         "magnitudes": {}
                        }
 
@@ -132,12 +146,22 @@ class CombustionObject:
         """
 
         # Determine the expansion ratio from Pamb and  Pc
-        eps = self.data_dictionary['P_chamber_bar'] / pascal2bar(self.data_dictionary['Pa'])
+        # eps = self.data_dictionary['P_chamber_bar'] / pascal2bar(self.data_dictionary['Pa'])
+        eps = self.nozzle.expansion_ratio
+
+        t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.fuel.return_combustion_variables(
+            Pc=self.data_dictionary['P_chamber_bar'],
+            MR=of_ratio,
+            eps=eps)
+
+        # Account for combustion efficiency
+        eta_comb = self.data_dictionary['combustion_efficiency']            # Extract the combustion efficiency
+        t_chamber = eta_comb * t_chamber                                    # Multiply the t_chamber by eta_comb
+        rho_ch = rho_ch / eta_comb                                          # Divide the density (of gas)
+        son_vel = m.sqrt(eta_comb) * son_vel
 
         # Return the output
-        return self.fuel.return_combustion_variables(Pc=self.data_dictionary['P_chamber_bar'],
-                                                     MR=of_ratio,
-                                                     eps=eps)
+        return t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch
 
     def unpack_data_dictionary(self):
         """ unpack the data dictionary into different variables to reduce code size
@@ -150,7 +174,8 @@ class CombustionObject:
                self.data_dictionary['n'],           \
                self.data_dictionary['m'],           \
                self.data_dictionary['rho_fuel'],    \
-               self.data_dictionary['P_chamber_bar'] * (10 ** 5)
+               self.data_dictionary['P_chamber_bar'] * (10 ** 5), \
+               self.data_dictionary['combustion_efficiency']
 
     def post_process_data(self, dt):
         """ Compute results averages and total impulse"""
@@ -188,12 +213,9 @@ class CombustionObject:
         assert dt > 0, "Simulation time-increment not greater than 0, check your inputs to CombustionModule. \n"
 
         # Call for workspace definition methods
-        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure = self.unpack_data_dictionary()
+        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure, eta_comb = self.unpack_data_dictionary()
 
         # -------------------- Initialize simulation_variables if required -------------
-
-        # regression_rate, fuel_flow, total_mass_flow, OF, T_chambre, gamma, masse_molaire_gaz, c_star = \
-        #     self.initialize_variables()
 
         pression_chambre = initial_chamber_pressure
 
@@ -214,12 +236,16 @@ class CombustionObject:
             Go = ox_flow / self.geometry.totalCrossSectionArea()
 
             # Call CEA process to obtain thermochemical variables
-            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel = self.run_thermochemical_analysis(of_ratio)
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.run_thermochemical_analysis(of_ratio)
             r = R / gas_molar_mass  # Specific gaz constant
+
+            # Determine the flow port-speed
+            u_ch = calculate_flow_speed(cross_section=self.geometry.totalCrossSectionArea(),
+                                        mass_flow=total_mass_flow,
+                                        density=rho_ch)
 
             # Calculate chamber conditions and motor performance
             # Chamber pressure is not recalculated as it is assumed constant
-
             mach_exit = iso.exit_mach_via_expansion(gamma=gamma, expansion=self.nozzle.get_expansion_ratio(),
                                                     supersonic=True)
             exit_pressure = pression_chambre / iso.pressure_ratio(gamma, mach_exit)
@@ -245,7 +271,12 @@ class CombustionObject:
             self.results["run_values"]["nozzle_param"].append(nozzle_p)
             self.results["run_values"]["c_star"].append(cea_c_star)
             self.results["run_values"]["chamber_sound_speed"].append(son_vel)
+            self.results["run_values"]["chamber_rho"].append(rho_ch)
+            self.results["run_values"]["mass_flow"].append(total_mass_flow)
+            self.results["run_values"]["chamber_speed"].append(u_ch)
+            self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
 
+            # TODO: modify the implementation of the radius storage
             # Verify it is a single port_number before updating the port number
             if isinstance(self.geometry, (OneCircularPort,
                                           ThreeCircularPorts)):
@@ -294,7 +325,7 @@ class CombustionObject:
         assert safety_thickness > 0, "Safety thickness not greater than 0, check your inputs to CombustionModule. \n"
 
         # Call for workspace definition methods
-        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure = self.unpack_data_dictionary()
+        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure, eta_comb = self.unpack_data_dictionary()
 
         # -------------------- Initialize simulation_variables if required -------------
 
@@ -311,13 +342,14 @@ class CombustionObject:
         # Get the thickness equivalent to 5 pixels
         dr = self.geometry.getMetersPerPixel() * 5
 
+        # Initialize the simulation counter
         k = 0
 
-        self.geometry.draw_geometry()
+        # self.geometry.draw_geometry()
 
         while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
 
-            print( self.geometry.totalSurfaceArea() / self.geometry.get_length() / 2 / math.pi)
+            # print( self.geometry.totalSurfaceArea() / self.geometry.get_length() / 2 / math.pi)
 
             # Regression rate and mass flow calculations
             fuel_flow = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
@@ -325,13 +357,18 @@ class CombustionObject:
             of_ratio = ox_flow / fuel_flow
             Go = ox_flow / self.geometry.totalCrossSectionArea()
             dt = dr / self.geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow)
-            #print('Cross-sction:', self.geometry.totalCrossSectionArea())
-            #print('Surface:', self.geometry.totalSurfaceArea())
-            #self.geometry.draw_geometry()
 
             # Call CEA process to obtain thermochemical variables
-            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel = self.run_thermochemical_analysis(of_ratio)
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.run_thermochemical_analysis(of_ratio)
             r = R / gas_molar_mass  # Specific gaz constant
+
+            # Determine the flow port-speed
+            u_ch = calculate_flow_speed(cross_section=self.geometry.totalCrossSectionArea(),
+                                        mass_flow=total_mass_flow,
+                                        density=rho_ch)
+
+            # Calculate cea_c_star to consider the combustion efficiency parameter
+            # cea_c_star = eta_comb * cea_c_star
 
             # Calculate chamber conditions and motor performance
             # Chamber pressure is not recalculated as it is assumed constant
@@ -362,6 +399,10 @@ class CombustionObject:
             self.results["run_values"]["nozzle_param"].append(nozzle_p)
             self.results["run_values"]["c_star"].append(cea_c_star)
             self.results["run_values"]["chamber_sound_speed"].append(son_vel)
+            self.results["run_values"]["chamber_rho"].append(rho_ch)
+            self.results["run_values"]["mass_flow"].append(total_mass_flow)
+            self.results["run_values"]["chamber_speed"].append(u_ch)
+            self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
 
             # Verify it is a single port_number before updating the port number
             if isinstance(self.geometry, (OneCircularPort,
@@ -390,7 +431,7 @@ class CombustionObject:
 
             k +=1
 
-        self.geometry.draw_geometry()
+        # self.geometry.draw_geometry()
 
         # ------------------------ POST-PROCESS ------------------------
 
