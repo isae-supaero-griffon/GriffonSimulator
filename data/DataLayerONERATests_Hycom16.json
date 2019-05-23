@@ -1,0 +1,225 @@
+{
+  "combustion_table": {
+    "g0": 9.81,
+    "R": 8.314,
+    "Pa": 101299.99999999999,
+    "a": 1.05e-05,
+    "n": 0.87,
+    "m": -0.2,
+    "n2": 0.0,
+    "m2": -0.2,
+    "maxGo": 57,
+    "rho_fuel": 946.45,
+    "P_chamber_bar": 33.5,
+    "rho_ox_pure": 1.45,
+    "ox_purity": 0.875,
+    "combustion_efficiency": 0.85
+  },
+  "mass_simulator_table": {
+    "identifier": "hybrid engine",
+    "materials": {
+      "aluminium": {
+        "identifier": "aluminium",
+        "density": 2700.0,
+        "yield_stress": 250000000.0
+      },
+      "liner_mat": {
+        "identifier": "liner_mat",
+        "density": 1070.0
+      }
+    },
+    "subsystems": {
+      "avionics": {
+        "identifier": "avionics",
+        "parts": {
+          "electronics": {
+            "identifier": "electronics",
+            "type": "StaticPart",
+            "mass": 1.0
+          }
+        }
+      },
+      "combustion": {
+        "identifier": "combustion",
+        "parts": {
+          "chamber": {
+            "identifier": "chamber",
+            "type": "CombustionChamber",
+            "radius": 0.1,
+            "height": 0.6,
+            "pressure": 3600000.0,
+            "propellant_mass": 0.75,
+            "material_id": "aluminium"
+          },
+          "liner": {
+            "identifier": "liner",
+            "type": "ThermalLiner",
+            "chamber_ref": {
+              "subsystem_id": "combustion",
+              "part_id": "chamber"
+            },
+            "thickness": 0.005,
+            "material_id": "liner_mat"
+          },
+          "injector": {
+            "identifier": "injector",
+            "type": "StaticPart",
+            "mass": 0.5
+          },
+          "nozzle": {
+            "identifier": "nozzle",
+            "type": "StaticPart",
+            "mass": 1.0
+          }
+        }
+      },
+      "oxidiser": {
+        "identifier": "oxidiser",
+        "parts": {
+          "oxidant_tank": {
+            "identifier": "oxidant_tank",
+            "type": "OxidantTank",
+            "radius": 0.1,
+            "height": 0.3,
+            "pressure": 6000000.0,
+            "propellant_mass": 4.0,
+            "material_id": "aluminium"
+          }
+        }
+      },
+      "pressuriser": {
+        "identifier": "pressuriser",
+        "parts": {
+          "pressuriser_tank": {
+            "identifier": "pressuriser_tank",
+            "type": "PressuriserTank",
+            "radius": 0.1,
+            "height": 0.2,
+            "structure_mass": 1.0,
+            "oxidiser_ref": {
+              "subsystem_id": "oxidiser",
+              "part_id": "oxidant_tank"
+            },
+            "pressuriser_gas_constant": 2077.0,
+            "pressuriser_gamma": 1.66,
+            "ambient_temperature": 300.0
+          },
+          "pressuriser_valve": {
+            "identifier": "pressuriser_valve",
+            "type": "StaticPart",
+            "mass": 0.4
+          }
+        }
+      },
+      "plumbing": {
+        "identifier": "plumbing",
+        "parts": {
+          "pipes": {
+            "identifier": "pipes",
+            "type": "StaticPart",
+            "mass": 0.5
+          },
+          "valve1": {
+            "identifier": "valve1",
+            "type": "StaticPart",
+            "mass": 0.4
+          },
+          "valve2": {
+            "identifier": "valve2",
+            "type": "StaticPart",
+            "mass": 0.4
+          },
+          "valve3": {
+            "identifier": "valve3",
+            "type": "StaticPart",
+            "mass": 0.6
+          }
+        }
+      },
+      "structures": {
+        "identifier": "structure",
+        "parts": {
+          "rocket_structure": {
+            "identifier": "rocket_structure",
+            "type": "StaticPart",
+            "mass": 20.0
+          },
+          "fixings": {
+            "identifier": "fixings",
+            "type": "StaticPart",
+            "mass": 0.5
+          }
+        }
+      }
+    },
+    "safety_factor": 3.0
+  },
+  "trajectory_table": {
+    "density": {
+      "g0": 9.81,
+      "R": 8.314,
+      "M": 0.02896,
+      "rho_0": 1.225,
+      "T_0": 298,
+      "h_0": 0
+    },
+    "drag": {
+      "type": "constant",
+      "Cd": 0.4,
+      "area_ref": 0.031415926535897934
+    }
+  },
+  "propellant_table": {
+    "oxidizer": {
+      "name": "GriffonOxydizer_H2O2",
+      "components": [
+        {
+          "oxid": "H2O2(L)",
+          "wt": 87.5,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          }
+        },
+        {
+          "oxid": "H2O(L)",
+          "wt": 12.5,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          }
+        }
+      ]
+    },
+    "fuel": {
+      "name": "3DPrinted_ABS",
+      "components": [
+        {
+          "fuel": "Air",
+          "wt": 1,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          }
+        },
+        {
+          "fuel": "ABS",
+          "wt": 99,
+          "t": {
+            "value": 298,
+            "units": "(k)"
+          },
+          "h": {
+            "value": 62.63,
+            "units": "kj/mol"
+          },
+          "composition": {
+            "C": 3.85,
+            "H": 4.85,
+            "N": 0.43
+          }
+        }
+      ]
+    }
+  }
+}
