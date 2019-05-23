@@ -58,6 +58,14 @@ class JsonInterpreter:
             """
             return self.json_data['combustion_table']
 
+        def set_combustion_table(self, combustion_dictionary):
+            """
+            set_combustion_table sets the value of the combustion table dictionary
+            :param combustion_dictionary: dictionary with the combustion table
+            :return: nothing
+            """
+            self.json_data['combustion_table'] = combustion_dictionary
+
         def return_mass_simulator_table(self):
             """
             return_mass_simulator_table returns the mass simulator table with all the static parameters
