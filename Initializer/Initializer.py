@@ -13,6 +13,7 @@ from DataLayer.JsonInterpreter import JsonInterpreter       # Import the JsonInt
 from TrajectoryModule.Drag import *                         # Import the Drag Module (DensityLaw in it)
 from Libraries.Collections import Collections               # Import Collections class
 from MassEstimationModule.system import *                   # Import the Mass Module classes
+import CombustionModule.RegressionModel as Reg                  # Import the RegressionModel module
 # ------------------ FUNCTIONS/STATIC CLASSES -------------------
 
 
@@ -200,10 +201,13 @@ class Initializer:
         # ------------- Generate the objects:
 
         # Geometry
-        geometry_obj = combustion_init_dict['geometric_params'].pop('type')
-        regression_obj = combustion_init_dict['geometric_params']['regressionModel'](**json_interpreter.return_combustion_table())
+        geometry_type = combustion_init_dict['geometric_params'].pop('type')
+        regression_obj = Reg.MarxmanAndConstantFloodingRegimeModel(**json_interpreter.return_combustion_table())
         combustion_init_dict['geometric_params']['regressionModel'] = regression_obj
-        geometry_obj = geometry_obj(**combustion_init_dict['geometric_params'])
+        geometry_obj = geometry_type(**combustion_init_dict['geometric_params'])
+        if geometry_type == SinglePortImageGeometry :
+            geometry_obj.generateFourier(**combustion_init_dict['shape_params'])
+
 
         # Nozzle
         nozzle_obj = Nozzle(**combustion_init_dict['nozzle_params'])

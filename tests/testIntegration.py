@@ -25,28 +25,33 @@ def generate_data_layer(data_file):
     return JsonInterpreter(file_name="/".join([data_directory, data_file]))
 
 
-def test_simulation_initializer():
+def test_simulation_initializer(isImageBased):
     """ the method is in charge of generating the inputs for the initializer and
     instantiating it. """
 
     # ------------ Generate the data-layer:
 
-    json_interpreter = generate_data_layer("Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json")
+    json_interpreter = generate_data_layer("DataLayerONERATests_Hycom14.json")
 
     # ---------- Pack the inputs:
 
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': NBranchRectangleStarPort, 'L': 0.2, 'rint0': 0.03,
-                                                            'rext0': 0.05, 'rb0': 0.02, 'n0': 8},
+                                       'geometric_params': {'type': SinglePortImageGeometry, 'L': 0.4,
+                                                            'externalRadius': 0.05, 'imagePixelSize': 1024,
+                                                            'imageMeterSize': 0.1},
+
+                                       'shape_params': {'a': [0,1], 'b': [1, 0, 0],
+                                                            'baseRadius': 0.036, 'branches': 10, 'impact': 0.1,
+                                                            'n': 40},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
 
                                        'set_nozzle_design': True,
 
-                                       'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
-                                                         'c_star': 1500, 'isp': 230, 'thrust': 30000},
+                                       'design_params': {'gamma': 1.27, 'p_chamber': 3200000, 'p_exit': 100000,
+                                                         'c_star': 1500, 'ox_flow': 1.2, 'OF': 5},
                                       },
 
 
@@ -56,7 +61,7 @@ def test_simulation_initializer():
                                              'max_burn_time': None},
 
                               'mass_simulator': {'ox_flow': 1, 'burn_time': 'TBD', 'extra_filling': 0.05,
-                                                 'injection_loss': 0.5, 'area_injection': 0.000105},
+                                                 'injection_loss': 0.5, 'area_injection': 0.000105, 'system' : SystemDynamic},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
                                              'simulation_time': 100}
@@ -70,11 +75,11 @@ def test_simulation_initializer():
 
     # -------------- Generate the simulation object:
 
-    simulation_object = SimulationObject(initializer_collection=init_obj)
+    simulation_object = SimulationObject(isImageBased, initializer_collection=init_obj)
 
     # --------------- Run the simulation:
 
-    simulation_object.run_simulation_in_batch()
+    simulation_object.run_simulation_in_batch(isImageBased)
 
     # Print the total mass
     print("\nRockets Total Mass: {0} kgs".format(simulation_object.mass_simulator_module.get_mass()))
@@ -103,4 +108,4 @@ def test_simulation_initializer():
 if __name__ == '__main__':
 
     # Call the test functions
-    test_simulation_initializer()
+    test_simulation_initializer(isImageBased=True)

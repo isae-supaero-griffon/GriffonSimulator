@@ -47,7 +47,7 @@
             "type": "CombustionChamber",
             "radius": 0.1,
             "height": 0.6,
-            "pressure": 3600000.0,
+            "pressure": 3250000.0,
             "propellant_mass": 0.75,
             "material_id": "aluminium"
           },

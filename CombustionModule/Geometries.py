@@ -780,11 +780,11 @@ class SinglePortImageGeometry(Geometry):
     def get_perimeter(self):
         """ return the perimeter of the image """
         if self.portGeometryIsGenerated:
-
+            perimeter = 0
             proxy_image = self.image
             contours, hierarchy = cv2.findContours(proxy_image, 0, 2)
-            cnt = contours[0]
-            perimeter = cv2.arcLength(cnt, True) * self.getMetersPerPixel()
+            for cnt in contours :
+                perimeter += cv2.arcLength(cnt, True) * self.getMetersPerPixel()
             return perimeter
         else:
             raise ValueError("Image is black : please generate geometry")
@@ -900,6 +900,23 @@ class SinglePortImageGeometry(Geometry):
 
         # Draw the shape
         cv2.fillPoly(self.image, np.int32([points]), 1, 255)
+
+        # Indicate that a shape has been generated
+        self.portGeometryIsGenerated = True
+
+    def generateMultipleCircular(self, n, ringPortsInitialRadius, centralPortInitialRadius):
+
+        # Draw the central port
+        cv2.circle(self.image, (int(self.imagePixelSize//2), int(self.imagePixelSize//2)), int(centralPortInitialRadius // self.getMetersPerPixel()), 255, -1)
+
+        # Plot the ring ports
+        if n > 0:
+            R = self.externalRadius / (1 + m.sin(m.pi / n)) // self.getMetersPerPixel()
+
+            for k in range(n):
+
+                cv2.circle(self.image, (int(R * m.cos(2 * k * m.pi / n) + self.imagePixelSize//2),
+                                        int(R * m.sin(2 * k * m.pi / n)) + self.imagePixelSize//2), int(ringPortsInitialRadius // self.getMetersPerPixel()), 255, -1)
 
         # Indicate that a shape has been generated
         self.portGeometryIsGenerated = True
