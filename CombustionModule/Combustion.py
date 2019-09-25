@@ -86,6 +86,8 @@ class CombustionObject:
                                                   else nan],
                                        "regression_rate": [0],
                                        "mass_flow": [0],
+                                       "mass_flow_ox": [0],
+                                       "mass_flow_f": [0],
                                        "of": [0],
                                        "Go": [0],
                                        "nozzle_param": [0],
@@ -191,6 +193,11 @@ class CombustionObject:
 
         self.results["magnitudes"]["burn_time"] = self.results["run_values"]["time"][-1]
 
+        # Calculate global O/F
+        total_fuel_mass = trapz(self.results["run_values"]["mass_flow_f"], self.results["run_values"]["time"], dt)
+        total_ox_mass = trapz(self.results["run_values"]["mass_flow_ox"], self.results["run_values"]["time"], dt)
+        self.results["magnitudes"]["global_of"] = total_ox_mass / total_fuel_mass
+
     def return_results(self):
         """ return the results from the simulation """
         return self.results
@@ -273,6 +280,8 @@ class CombustionObject:
             self.results["run_values"]["chamber_sound_speed"].append(son_vel)
             self.results["run_values"]["chamber_rho"].append(rho_ch)
             self.results["run_values"]["mass_flow"].append(total_mass_flow)
+            self.results["run_values"]["mass_flow_ox"].append(ox_flow)
+            self.results["run_values"]["mass_flow_f"].append(fuel_flow)
             self.results["run_values"]["chamber_speed"].append(u_ch)
             self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
 
@@ -401,6 +410,8 @@ class CombustionObject:
             self.results["run_values"]["chamber_sound_speed"].append(son_vel)
             self.results["run_values"]["chamber_rho"].append(rho_ch)
             self.results["run_values"]["mass_flow"].append(total_mass_flow)
+            self.results["run_values"]["mass_flow_ox"].append(ox_flow)
+            self.results["run_values"]["mass_flow_f"].append(fuel_flow)
             self.results["run_values"]["chamber_speed"].append(u_ch)
             self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
 
