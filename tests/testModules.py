@@ -8,7 +8,7 @@ from DataLayer.JsonInterpreter import JsonInterpreter           # Import the jso
 import CombustionModule.RegressionModel as Reg                  # Import the RegressionModel module
 import CombustionModule.Geometries as Geom                      # Import the Geometry module
 import CombustionModule.Nozzle as Noz                           # Import the Nozzle module
-from CombustionModule.Combustion import CombustionObject        # Import the CombustionObject
+import CombustionModule.Combustion as Comb                      # Import the Combustion module
 from CombustionModule.Fuel import *                             # Import the Fuel class
 from MassEstimationModule.system import System                  # Import the system class
 from TrajectoryModule.Drag import *                             # Import the Drag library
@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt                                 # Import matplot
 # ------------------------ FUNCTION DEFINITIONS ------------------------
 
 
-def generate_data_layer(data_file="Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json"):
+def generate_data_layer(data_file="DataLayerONERATests_Hycom16.json"):
     """ generate_data_layer instantiates all of the objects that
     are required as data layer for the program to run properly.
     :param data_file: name of the json file to be used as reference for the simulation (str)
@@ -43,17 +43,17 @@ def test_combustion():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.5,
-                        'rintInitial': 0.04,
-                        'rext0': 0.1,
+    geometric_params = {'L': 0.4,
+                        'rintInitial': 0.05,
+                        'rext0': 0.07,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
-    design_params = {'gamma': 1.27, 'p_chamber': 4000000, 'p_exit': 100000,
-                     'c_star': 1500, 'ox_flow': 2, 'OF': 5}
+    design_params = {'gamma': 1.27, 'p_chamber': 3200000, 'p_exit': 100000,
+                     'c_star': 1500, 'ox_flow': 1.2, 'OF': 5}
 
-    simulation_params = {'ox_flow': 2, 'safety_thickness': 0.005, 'dt': 0.05}
+    simulation_params = {'ox_flow': 1.3, 'safety_thickness': 0.005, 'dt': 0.05}
 
     # ------------- Generate objects:
 
@@ -63,7 +63,7 @@ def test_combustion():
     json_interpreter = generate_data_layer()
 
     # Instantiate the combustion module
-    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+    combustion_obj = CombustionObjectClassic(json_interpreter=json_interpreter,
                                       geometry_object=geometry_obj,
                                       nozzle_object=nozzle_obj)
 
@@ -88,25 +88,25 @@ def test_combustion_image_geometry():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.5,
-                        'externalRadius': 0.1,
+    geometric_params = {'L': 0.4,
+                        'externalRadius': 0.45,
                         'imagePixelSize': 2048,
-                        'imageMeterSize': 0.2,
+                        'imageMeterSize': 0.1,
                         'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
-    shape_params = {'a': [0.2, 0.4, -0.3, 0.3, 0],
-                    'b': [-0.1, 0.4, 0.2, -0.02],
-                    'baseRadius': 0.04,
-                    'branches': 12,
-                    'impact': 0.1,
-                    'n': 50}
+    shape_params = {'a' : [0.07552083333333333, -0.22916666666666666, 0.3151041666666667],
+                    'b' : [],
+                    'baseRadius' : 0.036,
+                    'branches' : 8,
+                    'impact' : 0.3,
+                    'n' : 40}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
-    design_params = {'gamma': 1.27, 'p_chamber': 4000000, 'p_exit': 100000,
-                     'c_star': 1500, 'ox_flow': 2, 'OF': 5}
+    design_params = {'gamma': 1.27, 'p_chamber': 3200000, 'p_exit': 100000,
+                     'c_star': 1500, 'ox_flow': 1., 'OF': 9}
 
-    simulation_params = {'ox_flow': 2, 'safety_thickness': 0.005}
+    simulation_params = {'ox_flow': 0.96875, 'safety_thickness': 0.000000001, 'max_burn_time' : 5, 'dt': 0.05}
 
     # ------------- Generate objects:
 
@@ -118,13 +118,13 @@ def test_combustion_image_geometry():
     json_interpreter = generate_data_layer()
 
     # Instantiate the combustion module
-    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+    combustion_obj = Comb.CombustionObjectImage(json_interpreter=json_interpreter,
                                       geometry_object=geometry_obj,
                                       nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
-    combustion_obj.run_simulation_constant_fuel_sliver_image_geometry(**simulation_params)
+    combustion_obj.run_simulation_constant_fuel_sliver(**simulation_params)
 
     # Print the module
     print(combustion_obj)
@@ -155,7 +155,7 @@ def test_combustion_three_port_geometry():
     json_interpreter = generate_data_layer()
 
     # Instantiate the combustion module
-    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+    combustion_obj = CombustionObjectClassic(json_interpreter=json_interpreter,
                                       geometry_object=geometry_obj,
                                       nozzle_object=nozzle_obj)
 
@@ -196,7 +196,7 @@ def test_combustion_onera_data():
     json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
 
     # Instantiate the combustion module
-    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+    combustion_obj = CombustionObjectClassic(json_interpreter=json_interpreter,
                                       geometry_object=geometry_obj,
                                       nozzle_object=nozzle_obj)
 
@@ -242,7 +242,7 @@ def test_onera_physical_test_2():
     json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
 
     # Instantiate the combustion module
-    combustion_obj = CombustionObject(json_interpreter=json_interpreter,
+    combustion_obj = CombustionObjectClassic(json_interpreter=json_interpreter,
                                       geometry_object=geometry_obj,
                                       nozzle_object=nozzle_obj)
 
@@ -281,9 +281,10 @@ def test_trajectory():
     thrust = []                                             # Initiate the thrust array
     isp = []                                                # Initiate the isp array
     time = []                                               # Initiate the time array
-    burn_time = 3.5                                         # Burn time in seconds
-    constant_thrust = 3000                                  # Thrust value in newtons
-    constant_isp = 245                                      # Isp value in seconds
+    burn_time = 4.5
+    # Burn time in seconds
+    constant_thrust = 2600                         # Thrust value in newtons
+    constant_isp = 210                              # Isp value in seconds
 
     for i in range(0, n_points):
         t = delta_t*i
@@ -296,7 +297,7 @@ def test_trajectory():
             isp.append(np.nan)
 
     # isp, area_ref, initial conditions
-    initial_conditions = {'h0': 0, 'v0': 0, 'm0': 28}       # Initial mass in kg
+    initial_conditions = {'h0': 0, 'v0': 0, 'm0': 35}       # Initial mass in kg
 
     # ------------- Generate objects:
 
@@ -354,10 +355,10 @@ if __name__ == '__main__':
     # test_combustion()
     # test_combustion_three_port_geometry()
     # test_mass_simulator()
-    # test_trajectory()
-    test_combustion_onera_data()
+    #test_trajectory()
+    #test_combustion_onera_data()
     # test_onera_physical_test_2()
-    # test_combustion_image_geometry()
+    test_combustion_image_geometry()
     # test_fuel()
     # Show any plots
     plt.show()
