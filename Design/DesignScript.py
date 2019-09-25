@@ -16,7 +16,7 @@ import json                                                         # Import the
 # -------------------- FUNCTIONS DEFINITIONS ------------------
 
 
-def generate_data_layer(data_file):
+def generate_data_layer(data_file="Griffon Data - ABS - H2O2 - 36 bar.json"):
     """ generate_data_layer instantiates all of the objects that
     are required as data layer for the program to run properly.
     :param data_file: name of the json file to be used as reference for the simulation (str)
@@ -37,34 +37,34 @@ def single_case_analysis_one_port():
 
     # ------------ Generate the data-layer:
 
-    json_interpreter = generate_data_layer("Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json")
+    json_interpreter = generate_data_layer("Griffon Data - ABS - H2O2 - 36 bar.json")
 
     # ---------- Pack the inputs:
 
-    ox_flow = 1.09
+    ox_flow = 1.01
 
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': OneCircularPort,
-                                                            'L': 0.325,
-                                                            'rintInitial': 0.03,
-                                                            'rext0': 0.05,
+                                                            'L': 0.4,
+                                                            'rintInitial': 0.04,
+                                                            'rext0': 0.1/2,
                                                             'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
 
-                                       'set_nozzle_design': True,
+                                       'set_nozzle_design': False,
 
                                        'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
-                                                         'c_star': 1580, 'ox_flow': ox_flow, 'OF': 5.5},
+                                                         'c_star': 1430, 'ox_flow': ox_flow, 'OF': 5.5},
                                       },
 
 
                       }
     simulation_parameters = {
                               'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.01,
-                                             'max_burn_time': 4.5},
+                                             'max_burn_time': 5     },
 
                               'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
                                                  'system': SystemDynamic, 'extra_filling': 0.1,
@@ -557,4 +557,5 @@ if __name__ == '__main__':
     # Execute the program
     # run_design_cases()
     # single_case_analysis_three_circular_ports()
-    single_case_analysis_one_port_review()
+    # single_case_analysis_one_port_review()
+    single_case_analysis_one_port()
