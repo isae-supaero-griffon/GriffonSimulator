@@ -165,16 +165,15 @@ class Rossiter:
         for mode in self.modes[1:]:
             mode.k_ross = self.modes[0].k_ross
 
-    def calculate_modes_frequencies(self, start_time):
+    def calculate_modes_frequencies(self):
         """
         calculate_modes_frequencies starts the calculations for the modes involved
-        :param start_time: start time for the mode to appear
         :return: nothing
         """
 
         # Loop through every mode and execute the corresponding method
         for mode in self.modes:
-            mode.calculate_frequency_evolution(start_time, self.combustion.results['run_values'])
+            mode.calculate_frequency_evolution(self.combustion.results['run_values'])
 
     @staticmethod
     def _initialize_modes(modes_params, post_combustion):
@@ -239,9 +238,9 @@ class Rossiter:
         # --------------- ROSSITER PLOT -----------------
 
         # Plot the data associated to the test
-        axs[0].plot(self.test_results['t'], self.test_results['f'], color='blue',
+        axs[0].plot(self.test_results['t'], self.test_results['f'], color='lightcoral',
                   label="%s Test" % self.test_name, linestyle='',
-                  marker='*', markersize=1.0, markerfacecolor='blue')
+                  marker='*', markersize=1.0, markerfacecolor='lightcoral')
 
         # Plot the modes results
         for mode in self.modes:
@@ -383,11 +382,10 @@ class RossiterMode:
                                        L=self.post_combustion.L, f0=self.f0, u0=sub_dict['chamber_speed'],
                                        c0=sub_dict['chamber_sound_speed'], beta=beta)
 
-    def calculate_frequency_evolution(self, start_time, combustion_results):
+    def calculate_frequency_evolution(self, combustion_results):
         """
         calculate_frequency_evolution estimates the frequency evolution over time
         of the burn.
-        :param start_time:
         :param combustion_results:
         :return: nothing
         """
@@ -404,7 +402,7 @@ class RossiterMode:
             t = record['time']
 
             # Check for the initial time in which the mode appears
-            if start_time <= t:
+            if self.t0 <= t:
                 # Extract the required data
                 r, c, u = record['hydraulic_port_diameter']/2, record['chamber_sound_speed'], record['chamber_speed']
 
