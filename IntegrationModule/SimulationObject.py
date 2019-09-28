@@ -10,7 +10,7 @@ from Initializer.Initializer import *                   # Import the Initializer
 import warnings                                         # Import the warnings module
 from TrajectoryModule.Trajectory import *               # Import the Trajectory class
 from Results.Results import *                           # Import Results classes
-import CombustionModule.Combustion as Comb                         # Import the Combustion module
+import CombustionModule.Combustion as Comb              # Import the Combustion module
 
 # ---------------------- FUNCTION DEFINITIONS ---------------------
 
@@ -59,7 +59,7 @@ class SimulationObject:
         5. results_dictionary: dictionary which contains the results of the code.
     """
 
-    def __init__(self, isImageBased, initializer_collection=None):
+    def __init__(self, initializer_collection=None):
         """
         class initializer
         :param initializer_collection: Initializer instance object used to set up the simulation
@@ -90,14 +90,14 @@ class SimulationObject:
             self.initialization_object = None
 
         # Set the remaining attributes
-        self.combustion_module = self._generate_combustion_module(isImageBased)
+        self.combustion_module = self._generate_combustion_module()
         self.mass_simulator_module = None
         self.trajectory_module = self._generate_trajectory_module()
 
         # Initialize an empty ResultsCollection object
         self.results_collection = ResultsCollection([])
 
-    def _generate_combustion_module(self, isImageBased):
+    def _generate_combustion_module(self):
         """
         _generate_combustion_module calls the constructor of the Combustion class and initializes it
         :return: Combustion object
@@ -106,10 +106,9 @@ class SimulationObject:
         # Check the validity of the initializer
         if self.initialization_object:
             # Initialize the combustion object if initializer is present
-            if isImageBased:
-                obj = Comb.CombustionObjectImage(**self.initialization_object.combustion_parameters)
-            else:
-                obj = Comb.CombustionObjectClassic(**self.initialization_object.combustion_parameters)
+            obj = self.initialization_object.simulation_parameters['CombustionModel'](**self.initialization_object.combustion_parameters)
+            # else:
+                # obj = Comb.CombustionObjectClassic(**self.initialization_object.combustion_parameters)
         else:
             # Set the object to None value, issue warning
             warnings.warn("Set the CombustionObject to None, not representative object. \n")
@@ -158,7 +157,7 @@ class SimulationObject:
         # Return the module
         return obj
 
-    def update_modules(self, initialization_object, isImageBased):
+    def update_modules(self, initialization_object):
         """
         update_modules re-runs the modules generators to update them to a new initializer object
         :param initialization_object: new initializer object
@@ -169,7 +168,7 @@ class SimulationObject:
         self.initialization_object = initialization_object
 
         # Regenerate the modules
-        self.combustion_module = self._generate_combustion_module(isImageBased)
+        self.combustion_module = self._generate_combustion_module()
         self.mass_simulator_module = None
         self.trajectory_module = self._generate_trajectory_module()
 
@@ -196,7 +195,7 @@ class SimulationObject:
         else:
             print("\n-------- NO RESULTS DETECTED ON SIMULATION OBJECT ----------\n")
 
-    def run_simulation_in_batch(self, isImageBased):
+    def run_simulation_in_batch(self):
         """
         run_simulation_in_batch runs the simulations contained in the InitializerCollection and stores the output
         :return: nothing
@@ -206,7 +205,7 @@ class SimulationObject:
         for initializer_obj in self.initialization_collection.elements_list:
 
             # Update the simulation object to the initialization obj
-            self.update_modules(initializer_obj, isImageBased)
+            self.update_modules(initializer_obj)
 
             try:
                 self.run_simulation()
