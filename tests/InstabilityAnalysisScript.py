@@ -9,6 +9,7 @@
 # ---------------------------- IMPORT MODULES -------------------------------
 
 from DataLayer.JsonInterpreter import JsonInterpreter           # Import the json interpreter
+from CombustionModule.Combustion import *
 import CombustionModule.RegressionModel as Reg                  # Import the RegressionModel module
 import CombustionModule.Geometries as Geom                      # Import the Geometry module
 import CombustionModule.Nozzle as Noz                           # Import the Nozzle module
@@ -61,9 +62,9 @@ def define_onera_physical_hycom_13_test_combustion_object():
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
-    combustion_object = CombustionObject(json_interpreter=json_interpreter,
-                                         geometry_object=geometry_obj,
-                                          nozzle_object=nozzle_obj)
+    combustion_object = CombustionObjectClassic(json_interpreter=json_interpreter,
+                                                geometry_object=geometry_obj,
+                                                nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
@@ -171,9 +172,9 @@ def define_onera_physical_hycom_16_test_combustion_object():
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
-    combustion_object = CombustionObject(json_interpreter=json_interpreter,
-                                         geometry_object=geometry_obj,
-                                          nozzle_object=nozzle_obj)
+    combustion_object = CombustionObjectClassic(json_interpreter=json_interpreter,
+                                                geometry_object=geometry_obj,
+                                                nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
