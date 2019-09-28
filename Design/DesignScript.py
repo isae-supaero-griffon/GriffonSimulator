@@ -7,6 +7,7 @@
 # ---------------------- IMPORT MODULES -----------------------
 
 from Initializer.Initializer import *                               # Import the Initializer object
+from CombustionModule.Combustion import *                           # Import the Combustion Models
 from IntegrationModule.SimulationObject import SimulationObject     # Import the SimulationObject
 import numpy as np                                                  # Import numpy
 import itertools                                                    # Import itertools
@@ -29,7 +30,7 @@ def generate_data_layer(data_file="Griffon Data - ABS - H2O2 - 36 bar.json"):
     return JsonInterpreter(file_name="/".join([data_directory, data_file]))
 
 
-def single_case_analysis_one_port():
+def single_case_analysis_one_circular_port():
     """
     Study the behavior of the rocket for a single case with OneCircularPort
     :return: nothing
@@ -41,12 +42,12 @@ def single_case_analysis_one_port():
 
     # ---------- Pack the inputs:
 
-    ox_flow = 1.01
+    ox_flow = 1.1
 
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': OneCircularPort,
-                                                            'L': 0.4,
+                                                            'L': 0.6,
                                                             'rintInitial': 0.04,
                                                             'rext0': 0.1/2,
                                                             'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
@@ -54,21 +55,26 @@ def single_case_analysis_one_port():
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
 
-                                       'set_nozzle_design': False,
+                                       'set_nozzle_design': True,
 
                                        'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
-                                                         'c_star': 1430, 'ox_flow': ox_flow, 'OF': 5.5},
+                                                         'c_star': 1430, 'ox_flow': ox_flow, 'OF': 12.5},
                                       },
 
 
                       }
     simulation_parameters = {
-                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.01,
-                                             'max_burn_time': 5     },
+                              'CombustionModel': CombustionObjectClassic,
+
+                              'combustion': {
+                                             'ox_flow': ox_flow,
+                                             'safety_thickness': 0.005,
+                                             'dt': 0.01,
+                                             'max_burn_time': 5},
 
                               'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
                                                  'system': SystemDynamic, 'extra_filling': 0.1,
-                                                 'injection_loss': 0.5, 'area_injection': 0.000105},
+                                                 'injection_loss': 0.3, 'area_injection': 0.000105},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
                                              'simulation_time': 60}
@@ -558,4 +564,4 @@ if __name__ == '__main__':
     # run_design_cases()
     # single_case_analysis_three_circular_ports()
     # single_case_analysis_one_port_review()
-    single_case_analysis_one_port()
+    single_case_analysis_one_circular_port()
