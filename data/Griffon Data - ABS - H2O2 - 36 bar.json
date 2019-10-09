@@ -32,10 +32,15 @@
       "avionics": {
         "identifier": "avionics",
         "parts": {
+          "e_bay": {
+            "identifier": "E-Bay",
+            "type": "StaticPart",
+            "mass": 0.48
+          },
           "electronics": {
             "identifier": "electronics",
             "type": "StaticPart",
-            "mass": 1.0
+            "mass": 1.716
           }
         }
       },
@@ -43,33 +48,12 @@
         "identifier": "combustion",
         "parts": {
           "chamber": {
-            "identifier": "chamber",
-            "type": "CombustionChamber",
-            "radius": 0.1,
-            "height": 0.6,
-            "pressure": 3600000.0,
-            "propellant_mass": 0.75,
-            "material_id": "aluminium"
-          },
-          "liner": {
-            "identifier": "liner",
-            "type": "ThermalLiner",
-            "chamber_ref": {
-              "subsystem_id": "combustion",
-              "part_id": "chamber"
-            },
-            "thickness": 0.005,
-            "material_id": "liner_mat"
-          },
-          "injector": {
-            "identifier": "injector",
+            "identifier": "CombustionChamber",
             "type": "StaticPart",
-            "mass": 0.5
-          },
-          "nozzle": {
-            "identifier": "nozzle",
-            "type": "StaticPart",
-            "mass": 1.0
+            "radius": "",
+            "height": "",
+            "propellant_mass": "tbd",
+            "mass": 6.59227
           }
         }
       },
@@ -78,12 +62,11 @@
         "parts": {
           "oxidant_tank": {
             "identifier": "oxidant_tank",
-            "type": "OxidantTank",
-            "radius": 0.1,
-            "height": 0.3,
-            "pressure": 6000000.0,
-            "propellant_mass": 4.0,
-            "material_id": "aluminium"
+            "type": "TankStatic",
+            "radius": 0.06,
+            "height": 0.355,
+            "propellant_mass": "tbd",
+            "mass": 4.387
           }
         }
       },
@@ -92,68 +75,39 @@
         "parts": {
           "pressuriser_tank": {
             "identifier": "pressuriser_tank",
-            "type": "PressuriserTank",
-            "radius": 0.1,
-            "height": 0.2,
-            "structure_mass": 1.0,
-            "oxidiser_ref": {
-              "subsystem_id": "oxidiser",
-              "part_id": "oxidant_tank"
-            },
-            "pressuriser_gas_constant": 2077.0,
-            "pressuriser_gamma": 1.66,
-            "ambient_temperature": 300.0
-          },
-          "pressuriser_valve": {
-            "identifier": "pressuriser_valve",
             "type": "StaticPart",
-            "mass": 0.4
+            "mass": 1.65
           }
         }
       },
       "plumbing": {
         "identifier": "plumbing",
         "parts": {
-          "pipes": {
-            "identifier": "pipes",
+          "all_plumbing": {
+            "identifier": "all_plumbing",
             "type": "StaticPart",
-            "mass": 0.5
-          },
-          "valve1": {
-            "identifier": "valve1",
-            "type": "StaticPart",
-            "mass": 0.4
-          },
-          "valve2": {
-            "identifier": "valve2",
-            "type": "StaticPart",
-            "mass": 0.4
-          },
-          "valve3": {
-            "identifier": "valve3",
-            "type": "StaticPart",
-            "mass": 0.6
+            "mass": 1.95
           }
         }
       },
       "structures": {
         "identifier": "structure",
         "parts": {
+          "engine_structures": {
+            "identifier": "engine_structures",
+            "type": "StaticPart",
+            "mass": 2.64
+          },
           "rocket_structure": {
             "identifier": "rocket_structure",
             "type": "StaticPart",
             "mass": 20.0
-          },
-          "fixings": {
-            "identifier": "fixings",
-            "type": "StaticPart",
-            "mass": 0.5
+          }
           }
         }
-      }
     },
     "safety_factor": 3.0
-  },
+   },
   "trajectory_table": {
     "density": {
       "g0": 9.81,
