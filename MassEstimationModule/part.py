@@ -163,7 +163,7 @@ class DimensionedTank(Tank):
         return self.get_shell_volume() * self.material.density + self.propellant_mass
     
 
-class OxidantTankStatic(StaticPart, Tank):
+class TankStatic(StaticPart, Tank):
     """Class for tanks with already defined mass and dimensions. Inherits from both
        StaticPart and Tank. 
     """
@@ -256,7 +256,7 @@ class PartsCatalogue:
                  'OxidantTank': OxidantTank,
                  'PressuriserTank': PressuriserTank,
                  'ThermalLiner': ThermalLiner,
-                 'OxidantTankStatic': OxidantTankStatic
+                 'TankStatic': TankStatic
                  }
 
     @staticmethod
