@@ -4,11 +4,12 @@
 
 # ------------------------- IMPORT MODULES ----------------------
 
-from abc import ABC, abstractmethod
-import matplotlib.pyplot as plt
-import math as m
-import numpy as np
-import cv2
+from abc import ABC, abstractmethod         # Import abc module for abstract classes definitions
+import matplotlib.pyplot as plt             # Import matplotlib
+import math as m                            # Import the math module
+import numpy as np                          # Import numpy
+import cv2                                  # Import cv2
+from CombustionModule.Mesher import *       # Import the different kinds of meshes
 
 # ------------------------ FUNCTION DEFINITIONS -----------------
 
@@ -106,6 +107,7 @@ def draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle):
     # Plot the combustion port
     plt.plot(p1, p3, 'w-', lw=2)
     plt.plot(p2, p3, 'w - ', lw=2)
+
 
 # -------------------------- CLASS DEFINITIONS ------------------
 
@@ -881,7 +883,6 @@ class SinglePortImageGeometry(Geometry):
         # Indicate that a shape has been generated
         self.portGeometryIsGenerated = True
 
-
     def generateFourier(self, a, b, baseRadius, branches, impact, n):
 
         pixelBaseRadius = m.floor(baseRadius / self.getMetersPerPixel())  # Get the base radius in pixels
@@ -920,3 +921,176 @@ class SinglePortImageGeometry(Geometry):
 
         # Indicate that a shape has been generated
         self.portGeometryIsGenerated = True
+
+
+# ---------------------- 1D Geometry definition
+
+class Geometry1D(ABC):
+    """
+    The Geometry1D class is an abstract class aimed at providing 1D simulation
+    capabilities to the Griffon Simulator, based on the Haltman's book.
+
+    Attributes:
+        1. Mesh: Mesh class instance
+        2. r_ext: External cylinder radius (all grains are assumed to be cylindrical
+        3. min_thickness: min material thickness with the external part of the cylinder
+        3. interpolator: method used to aid in the interpolation of the geometries
+    """
+
+    #TODO: associate the Geometry1D model with the Geometry - 0D models in a redesign of the code
+
+    def __init__(self, L, r_ext, min_thickness):
+        """
+        Class initializer
+        :param L: float containing the grain-length
+        :param r_ext: float indicating the external radius of the geometry
+        :param min_thickness: min material thickness with the external part of the cylinder
+        :param N: integer defining the number of cells in the mesh
+        """
+        # Call superclass initializer
+        super(Geometry1D, self).__init__()
+
+        # Check the inputs
+        assert  L > 0, "Grain length (L) must be greater than 0 \n"
+        assert  r_ext > 0, "Grain external radius (r_ext) must be greater than 0 \n"
+        assert  N > 0, "Number of nodes (N) must be greater than 0 \n"
+        assert  isinstance(N, int), "Number of nodes (N) must be an integer \n"
+
+        # Set attributes
+        self.L = L
+        self.mesh = None
+        self.min_thickness = min_thickness
+        self.interpolator = None
+
+    def _generate_mesh(self, N):
+        """
+        _generate_mesh is a private method which generates a uniformly spaced mesh
+        :param N: integer indicating the number of cells of the mesh
+        :return: UniformSpacedMesh instance
+        """
+        return UniformlySpacedMesh("Mesh-1D", self, N)
+
+    @abstractmethod
+    def _generate_interpolator(self):
+        """
+        _generate_interpolator handles the geneation of the interpolator object.
+        :return: interpolator object or collection of interpolators
+        """
+
+    @abstractmethod
+    def my_cell_factory(self, i, x):
+        """
+        my_cell_factory is a method which helps instantiate the cells associated to the geometry
+        :param i: integer indicating cell number
+        :param x: cell position
+        :return: Cell instance of interest
+        """
+        pass
+
+    @abstractmethod
+    def _update_interpolator(self):
+        """ _update_interpolator updates the values present in the interpolator to the
+        values present in the cells.
+        """
+        pass
+
+    @abstractmethod
+    def regress(self, regression_model, m_ox, rho_f, dt):
+        """
+        regress method performs the regression of the fuel grain. Updates the geometry
+        along the port by updating the cells on the mesh
+        :param regression_model: RegressionModel instance.
+        :param m_ox: mass flow of oxidizer
+        :param rho_f: fuel density
+        :param dt: time of simulation
+        :return: total mass of fuel regressed.
+        """
+        pass
+
+    @abstractmethod
+    def min_thickness_reached(self):
+        """
+        min_thickness_reached determines if the minimum thickness has been reached to stop the simulation
+        :return: boolean indicating true or false
+        """
+        pass
+
+
+
+class SingleCircularPort1D(Geometry1D):
+    """
+    SingleCircularPort1D class inherits from the Geometry1D class and implements
+    the case of a single circular port. For such case then, the profile expected for the
+    port is a circle of constant radius.
+
+    Attributes:
+        1. r_int: float indicating the internal radius
+    """
+
+    def __init__(self, L, r_ext, N, r_init):
+        """
+        class initializer
+        :param r_init: float indicating the internal radius.
+        """
+
+        # Call parent class constructor
+        super(SingleCircularPort1D, self).__init__(L, r_ext)
+
+        # Check the inputs
+        assert  r_init > 0, "Internal radius (r_init) has to be greater than 0 \n"
+
+        # Set the properties
+        self.r_init = r_init
+        self.mesh = self._generate_mesh(N)
+        self.interpolator = self._generate_interpolator()
+
+    def my_cell_factory(self, i, x):
+        """ implement cell factory for single circular port """
+        return CircularPortCell(i, x, self.r_init)
+
+    def _generate_interpolator(self):
+        """ generate the interpolator """
+
+        # Collect the area data
+        x, areas, perimeters = self.mesh.return_data()
+
+        # Return the output
+        return Interpolator(0, self.L, x, areas, perimeters)
+
+    def _update_interpolator(self):
+        # Collect the area data
+        _, updated_areas, updated_perimeters = self.mesh.return_data()
+
+        # Set the new areas
+        self.interpolator.set_y_cor(updated_areas)
+        self.interpolator.set_z_cor(updated_perimeters)
+
+    def regress(self, regression_model, m_ox, rho_f, dt):
+        """ perform the regression of the fuel geometry """
+
+        # Define the Runge-Kutta function
+        def mass_flux_gradient(x, mass_flux_fuel):
+            """
+            mass_flux_gradient is the function that is inputted into the solver
+            :param x: x_cordinate
+            :param mass_flux_fuel: mass flux of fuel at coordinate x
+            :return: mass flux gradient
+            """
+
+            # Interpolate the area and perimeter from the mesh
+            area, perimeter = self.interpolator.interpolate(x)
+
+            # Calculate fluxes and hydraulic_diameter
+            mass_flux_ox = m_ox / area
+            hydraulic_diameter = 4 * area / perimeter
+
+            # TODO: finish implementation of regress and account for check min thickness
+
+
+
+
+
+
+
+
+

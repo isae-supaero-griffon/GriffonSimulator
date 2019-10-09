@@ -1,0 +1,274 @@
+# The Mesher.py file includes the class Mesh, used to define the mesh. The
+# mesh is important to define the domain of discretization and the specific
+# locations at which the problem is to be solved. By default the mesh strategy
+# is to define an uniformly spaced mesh. Further developments can enhance this
+# capability from a programming standpoint, however it is to be noticed that
+# the Hydres model is derived for a uniformly spaced mesh.
+# In addition the class cell is defined in this document.
+# @author: Jose Felix Zapata Usandivaras
+# @date: 19/08/2019
+# ISAE - SUPAERO, MAE1 Research Project
+# Reference: Messineo, Jérôme. Modélisation des instabilités hydrodynamiques dans les moteurs-fusées hybrides.
+# Diss. Toulouse, ISAE, 2016.
+
+# TODO: check the hypothesis of the Hydres model that it is developed for a uniformly spaced mesh.
+
+# ------------------------- IMPORT MODULES --------------------------- #
+
+from abc import ABC, abstractmethod
+from CombustionModule.Geometries import Geometry1D
+import math as m
+import numpy as np
+
+
+
+# ----------------------- FUNCTION DEFINITIONS ----------------------- #
+
+
+
+
+# ------------------------- CLASS DEFINITIONS ------------------------ #
+
+class Mesh(ABC):
+    """
+    The class Mesh contains the cells assembly where it is to be calculated
+    the magnitudes of the problem.
+    Its attributes are:
+        0. name: string containing the name of the mesh.
+        1. cells: array of cells
+    """
+
+    def __init__(self, name, geometry_obj):
+        """ class initializer
+            :param  name: string containing the name of the mesh.
+            :param geometry_obj: Geometry class instance which defined the domain of the problem.
+        """
+        # Call superclass initializer
+        super(Mesh, self).__init__()
+
+        # Check the inputs
+        assert isinstance(name, str), "Failed assertion: name of mesh has to be of str type.\n"
+        assert isinstance(geometry_obj, Geometry), "Failed assertion: geometry_obj has to be of Geometry type.\n"
+
+        # Initialize attributes
+        self.name = name
+        self.geometry = geometry_obj
+        # TODO: find a more convenient array type with iterator protocol to operate with cells
+        self.cells = []
+
+    @abstractmethod
+    def _generate_cells(self, cell_factory):
+        pass
+
+    def return_x_cor(self):
+        """
+        return_x_corr returns a numpy array with the x_cor of the mesh
+        :return: np.array of x_cor
+        """
+        return np.array([my_cell.x_cor for my_cell in self.cells])
+
+    def return_data(self):
+        """
+        return_data provides the data to run the interpolation
+        :return: x, area array, perimeter array
+        """
+        x, areas, perimeters = zip([(my_cell.x_cor, my_cell.return_area_data(), my_cell.return_perimeter_data()) for
+                                    my_cell in self.cells])
+        return np.array(x), np.array(areas), np.array(perimeters)
+
+
+
+class UniformlySpacedMesh(Mesh):
+    """
+    The UniformlySpacedMesh inherits from the Mesh class.
+    """
+
+    def __init__(self, name, geometry_obj, n_el):
+        """
+        class initializer
+        :param geometry_obj: Geometry class instance which defined the domain of the problem.
+        :param n_el: number of cells integer.
+        """
+        # Call superclass constructor
+        super(UniformlySpacedMesh, self).__init__(name, geometry_obj)
+
+        # Check the input
+        assert isinstance(n_el, int), "Failed assertion: check n_el is an int.\n"
+
+        # Attributes definition
+        self.n_el = n_el
+        self.dx = self.geometry_obj.L / n_el
+        self.cells = self._generate_cells(geometry_obj.my_cell_factory)
+
+    def _generate_cells(self, cell_factory):
+        """
+        Generate the cells according to the law proposed.
+        :param cell_factory: cell factory method associated to the geometry object
+        :return: array of cells
+        """
+        return [cell_factory(i, i * self.dx) for i in range(0, self.n_el+1)]
+        # TODO: be careful with the definition of the nels
+
+
+class Cell(ABC):
+    """
+    The Cell class is in charge of storing the local magnitudes associated to a given
+    position within the discretized domain of the rocket.
+    Its attributes are:
+        0. number: integer starting from 0 defining the position on the mesh array
+        1. x_cor: float defining the x coordinate of the cell. First cell starts at 0 and last
+                  finishes at L equivalent to the length of the domain.
+        2. profile: associated profile to the cell depends on the type of geometry
+    """
+
+    def __init__(self, num, x, profile):
+        """
+        class initializer
+        :param num: integer indicating the cell number.
+        :param x: float which indicates the cell position.
+        :param profile: profile which characterizes the cell
+        """
+        # Call superclass initializers
+        super(Cell, self).__init__()
+
+        # Initialize attributes
+        assert isinstance(num, int), "Failed assertion: cell number is not an int instance.\n"
+        assert isinstance(x, float), "Failed assertion: cell position is not a float instance.\n"
+
+        # Set the attributes
+        self.number = num
+        self.x_cor = x
+        self.profile = profile
+
+    def set_profile(self, my_profile):
+        """
+        set_profile sets the profile property
+        :param my_profile: depends on the type geometry but it characterizes the geometry
+        description
+        :return: nothing
+        """
+        self.profile = my_profile
+
+    @abstractmethod
+    def total_cross_section_area(self):
+        """ return total cross section area"""
+        pass
+
+    @abstractmethod
+    def cross_section_perimeter(self):
+        """ return the cross section perimeter """
+        pass
+
+    @abstractmethod
+    def return_area_data(self):
+        """ return area data
+        :return single element or tupple if its multi-dimensional"""
+        pass
+
+    @abstractmethod
+    def return_perimeter_data(self):
+        """ return perimeter data
+        :return single element or tupple if its multi-dimensional """
+        pass
+
+
+class CircularPortCell(Cell):
+    """
+    CircularPortCell is a concrete class which inherits from Cell, only to be instantiated
+    by the proper factory method
+    """
+
+    def __init__(self, num, x, profile):
+        """ class initializer """
+
+        # Call superclass constructor
+        super(CircularPortCell, self).__init__(num, x, profile)
+
+    def total_cross_section_area(self):
+        """ Calculate cross section area for circular port cell """
+        return m.pi * self.profile ** 2
+
+    def cross_section_perimeter(self):
+        """ Calculate the cross section perimeter for a circular port cell"""
+        return 2 * m.pi * self.profile
+
+    def return_area_data(self):
+        return self.total_cross_section_area()
+
+    def return_perimeter_data(self):
+        return self.cross_section_perimeter()
+
+
+
+
+class Interpolator:
+    """
+    Interpolator class helps in the interpolation of the cross section
+    area for the single port.
+
+        Attrs:
+            0. x_cor: coordinates of x
+            1. y_cor: coordinates of y (cross section area of port)
+            2. z_cor: coordinates of z (perimeter of cross section area)
+    """
+
+    def __init__(self, x_min, x_max, x_cor=0, y_cor=0, z_cor=0):
+        """
+        class initializer
+        :param x_min: minimum value admisible for x
+        :param x_max: maximum value admisible for x
+        :param x_cor: initial values for the x_cor
+        :param y_cor: initial values for the y_cor
+        :param z_cor: initial values for the z_cor
+        """
+
+        # Set the attributes
+        self.x_min = x_min
+        self.x_max = x_max
+        self.x_cor = x_cor
+        self.y_cor = y_cor
+        self.z_cor = z_cor
+
+    def set_x_cor(self, x_cor):
+        self.x_cor = x_cor
+
+    def set_y_cor(self, y_cor):
+        self.y_cor = y_cor
+
+    def set_z_cor(self, z_cor):
+        self.z_cor = z_cor
+
+    def interpolate(self, x):
+        """
+        perform the interpolation for the value of x
+        :param x: coordinate x
+        :return: interpolated value
+        """
+
+        # Check the value
+        if x < self.x_min or x > self.x_max:
+            raise ValueError("Interpolated value greater than interp bounds. \n")
+
+        # return value
+        return np.interp(x, self.y_cor), np.interp(x, self.z_cor)
+
+# --------------------------- COMMENTS ----------------------------
+#
+# class FlowCell(Cell):
+#     """
+#     FlowCell is a class which inherits from cell in order to separate the geometric data from the flow data.
+#     This eases the code's readability and helps in the future to separate the behavior.
+#         Attributes:
+#
+#     """
+#
+#     def __init__(self, num, x):
+#         """
+#         class initializer
+#         :param num: integer indicating the cell number.
+#         :param x: float which indicates the cell position.
+#         """
+#
+#         super(FlowCell, self).__init__(num, x)
+#
+#         # Define flow variables as attributes of the flow cell

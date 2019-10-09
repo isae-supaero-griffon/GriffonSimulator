@@ -10,6 +10,7 @@ from CombustionModule.Geometries import *                                       
 from CombustionModule.Nozzle import *                                               # Import the nozzle class
 import CombustionModule.Isentropic as iso                                           # Import the isoentropic module
 from CombustionModule.Fuel import *                                                 # Import the RocketCEA wrapper
+from CombustionModule.RegressionModel import *                                      # Import the Regression Model
 import math                                                                         # Import math
 import matplotlib.pyplot as plt                                                     # Import matplotlib to plot results
 from matplotlib.ticker import FormatStrFormatter                                    # Import formatter
@@ -40,28 +41,20 @@ class CombustionObject(ABC):
     The functionality of the combustion object is to perform the integration of the regression
     rate based on the parameters defined for the rocket engine.
 
-    # Global attributes:
-        simulation_type: simulation type used to interpolate from the CEA table
-
     # Attributes:
         1. data_dictionary: combustion table that contains all of the static data required for
         object to work properly, (mainly constants stored in the json file and uploaded by the
         JsonInterpreter.
-        2. interpolator: Interpolator instance used to process CEA data table
-        3. geometry: Geometry instance used to define the geometry of the port (hybrid rocket)
-        4. nozzle: Nozzle instance to define the parameters of the nozzle and convert regression rate
+        2. fuel: Fuel object instance, acts as a wrapper of RocketCEA module
+        2. nozzle: Nozzle instance to define the parameters of the nozzle and convert regression rate
         into thrust and Isp.
-        5. results
+        3. results
     """
 
-    # Global attribute
-    simulation_type = "THEORETICAL ROCKET PERFORMANCE ASSUMING EQUILIBRIUM"
-
-    def __init__(self, json_interpreter, geometry_object, nozzle_object):
+    def __init__(self, json_interpreter, nozzle_object):
         """
         class initializer
         :param json_interpreter: JsonInterpreter instance used to collect the data
-        :param geometry_object: Geometry instance
         :param nozzle_object: Nozzle instance
 
         """
@@ -69,39 +62,31 @@ class CombustionObject(ABC):
 
         # Assert nature of the inputs - JsonInterpreter is a singleton so it is instantiated once
         assert json_interpreter == JsonInterpreter.instance, "Please insert a valid JsonInterpreter. \n"
-        assert isinstance(geometry_object, Geometry), " Please insert a valid Geometry instance. \n"
         assert isinstance(nozzle_object, Nozzle), " Please insert a valid Nozzle instance. \n"
 
         # Allocate the attributes
         self.data_dictionary = json_interpreter.return_combustion_table()
-        self.geometry = geometry_object
         self.nozzle = nozzle_object
+        self.geometry = None                        #TODO: check if __str__ method implementation works
         self.fuel = Fuel(json_interpreter)
         self.results = {
-                        "run_values": {"time": [0],
-                                       "thrust": [0],
-                                       "isp": [0],
-                                       "pressure": [0],
-                                       "temperature": [0],
-                                       "radius": [self.geometry.get_port_radius() if
-                                                  isinstance(self.geometry,
-                                                             (OneCircularPort,
-                                                              ThreeCircularPorts))
-                                                  else nan],
-                                       "regression_rate": [0],
-                                       "mass_flow": [0],
-                                       "mass_flow_ox": [0],
-                                       "mass_flow_f": [0],
-                                       "of": [0],
-                                       "Go": [0],
-                                       "nozzle_param": [0],
-                                       "c_star": [0],
-                                       "chamber_sound_speed": [0],
-                                       "chamber_rho": [0],
-                                       "chamber_speed": [0],
-                                       "hydraulic_port_diameter": [0]},
-                        "magnitudes": {}
-                       }
+            "run_values": {"time": [0],
+                           "thrust": [0],
+                           "isp": [0],
+                           "pressure": [0],
+                           "temperature": [0],
+                           "mass_flow": [0],
+                           "mass_flow_ox": [0],
+                           "mass_flow_f": [0],
+                           "of": [0],
+                           "Go": [0],
+                           "nozzle_param": [0],
+                           "c_star": [0],
+                           "chamber_sound_speed": [0],
+                           "chamber_rho": [0],
+                           "chamber_speed": [0]},
+            "magnitudes": {}
+        }
 
     def __str__(self):
         """ return a string that represents the Object """
@@ -123,25 +108,6 @@ class CombustionObject(ABC):
 
         # Return the string
         return "\n".join([data_str, inputs_str, results_str]) + "\n"
-
-    def lookup_from_cea(self, desired_of_ratio):
-        """
-        lookup_from_cea go and collects the data from the CEA file contained in the interpolator object
-        :param desired_of_ratio: float containing the desired O/F ratio used for the simulation
-        :return: tuple with the variables of interest in their right locations ()
-        """
-
-        # Define the variables to interpolate
-        vars_ = ["t", "m", "gammas", "cstar", "sonvel"]
-        # Call out the interpolator with the required variables and get the output
-        output = self.interpolator.interpolate_data(o_f_desired_value=desired_of_ratio,
-                                                    variables=vars_,
-                                                    mole_fractions="")
-
-        # Return the values
-        return output['variables']['t']['CHAMBER'], output['variables']['gammas']['CHAMBER'],\
-               output['variables']['m']['CHAMBER']/1000, output['variables']['cstar']['THROAT'], \
-               output['variables']['sonvel']['CHAMBER'],
 
     def run_thermochemical_analysis(self, of_ratio):
         """
@@ -206,9 +172,13 @@ class CombustionObject(ABC):
         """ return the results from the simulation """
         return self.results
 
+    @abstractmethod
+    def plot_results(self):
+        """ plot the results associated to the combustion module """
+        pass
 
     @abstractmethod
-    def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time):
+    def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time=None):
         """
         Simulate the hybrid rocket burn.
         Every value is expressed in ISU unless specified otherwise. Simulation is only valid for normal ground
@@ -221,6 +191,106 @@ class CombustionObject(ABC):
         """
         pass
 
+
+# ------------------------- 0D COMBUSTION DEFINITIONS ----------------------
+
+class CombustionObject0D(CombustionObject):
+    """
+    The CombustionObject0D inherits from the CombustionObject class and is in charge
+    of working out the simulation at the combustion chamber level in the case of a 0D
+    model implementation. Along the attributes of the parent class its other attributes
+    are:
+
+    # Attributes:
+        1. geometry: Geometry instance used to define the geometry of the port (hybrid rocket)
+    """
+
+    def __init__(self, json_interpreter, nozzle_object, geometry_object):
+        """
+        class initializer
+        :param json_interpreter: JsonInterpreter instance used to collect the data
+        :param nozzle_object: Nozzle instance
+        :param geometry_object: Geometry instance
+        """
+
+        # Assert nature of the inputs
+        assert isinstance(geometry_object, Geometry), " Please insert a valid Geometry instance. \n"
+
+        # Call superclass initializer
+        super(CombustionObject0D, self).__init__(json_interpreter, nozzle_object)
+
+        # Allocate the attributes
+        self.geometry = geometry_object
+        self.results['run_values'].update({'radius':[self.geometry.get_port_radius() if
+                                                     isinstance(self.geometry,
+                                                               (OneCircularPort,
+                                                                ThreeCircularPorts))
+                                                     else nan],
+                                            'regression_rate': [0],
+                                            'hydraulic_port_diameter': [0]})
+
+    def run_thermochemical_analysis(self, of_ratio):
+        """
+        run_thermochemical_analysis returns the thermochemical variables at CHAMBER conditions as obtained from
+        CEA.
+        :param of_ratio: mixture ratio
+        :return: tuple with the variables of interest in their right locations ()
+        """
+
+        # Determine the expansion ratio from Pamb and  Pc
+        # eps = self.data_dictionary['P_chamber_bar'] / pascal2bar(self.data_dictionary['Pa'])
+        eps = self.nozzle.expansion_ratio
+
+        t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.fuel.return_combustion_variables(
+            Pc=self.data_dictionary['P_chamber_bar'],
+            MR=of_ratio,
+            eps=eps)
+
+        # Account for combustion efficiency
+        eta_comb = self.data_dictionary['combustion_efficiency']            # Extract the combustion efficiency
+        t_chamber = eta_comb * t_chamber                                    # Multiply the t_chamber by eta_comb
+        rho_ch = rho_ch / eta_comb                                          # Divide the density (of gas)
+        son_vel = m.sqrt(eta_comb) * son_vel
+
+        # Return the output
+        return t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch
+
+    def unpack_data_dictionary(self):
+        """ unpack the data dictionary into different variables to reduce code size
+        order: (g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure) """
+
+        return self.data_dictionary['g0'],          \
+               self.data_dictionary['R'],           \
+               self.data_dictionary['Pa'],          \
+               self.data_dictionary['a'],           \
+               self.data_dictionary['n'],           \
+               self.data_dictionary['m'],           \
+               self.data_dictionary['rho_fuel'],    \
+               self.data_dictionary['P_chamber_bar'] * (10 ** 5), \
+               self.data_dictionary['combustion_efficiency']
+
+    def post_process_data(self, dt):
+        """ Compute results averages and total impulse"""
+
+        for key in self.results['run_values'].keys():
+            self.results['run_values'][key][0] = self.results['run_values'][key][1]
+
+        self.results["magnitudes"] = {key: nanmean(value) for key, value in self.results["run_values"].items()
+                                      if key != "time"}
+        self.results["magnitudes"]["impulse"] = trapz(self.results["run_values"]["thrust"],
+                                                                        self.results["run_values"]["time"],
+                                                                        dt)
+
+        self.results["magnitudes"]["burn_time"] = self.results["run_values"]["time"][-1]
+
+        # Calculate global O/F
+        total_fuel_mass = trapz(self.results["run_values"]["mass_flow_f"], self.results["run_values"]["time"], dt)
+        total_ox_mass = trapz(self.results["run_values"]["mass_flow_ox"], self.results["run_values"]["time"], dt)
+        self.results["magnitudes"]["global_of"] = total_ox_mass / total_fuel_mass
+
+    def return_results(self):
+        """ return the results from the simulation """
+        return self.results
 
     def plot_results(self):
         """
@@ -322,20 +392,10 @@ class CombustionObject(ABC):
         axs[6].set_ylim(bottom=nanmin(chamber_sound_speed), top=nanmax(chamber_sound_speed))
 
 
-    @staticmethod
-    def initialize_variables():
-        """ initialize the variables that are used during the simulation and later recalculated
-        as the simulation advances. These are:
-            regression_rate, fuel_flow, total_mass_flow, OF, T_chambre, gamma, masse_molaire_gaz, c_star """
-        return 0, 0, 0, 0, 3000, 1.4, 20*10**(-3), 1500
-
-
-
-class CombustionObjectClassic(CombustionObject):
+class CombustionObjectClassic(CombustionObject0D):
 
     def __init__(self, json_interpreter, geometry_object, nozzle_object):
         super().__init__(json_interpreter, geometry_object, nozzle_object)
-
 
     def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time=None):
         """
@@ -456,22 +516,26 @@ class CombustionObjectClassic(CombustionObject):
         self.post_process_data(dt=dt)
 
 
-class CombustionObjectImage(CombustionObject):
+class CombustionObjectImage(CombustionObject0D):
 
     def __init__(self, json_interpreter, geometry_object, nozzle_object):
+        """ class initializer """
 
-        assert type(geometry_object).__name__ == 'SinglePortImageGeometry', "Geometry is not image-based, please " \
+        # Assert the nature of the input
+        assert isinstance(geometry_object, SinglePortImageGeometry), "Geometry is not image-based, please " \
                                                                      "use SinglePortGeometry class. \n"
 
+        # Call superclass initializer
         super().__init__(json_interpreter, geometry_object, nozzle_object)
 
-    def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time):
+    def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time=None):
         """
         Simulate the hybrid rocket burn.
         Every value is expressed in ISU unless specified otherwise. Simulation is only valid for normal ground
         atmosphere conditions (1 bar, 293 K).
         :param ox_flow: value of input oxidizer flow
         :param safety_thickness: minimum allowed thickness for fuel slivers, which conditions burn termination
+        :param dt: time-step for the simulation
         :param max_burn_time: maximum burn time (if inputted)
         :return: TBD
         """
@@ -492,7 +556,6 @@ class CombustionObjectImage(CombustionObject):
         # ---------------------------- MAIN SIMULATION LOOP -----------------------------
 
         # Set the flag for the maximum burn-time
-        flag_burn = True
         time = 0
 
         # Get the thickness equivalent to 5 pixels
@@ -579,10 +642,8 @@ class CombustionObjectImage(CombustionObject):
             self.geometry.regress(ox_flow=ox_flow, dt=delta_t)
             self.nozzle.erode(delta_t)
 
+            # Recalculate the time
             time += delta_t
-
-            # Update the flag for burn-time
-            flag_burn = time <= max_burn_time
 
         self.geometry.draw_geometry()
 
@@ -590,6 +651,8 @@ class CombustionObjectImage(CombustionObject):
 
         # Convert to numpy arrays
         self.results['run_values'] = {key: asarray(value) for key, value in self.results["run_values"].items()}
+
+        #TODO: add specific method for re-sampling of the data
 
         # Re-sample the data for dt
         k = 1
@@ -669,5 +732,72 @@ class CombustionObjectImage(CombustionObject):
 
         # Post-process the data
         self.post_process_data(dt=dt)
+
+
+# ----------------------------- COMBUSTION OBJECT 1D -----------------------------
+
+#TODO: integrate 1D with 0D architecture, think of an intermediate class, identify methods in common
+
+class CombustionObject1D(CombustionObject):
+    """
+    CombustionObject1D is a 1 dimensional implementation of the Combustion Model considering the
+    empirical model described in Haltman's book. It is implemented as an abstract class
+
+        Attributes:
+            1. geometry = Geometry1D class instance
+            2. regression_model = RegressionModel instance
+
+    """
+
+    def __init__(self, json_interpreter, geometry_object, regression_model, nozzle_object):
+        """
+        Class initializer
+        :param json_interpreter: JsonInterpreter instance used to collect the data
+        :param geometry_object: Geometry instance
+        :param regression_model: RegressionModel instance
+        :param nozzle_object: Nozzle instance
+        """
+
+        # Call superclass constructor
+        super(CombustionObject1D, self).__init__(json_interpreter, nozzle_object)
+
+        # Assert nature of the inputs
+        assert isinstance(geometry_object, Geometry1D), " Please insert a valid Geometry instance. \n"
+        assert isinstance(regression_model, RegressionModel), "Please insert a valid RegressionModel instance. \n"
+
+        # Allocate the attributes
+        self.geometry = geometry_object
+        self.regression_model = regression_model
+
+    def plot_results(self):
+        """
+        plot_results plots the results for the given simulation
+        :return: Nothing
+        """
+
+    def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time=None):
+        """
+        Simulate the hybrid rocket burn.
+        Every value is expressed in ISU unless specified otherwise. Simulation is only valid for normal ground
+        atmosphere conditions (1 bar, 293 K).
+        :param ox_flow: value of input oxidizer flow
+        :param safety_thickness: minimum allowed thickness for fuel slivers, which conditions burn termination
+        :param dt: time increment
+        :param max_burn_time: maximum burn time (if inputted)
+        :return: TBD
+        """
+
+        # Check the inputs
+        assert ox_flow > 0, "Oxidizer flow not greater than 0, check your inputs to CombustionModule. \n"
+        assert safety_thickness > 0, "Safety thickness not greater than 0, check your inputs to CombustionModule. \n"
+        assert dt > 0, "Simulation time-increment not greater than 0, check your inputs to CombustionModule. \n"
+
+        # Call for workspace definition methods
+        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure, eta_comb = self.unpack_data_dictionary()
+
+        # -------------------- Initialize simulation_variables if required -------------
+
+        pression_chambre = initial_chamber_pressure
+
 
 
