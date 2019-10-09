@@ -168,11 +168,11 @@ class OxidantTankStatic(StaticPart, Tank):
        StaticPart and Tank. 
     """
     
-    def __init__(self, tank_radius, tank_height, mass, propellant_mass, sender, **kwargs):
+    def __init__(self, radius, height, mass, propellant_mass, sender, **kwargs):
         """ class initializer """
         # Call superclass initializer
         StaticPart.__init__(mass, sender, **kwargs)
-        Tank.__init__(tank_radius, tank_height, sender, **kwargs)
+        Tank.__init__(radius, height, sender, **kwargs)
 
         # Set additional attribute
         self.propellant_mass = propellant_mass
