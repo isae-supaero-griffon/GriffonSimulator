@@ -161,6 +161,25 @@ class DimensionedTank(Tank):
 
     def get_mass(self):
         return self.get_shell_volume() * self.material.density + self.propellant_mass
+    
+
+class OxidantTankStatic(StaticPart, Tank):
+    """Class for tanks with already defined mass and dimensions. Inherits from both
+       StaticPart and Tank. 
+    """
+    
+    def __init__(self, tank_radius, tank_height, mass, propellant_mass, sender, **kwargs):
+        """ class initializer """
+        # Call superclass initializer
+        StaticPart.__init__(mass, sender, **kwargs)
+        Tank.__init__(tank_radius, tank_height, sender, **kwargs)
+
+        # Set additional attribute
+        self.propellant_mass = propellant_mass
+
+
+    def get_mass(self):
+        return self.get_mass() + self.propellant_mass
 
 
 class CombustionChamber(DimensionedTank):
@@ -237,6 +256,7 @@ class PartsCatalogue:
                  'OxidantTank': OxidantTank,
                  'PressuriserTank': PressuriserTank,
                  'ThermalLiner': ThermalLiner,
+                 'OxidantTankStatic': OxidantTankStatic
                  }
 
     @staticmethod
