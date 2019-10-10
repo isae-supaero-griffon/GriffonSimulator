@@ -38,24 +38,24 @@ def single_case_analysis_one_circular_port():
 
     # ------------ Generate the data-layer:
 
-    json_interpreter = generate_data_layer("Griffon Data - ABS - H2O2 - 36 bar.json")
+    json_interpreter = generate_data_layer("Griffon Data - ABS - H2O2 - 36 bar - Mock.json")
 
     # ---------- Pack the inputs:
 
-    ox_flow = 1.1
+    ox_flow = 1.09
 
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': OneCircularPort,
-                                                            'L': 0.6,
-                                                            'rintInitial': 0.04,
-                                                            'rext0': 0.1/2,
-                                                            'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
+                                                            'L': 0.325,
+                                                            'rintInitial': 0.03,
+                                                            'rext0': 0.05,
+                                                            'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel},
 
-                                       'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
+                                       'nozzle_params': {'At': 0.000545, 'expansion': 4.96559, 'lambda_e': 0.98,
                                                          'erosion': 0},
 
-                                       'set_nozzle_design': True,
+                                       'set_nozzle_design': False,
 
                                        'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
                                                          'c_star': 1430, 'ox_flow': ox_flow, 'OF': 12.5},
@@ -70,7 +70,7 @@ def single_case_analysis_one_circular_port():
                                              'ox_flow': ox_flow,
                                              'safety_thickness': 0.005,
                                              'dt': 0.01,
-                                             'max_burn_time': 5},
+                                             'max_burn_time': 4.5},
 
                               'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
                                                  'system': SystemDynamic, 'extra_filling': 0.1,
@@ -222,6 +222,85 @@ def single_case_analysis_one_port_review():
 
     # Show any plots
     plt.show()
+
+
+def single_case_analysis_one_port_image_geometry():
+    """ case study for image geometry design """
+
+    # ------------ Generate the data-layer:
+
+    json_interpreter = generate_data_layer()
+
+    # ---------- Pack the inputs:
+
+    init_parameters = {
+                        'combustion': {
+                                       'geometric_params': {'type': SinglePortImageGeometry, 'L': 0.4,
+                                                            'externalRadius': 0.05, 'imagePixelSize': 1024,
+                                                            'imageMeterSize': 0.1},
+
+                                       'shape_params': {'a': [0,1], 'b': [1, 0, 0],
+                                                            'baseRadius': 0.036, 'branches': 10, 'impact': 0.1,
+                                                            'n': 40},
+
+                                       'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
+                                                         'erosion': 0},
+
+                                       'set_nozzle_design': True,
+
+                                       'design_params': {'gamma': 1.27, 'p_chamber': 3200000, 'p_exit': 100000,
+                                                         'c_star': 1500, 'ox_flow': 1.2, 'OF': 5},
+                                      },
+
+
+                      }
+    simulation_parameters = {
+                              'CombustionModel': CombustionObjectImage,
+
+                              'combustion': {'ox_flow': 1, 'safety_thickness': 0.005, 'dt': 0.05,
+                                             'max_burn_time': None},
+
+                              'mass_simulator': {'ox_flow': 1, 'burn_time': 'TBD', 'extra_filling': 0.05,
+                                                 'injection_loss': 0.5, 'area_injection': 0.000105, 'system' : SystemDynamic},
+
+                              'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
+                                             'simulation_time': 100}
+                            }
+
+    # -------------- Generate the initializer:
+
+    init_obj = Initializer(init_parameters=init_parameters,
+                           simulation_parameters=simulation_parameters,
+                           json_interpreter=json_interpreter)
+
+    # -------------- Generate the simulation object:
+
+    simulation_object = SimulationObject(initializer_collection=init_obj)
+
+    # --------------- Run the simulation:
+
+    simulation_object.run_simulation_in_batch()
+
+    # Print the total mass
+    print("\nRockets Total Mass: {0} kgs".format(simulation_object.mass_simulator_module.get_mass()))
+
+    # Print the splitted masses
+    print(simulation_object.mass_simulator_module)
+
+    # --------------- Export results to csv files:
+    #
+    # # data directory
+    # data_directory = "../data/data_tests"
+    #
+    # file_name_expression = "Griffon Output Test {number}.csv"
+    #
+    # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
+    #                                                                         file_name_expression]))
+
+    # --------------- Plot the results
+
+    simulation_object.results_collection.elements_list[0].combustion.plot_results()
+    simulation_object.results_collection.elements_list[0].trajectory.plot_results()
 
 
 def single_case_analysis_three_circular_ports():
@@ -564,4 +643,5 @@ if __name__ == '__main__':
     # run_design_cases()
     # single_case_analysis_three_circular_ports()
     # single_case_analysis_one_port_review()
+    # single_case_analysis_one_port_image_geometry()
     single_case_analysis_one_circular_port()
