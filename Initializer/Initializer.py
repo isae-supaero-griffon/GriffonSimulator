@@ -271,6 +271,7 @@ class Initializer:
 
         # ----------------------- Calculate oxidiser mass
 
+
         ox_flow = self.simulation_parameters['mass_simulator']['ox_flow']
         burn_time = self.simulation_parameters['mass_simulator']['burn_time']
         extra_filling = self.simulation_parameters['mass_simulator']['extra_filling']
@@ -296,28 +297,38 @@ class Initializer:
 
         # ----------------------- Calculate propellant mass
 
-        chamber_length = self.combustion_parameters['geometry_object'].length
-        chamber_radius = self.combustion_parameters['geometry_object'].return_external_radius()
+        # chamber_length = self.combustion_parameters['geometry_object'].length
+        # chamber_radius = self.combustion_parameters['geometry_object'].return_external_radius()
         propellant_mass = InitializerCalculator.calculate_fuel_mass(self.combustion_parameters['geometry_object'],
                                                                     combustion_table['rho_fuel'])
 
         # ----------------------- Calculate oxidiser mass
 
-        ox_flow = self.simulation_parameters['mass_simulator']['ox_flow']
-        burn_time = self.simulation_parameters['mass_simulator']['burn_time']
-        extra_filling = self.simulation_parameters['mass_simulator']['extra_filling']
+        # ox_flow = self.simulation_parameters['mass_simulator']['ox_flow']
+        # burn_time = self.simulation_parameters['mass_simulator']['burn_time']
+        # extra_filling = self.simulation_parameters['mass_simulator']['extra_filling']
+        #
+        # ox_mass = InitializerCalculator.calculate_oxidiser_mass_based_on_burn(ox_flow, burn_time, extra_filling)
 
-        ox_mass = InitializerCalculator.calculate_oxidiser_mass_based_on_burn(ox_flow, burn_time, extra_filling)
-
-        # ----------------------- Calculate oxidiser tank length
+        # Calculate oxidizer mass based on the size of the tank
+        ox_tank_radius = system_dict['subsystems']['oxidiser']['parts']['oxidant_tank']['radius']
+        ox_tank_height = system_dict['subsystems']['oxidiser']['parts']['oxidant_tank']['height']
 
         ox_density = InitializerCalculator.calculate_oxidiser_density(combustion_table['rho_ox_pure'],
                                                                       combustion_table['ox_purity'])
 
-        ox_tank_radius = system_dict['subsystems']['oxidiser']['parts']['oxidant_tank']['radius']
+        ox_mass = InitializerCalculator.calculate_oxidiser_mass_based_on_tank(tank_radius=ox_tank_radius,
+                                                                              tank_height=ox_tank_height,
+                                                                              oxidiser_density=ox_density)
+        # ----------------------- Calculate oxidiser tank length
 
-        # noinspection PyTypeChecker
-        ox_tank_height = InitializerCalculator.calculate_oxidiser_tank_height(ox_mass, ox_density, ox_tank_radius)
+        # ox_density = InitializerCalculator.calculate_oxidiser_density(combustion_table['rho_ox_pure'],
+        #                                                               combustion_table['ox_purity'])
+        #
+        # ox_tank_radius = system_dict['subsystems']['oxidiser']['parts']['oxidant_tank']['radius']
+        #
+        # # noinspection PyTypeChecker
+        # ox_tank_height = InitializerCalculator.calculate_oxidiser_tank_height(ox_mass, ox_density, ox_tank_radius)
 
         # Calculate the oxidiser pressure in the tank and redefine the dictionary
         chamber_pressure_mass = system_dict['subsystems']['combustion']['parts']['chamber']['pressure']
@@ -340,11 +351,11 @@ class Initializer:
                                                                              ox_density=ox_density)
 
         # Set the system_dict to its proper values
-        system_dict['subsystems']['combustion']['parts']['chamber']['height'] = chamber_length
-        system_dict['subsystems']['combustion']['parts']['chamber']['radius'] = chamber_radius
+        # system_dict['subsystems']['combustion']['parts']['chamber']['height'] = chamber_length
+        # system_dict['subsystems']['combustion']['parts']['chamber']['radius'] = chamber_radius
         system_dict['subsystems']['combustion']['parts']['chamber']['propellant_mass'] = propellant_mass
         system_dict['subsystems']['oxidiser']['parts']['oxidant_tank']['propellant_mass'] = ox_mass
-        system_dict['subsystems']['oxidiser']['parts']['oxidant_tank']['height'] = ox_tank_height
+        # system_dict['subsystems']['oxidiser']['parts']['oxidant_tank']['height'] = ox_tank_height
         system_dict['subsystems']['oxidiser']['parts']['oxidant_tank']['pressure'] = ox_pressure
 
         # Update the system_dict
