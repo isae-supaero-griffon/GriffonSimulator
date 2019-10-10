@@ -99,7 +99,9 @@ class CombustionObject(ABC):
                                        "chamber_sound_speed": [0],
                                        "chamber_rho": [0],
                                        "chamber_speed": [0],
-                                       "hydraulic_port_diameter": [0]},
+                                       "hydraulic_port_diameter": [0],
+                                       "t_exit": [0],
+                                       "t_ch": [0]},
                         "magnitudes": {}
                        }
 
@@ -421,6 +423,8 @@ class CombustionObjectClassic(CombustionObject):
             self.results["run_values"]["mass_flow_f"].append(fuel_flow)
             self.results["run_values"]["chamber_speed"].append(u_ch)
             self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
+            self.results["run_values"]["t_exit"].append(t_exit)
+            self.results["run_values"]["t_ch"].append(t_chamber)
 
             # TODO: modify the implementation of the radius storage
             # Verify it is a single port_number before updating the port number
@@ -498,10 +502,9 @@ class CombustionObjectImage(CombustionObject):
         # Get the thickness equivalent to 5 pixels
         dr = self.geometry.getMetersPerPixel() * 5
 
+        # self.geometry.draw_geometry()
 
-        self.geometry.draw_geometry()
-
-        while self.geometry.min_bloc_thickness() > safety_thickness and time < max_burn_time:
+        while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
 
             # print( self.geometry.totalSurfaceArea() / self.geometry.get_length() / 2 / math.pi)
 
@@ -582,7 +585,8 @@ class CombustionObjectImage(CombustionObject):
             time += delta_t
 
             # Update the flag for burn-time
-            flag_burn = time <= max_burn_time
+            if max_burn_time:
+                flag_burn = time <= max_burn_time
 
         self.geometry.draw_geometry()
 
