@@ -11,12 +11,10 @@
 # Reference: Messineo, Jérôme. Modélisation des instabilités hydrodynamiques dans les moteurs-fusées hybrides.
 # Diss. Toulouse, ISAE, 2016.
 
-# TODO: check the hypothesis of the Hydres model that it is developed for a uniformly spaced mesh.
-
 # ------------------------- IMPORT MODULES --------------------------- #
 
 from abc import ABC, abstractmethod
-from CombustionModule.Geometries import Geometry1D
+import CombustionModule.Geometries as Geom
 import math as m
 import numpy as np
 
@@ -48,7 +46,7 @@ class Mesh(ABC):
 
         # Check the inputs
         assert isinstance(name, str), "Failed assertion: name of mesh has to be of str type.\n"
-        assert isinstance(geometry_obj, Geometry), "Failed assertion: geometry_obj has to be of Geometry type.\n"
+        assert isinstance(geometry_obj, Geom.Geometry1D), "Failed assertion: geometry_obj has to be of Geometry type.\n"
 
         # Initialize attributes
         self.name = name
@@ -67,12 +65,20 @@ class Mesh(ABC):
         """
         return np.array([my_cell.x_cor for my_cell in self.cells])
 
+    def return_profile_data(self):
+        """
+        return_profile_data returns a numpy array with the profile characteristic of the mesh
+        for a circular port its the radius. For others is to be defined
+        :return: np.array of profile data
+        """
+        return np.array([my_cell.return_profile_data() for my_cell in self.cells])
+
     def return_data(self):
         """
         return_data provides the data to run the interpolation
         :return: x, area array, perimeter array
         """
-        x, areas, perimeters = zip([(my_cell.x_cor, my_cell.return_area_data(), my_cell.return_perimeter_data()) for
+        x, areas, perimeters = zip(*[(my_cell.x_cor, my_cell.return_area_data(), my_cell.return_perimeter_data()) for
                                     my_cell in self.cells])
         return np.array(x), np.array(areas), np.array(perimeters)
 
@@ -97,16 +103,19 @@ class UniformlySpacedMesh(Mesh):
 
         # Attributes definition
         self.n_el = n_el
-        self.dx = self.geometry_obj.L / n_el
-        self.cells = self._generate_cells(geometry_obj.my_cell_factory)
+        self.dx = geometry_obj.L / n_el
+        self._generate_cells(geometry_obj.my_cell_factory)
 
     def _generate_cells(self, cell_factory):
         """
         Generate the cells according to the law proposed.
         :param cell_factory: cell factory method associated to the geometry object
-        :return: array of cells
+        :return: nothing
         """
-        return [cell_factory(i, i * self.dx) for i in range(0, self.n_el+1)]
+
+        for i in range(0, self.n_el+1):
+            new_cell = cell_factory(i, i*self.dx)
+            self.cells.append(new_cell)
         # TODO: be careful with the definition of the nels
 
 
@@ -119,14 +128,16 @@ class Cell(ABC):
         1. x_cor: float defining the x coordinate of the cell. First cell starts at 0 and last
                   finishes at L equivalent to the length of the domain.
         2. profile: associated profile to the cell depends on the type of geometry
+        3. r_ext: external radius of the cell
     """
 
-    def __init__(self, num, x, profile):
+    def __init__(self, num, x, profile, r_ext):
         """
         class initializer
         :param num: integer indicating the cell number.
         :param x: float which indicates the cell position.
         :param profile: profile which characterizes the cell
+        :param r_ext: external radius of the cell
         """
         # Call superclass initializers
         super(Cell, self).__init__()
@@ -139,6 +150,8 @@ class Cell(ABC):
         self.number = num
         self.x_cor = x
         self.profile = profile
+        self.r_ext = r_ext
+        self.min_thickness = None
 
     def set_profile(self, my_profile):
         """
@@ -171,6 +184,34 @@ class Cell(ABC):
         :return single element or tupple if its multi-dimensional """
         pass
 
+    # TODO: get a proper definition for profile data returned by return_profile_data of Cell class
+    @abstractmethod
+    def return_profile_data(self):
+        """
+        return_profile_data returns a number associated to the profile that is representative of the cell
+        :return: single number
+        """
+        pass
+
+
+    @abstractmethod
+    def update_min_thickness(self):
+        """
+        update the value of the minimum thickness of the cell
+        :return: nothing
+        """
+        pass
+
+    @abstractmethod
+    def regress(self, local_r_dot, dt):
+        """
+        regress performs the regression of the cell
+        :param local_r_dot: local regression rate
+        :param dt: time-step
+        :return: nothing
+        """
+        pass
+
 
 class CircularPortCell(Cell):
     """
@@ -178,11 +219,21 @@ class CircularPortCell(Cell):
     by the proper factory method
     """
 
-    def __init__(self, num, x, profile):
+    def __init__(self, num, x, profile, r_ext):
         """ class initializer """
 
         # Call superclass constructor
-        super(CircularPortCell, self).__init__(num, x, profile)
+        super(CircularPortCell, self).__init__(num, x, profile, r_ext)
+
+        # Set minimum thickness
+        self.min_thickness = self.r_ext - self.profile
+
+    def update_min_thickness(self):
+        self.min_thickness = self.r_ext - self.profile
+
+        # If thickness is smaller than 0 raise exception
+        if self.min_thickness < 0:
+            raise ValueError("Minimum Thickness cannot be smaller than 0 \n")
 
     def total_cross_section_area(self):
         """ Calculate cross section area for circular port cell """
@@ -197,6 +248,15 @@ class CircularPortCell(Cell):
 
     def return_perimeter_data(self):
         return self.cross_section_perimeter()
+
+    def return_profile_data(self):
+        return self.profile
+
+    def regress(self, local_r_dot, dt):
+        # Subtract to the radius the regressed value
+        self.profile += local_r_dot * dt
+        # Update the minimum thickness
+        self.update_min_thickness()
 
 
 
@@ -250,7 +310,7 @@ class Interpolator:
             raise ValueError("Interpolated value greater than interp bounds. \n")
 
         # return value
-        return np.interp(x, self.y_cor), np.interp(x, self.z_cor)
+        return np.interp(x, self.x_cor, self.y_cor), np.interp(x, self.x_cor, self.z_cor)
 
 # --------------------------- COMMENTS ----------------------------
 #

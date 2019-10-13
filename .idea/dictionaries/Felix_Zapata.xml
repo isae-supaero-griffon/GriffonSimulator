@@ -4,10 +4,18 @@
       <w>appropiate</w>
       <w>chambre</w>
       <w>cstar</w>
+      <w>griffon</w>
+      <w>hydrodinamic</w>
+      <w>instantenous</w>
+      <w>isae</w>
       <w>kutta</w>
+      <w>matplotlib</w>
       <w>onera</w>
       <w>pression</w>
+      <w>rossiter</w>
       <w>runge</w>
+      <w>scube</w>
+      <w>supaero</w>
     </words>
   </dictionary>
 </component>

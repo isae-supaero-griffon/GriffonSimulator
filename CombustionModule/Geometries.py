@@ -4,12 +4,14 @@
 
 # ------------------------- IMPORT MODULES ----------------------
 
-from abc import ABC, abstractmethod         # Import abc module for abstract classes definitions
-import matplotlib.pyplot as plt             # Import matplotlib
-import math as m                            # Import the math module
-import numpy as np                          # Import numpy
-import cv2                                  # Import cv2
-from CombustionModule.Mesher import *       # Import the different kinds of meshes
+from abc import ABC, abstractmethod                 # Import abc module for abstract classes definitions
+import matplotlib.pyplot as plt                     # Import matplotlib
+import math as m                                    # Import the math module
+import numpy as np                                  # Import numpy
+import cv2                                          # Import cv2
+from CombustionModule.Mesher import *               # Import the different kinds of meshes
+from CombustionModule.RegressionModel import *      # Import the regression models
+from scipy.integrate import solve_ivp               # Import solve_ivp method from scipy
 
 # ------------------------ FUNCTION DEFINITIONS -----------------
 
@@ -107,6 +109,17 @@ def draw_n_star_branch(p1_0, p2_0, p3_0, rotation_angle):
     # Plot the combustion port
     plt.plot(p1, p3, 'w-', lw=2)
     plt.plot(p2, p3, 'w - ', lw=2)
+
+
+def calculate_hydraulic_diameter(area, perimeter):
+    """
+    calculate_hydraulic_diameter implements the equation of the hydraulic for
+    a given section
+    :param area: area of the section of interest
+    :param perimeter: perimeter of the section of interest
+    :return: hydraulic diameter
+    """
+    return 4 * area / perimeter
 
 
 # -------------------------- CLASS DEFINITIONS ------------------
@@ -939,12 +952,11 @@ class Geometry1D(ABC):
 
     #TODO: associate the Geometry1D model with the Geometry - 0D models in a redesign of the code
 
-    def __init__(self, L, r_ext, min_thickness):
+    def __init__(self, L, N, r_ext):
         """
         Class initializer
         :param L: float containing the grain-length
         :param r_ext: float indicating the external radius of the geometry
-        :param min_thickness: min material thickness with the external part of the cylinder
         :param N: integer defining the number of cells in the mesh
         """
         # Call superclass initializer
@@ -958,8 +970,7 @@ class Geometry1D(ABC):
 
         # Set attributes
         self.L = L
-        self.mesh = None
-        self.min_thickness = min_thickness
+        self.r_ext = r_ext
         self.interpolator = None
 
     def _generate_mesh(self, N):
@@ -1003,17 +1014,23 @@ class Geometry1D(ABC):
         :param m_ox: mass flow of oxidizer
         :param rho_f: fuel density
         :param dt: time of simulation
-        :return: total mass of fuel regressed.
+        :return: O/F ratio at end of port, mass_flows tupple, mass_fluxes tupple
         """
         pass
 
-    @abstractmethod
-    def min_thickness_reached(self):
+    def min_bloc_thickness(self):
         """
-        min_thickness_reached determines if the minimum thickness has been reached to stop the simulation
-        :return: boolean indicating true or false
+        min_block_thickness returns the minimum thickness of the block
+        :return: min_block thickness
         """
-        pass
+        min_block_thickness = self.r_ext
+        for my_cell in self.mesh.cells:
+            if my_cell.min_thickness < min_block_thickness:
+                min_block_thickness = my_cell.min_thickness
+
+        # Return the min block thickness
+        return min_block_thickness
+
 
 
 
@@ -1034,7 +1051,7 @@ class SingleCircularPort1D(Geometry1D):
         """
 
         # Call parent class constructor
-        super(SingleCircularPort1D, self).__init__(L, r_ext)
+        super(SingleCircularPort1D, self).__init__(L, N, r_ext)
 
         # Check the inputs
         assert  r_init > 0, "Internal radius (r_init) has to be greater than 0 \n"
@@ -1046,7 +1063,7 @@ class SingleCircularPort1D(Geometry1D):
 
     def my_cell_factory(self, i, x):
         """ implement cell factory for single circular port """
-        return CircularPortCell(i, x, self.r_init)
+        return CircularPortCell(i, x, self.r_init, self.r_ext)
 
     def _generate_interpolator(self):
         """ generate the interpolator """
@@ -1072,7 +1089,7 @@ class SingleCircularPort1D(Geometry1D):
         def mass_flux_gradient(x, mass_flux_fuel):
             """
             mass_flux_gradient is the function that is inputted into the solver
-            :param x: x_cordinate
+            :param x: x_coordinate
             :param mass_flux_fuel: mass flux of fuel at coordinate x
             :return: mass flux gradient
             """
@@ -1082,9 +1099,41 @@ class SingleCircularPort1D(Geometry1D):
 
             # Calculate fluxes and hydraulic_diameter
             mass_flux_ox = m_ox / area
-            hydraulic_diameter = 4 * area / perimeter
+            hydraulic_diameter = calculate_hydraulic_diameter(area, perimeter)
+            total_mass_flux = mass_flux_fuel + mass_flux_ox
 
-            # TODO: finish implementation of regress and account for check min thickness
+            # Return the output of the fuel flux
+            return 4 * rho_f * regression_model.compute_regression_rate_haltman(x, total_mass_flux) / hydraulic_diameter
+
+        # Implement the Runge-Kutta solver for the cells coordinates
+        x_cor = self.mesh.return_x_cor()
+
+        # Problem defined as follows
+        solution = solve_ivp(fun=mass_flux_gradient, t_span=(0, self.L), y0=[0], method='RK45', t_eval=x_cor)
+
+        # Update the profile by regressing it
+        for my_cell in self.mesh.cells:
+            g_ox = m_ox / my_cell.return_area_data()                                           # Get ox flux
+            g_f = solution.y[0][my_cell.number]                                                # Get fuel flux
+            g_tot = g_f  +  g_ox                                                               # Get the total mass flux
+            r_dot = regression_model.compute_regression_rate_haltman(my_cell.x_cor, g_tot)     # Calculate regression r
+            my_cell.regress(r_dot, dt)
+
+        # Calculate global O/F (at end of grain)
+        # noinspection PyUnboundLocalVariable
+        o_f = g_ox /g_f
+        m_f = g_f * self.mesh.cells[-1].return_area_data()
+
+        # Update the interpolator to account for the changes in the geometry
+        self._update_interpolator()
+
+        # Return O/F ratio
+        return o_f, (m_ox, m_f), (g_ox, g_f)
+
+
+
+
+
 
 
 

@@ -7,6 +7,7 @@
 # -------------------------- IMPORT MODULES -------------------------------
 
 from abc import ABC, abstractmethod
+import numpy as np
 
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
@@ -94,7 +95,10 @@ class SingleRegimeMarxmanModel(RegressionModel):
         Return the instantaneous solid fuel regression rate
         according to Marxman's equation
         """
-        return self.a * x ** self.m  * m_flux ** self.n
+        if x != 0:
+            return self.a * x ** self.m  * m_flux ** self.n
+        else:
+            return 0
 
 
 class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
@@ -133,7 +137,11 @@ class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
         :param x: x parameter along the grain
         :return: maximum regression rate
         """
-        return  self.marxman.a * (x ** self.marxman.m) * (self.threshold ** self.marxman.n)
+        if x != 0:
+            return self.marxman.a * (x ** self.marxman.m) * (self.threshold ** self.marxman.n)
+        else:
+            # TODO: Solve singularity
+            return 0
 
     def computeRegressionRate(self, geometry, ox_flow):
         """
@@ -157,7 +165,7 @@ class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
         if m_flux < self.threshold:
             return self.marxman.compute_regression_rate_haltman(x, m_flux)
         else:
-            return self.get_max_regression_rate_local(x)
+                return self.get_max_regression_rate_local(x)
 
 
 class TwoRegimesMarxmanAndFloodedModel(RegressionModel):

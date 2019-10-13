@@ -19,8 +19,6 @@ from Libraries.Interpolator import *                                            
 from DataLayer.JsonInterpreter import JsonInterpreter                               # Import the JsonInterpreter
 from abc import ABC, abstractmethod                                                 # Import the abstract class mold
 
-
-
 # ------------------------- FUNCTION DEFINITIONS ---------------------------
 
 def calculate_flow_speed(cross_section, mass_flow, density):
@@ -67,7 +65,6 @@ class CombustionObject(ABC):
         # Allocate the attributes
         self.data_dictionary = json_interpreter.return_combustion_table()
         self.nozzle = nozzle_object
-        self.geometry = None                        #TODO: check if __str__ method implementation works
         self.fuel = Fuel(json_interpreter)
         self.results = {
             "run_values": {"time": [0],
@@ -118,7 +115,6 @@ class CombustionObject(ABC):
         """
 
         # Determine the expansion ratio from Pamb and  Pc
-        # eps = self.data_dictionary['P_chamber_bar'] / pascal2bar(self.data_dictionary['Pa'])
         eps = self.nozzle.expansion_ratio
 
         t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.fuel.return_combustion_variables(
@@ -191,6 +187,12 @@ class CombustionObject(ABC):
         """
         pass
 
+    # @abstractmethod
+    # def run_coupled_hydraulic_analysis(self):
+    #     # TODO: implement recalculation of chamber pressure - take care when doing thermochemical analysis
+    #     pass
+
+
 
 # ------------------------- 0D COMBUSTION DEFINITIONS ----------------------
 
@@ -226,8 +228,8 @@ class CombustionObject0D(CombustionObject):
                                                                (OneCircularPort,
                                                                 ThreeCircularPorts))
                                                      else nan],
-                                            'regression_rate': [0],
-                                            'hydraulic_port_diameter': [0]})
+                                           'regression_rate': [0],
+                                           'hydraulic_port_diameter': [0]})
 
     def run_thermochemical_analysis(self, of_ratio):
         """
@@ -736,8 +738,6 @@ class CombustionObjectImage(CombustionObject0D):
 
 # ----------------------------- COMBUSTION OBJECT 1D -----------------------------
 
-#TODO: integrate 1D with 0D architecture, think of an intermediate class, identify methods in common
-
 class CombustionObject1D(CombustionObject):
     """
     CombustionObject1D is a 1 dimensional implementation of the Combustion Model considering the
@@ -749,7 +749,7 @@ class CombustionObject1D(CombustionObject):
 
     """
 
-    def __init__(self, json_interpreter, geometry_object, regression_model, nozzle_object):
+    def __init__(self, json_interpreter, nozzle_object, geometry_object, regression_model):
         """
         Class initializer
         :param json_interpreter: JsonInterpreter instance used to collect the data
@@ -771,9 +771,79 @@ class CombustionObject1D(CombustionObject):
 
     def plot_results(self):
         """
-        plot_results plots the results for the given simulation
-        :return: Nothing
+        Plot results generates a plot with the variables typically outputted by Maxim's code
+        :return: nothing
         """
+
+        # Check the time array is not, if so then raise error, otherwise
+        if len(self.results["run_values"]["time"]) != 0:
+
+            # Extract the concerning results
+            time = self.results["run_values"]["time"]
+            thrust = self.results["run_values"]["thrust"]
+            isp = self.results["run_values"]["isp"]
+            of_ratio = self.results["run_values"]["of"]
+        else:
+            raise ValueError("No values found for time, check results before plotting. \n")
+
+        # Get the final profile geometry
+        x_cor = self.geometry.mesh.return_x_cor()
+        if isinstance(self.geometry, SingleCircularPort1D):
+            radius = self.geometry.mesh.return_profile_data()
+        else:
+            radius = np.fill(x_cor.shape, np.nan)
+
+        # Set the font dictionaries (for plot title and axis titles)
+        title_font = {'size': '20', 'color': 'black', 'weight': 'normal',
+                      'verticalalignment': 'bottom'}  # Bottom vertical alignment for more space
+        axis_font = {'size': '16'}
+
+        # Generate the plots
+        fig = plt.figure(facecolor='w', figsize=(30, 30))
+        fig.suptitle('Combustion Module results', **title_font)
+        axs = [plt.subplot2grid((2, 2), (0, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((2, 2), (1, 0), rowspan=1, colspan=1),
+               plt.subplot2grid((2, 2), (0, 1), rowspan=1, colspan=1),
+               plt.subplot2grid((2, 2), (1, 1), rowspan=1, colspan=1)]
+
+        # Set the tick labels font
+        for ax in axs:
+            for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+                label.set_fontname('Arial')
+                label.set_fontsize(14)
+
+        # Thrust-plot
+        axs[0].plot(time, thrust, label='Thrust', color='blue', linewidth=2.0)
+        axs[0].set_title('')
+        axs[0].set_ylabel('Thrust (N)', **axis_font)
+        axs[0].grid(b=True, axis='both')
+        axs[0].set_xlim(left=time[0])
+        axs[0].set_ylim(bottom=0, top=max(thrust)*1.5)
+
+        # Isp-plot
+        axs[1].plot(time, isp, label='Isp', color='r', linewidth=2.0)
+        axs[1].set_title('')
+        axs[1].set_xlabel('Time (s)', **axis_font)
+        axs[1].set_ylabel('Isp (s)', **axis_font)
+        axs[1].grid(b=True, axis='both')
+        axs[1].set_xlim(left=time[0])
+        axs[1].set_ylim(bottom=0, top=max(isp)*1.5)
+
+        # of_ratio-plot
+        axs[2].plot(time, of_ratio, linestyle='--', color='green', label='O/F ratio', linewidth=2.0)
+        axs[2].set_title('')
+        axs[2].set_xlabel('Time (s)', **axis_font)
+        axs[2].set_ylabel('O/F ratio', **axis_font)
+        axs[2].grid(b=True, axis='both')
+        axs[2].set_xlim(left=time[0])
+
+        # Final profile plot
+        axs[3].plot(1000 * x_cor, 2 * 1000 * radius, linestyle='-', color='black', label='Final Profile', linewidth=3.0)
+        axs[3].set_title('Grain Profile')
+        axs[3].set_xlabel('X (mm)', **axis_font)
+        axs[3].set_ylabel('D (mm)', **axis_font)
+        axs[3].grid(b=True, axis='both')
+        axs[3].set_xlim(left=0, right=self.geometry.L * 1000)
 
     def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time=None):
         """
@@ -799,5 +869,79 @@ class CombustionObject1D(CombustionObject):
 
         pression_chambre = initial_chamber_pressure
 
+        # ---------------------------- MAIN SIMULATION LOOP -----------------------------
+
+        # Set a counter to keep-track of the loop
+        k = 1
+
+        # Set the flag for the maximum burn-time
+        flag_burn = True
+
+        while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
+
+            # ------------------- Perform the regression of the block ---------------------
+            # noinspection PyArgumentList
+            of_ratio, mass_flows, mass_fluxes = self.geometry.regress(self.regression_model, ox_flow, rho_fuel, dt)
+            m_ox, m_fuel = mass_flows
+            g_ox, g_f = mass_fluxes
+            total_mass_flow = m_ox + m_fuel
+
+            # --------------------- Run Thermochemical Analysis ---------------------------
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.run_thermochemical_analysis(
+                of_ratio)
+            r = R / gas_molar_mass  # Specific gaz constant
+
+            # Determine the flow port exit-speed
+            u_ch = calculate_flow_speed(cross_section=self.geometry.mesh.cells[-1].return_area_data(),
+                                        mass_flow=total_mass_flow,
+                                        density=rho_ch)
+
+            # ------------------------- Determine Propulsion Performances ------------------
+            mach_exit = iso.exit_mach_via_expansion(gamma=gamma, expansion=self.nozzle.get_expansion_ratio(),
+                                                    supersonic=True)
+            exit_pressure = pression_chambre / iso.pressure_ratio(gamma, mach_exit)
+            t_exit = t_chamber / iso.temperature_ratio(gamma, mach_exit)
+            v_exit = math.sqrt(gamma * r * t_exit) * mach_exit
+
+            thrust = self.nozzle.get_nozzle_effeciency() * (
+                total_mass_flow * v_exit + (exit_pressure - pression_atmo) *
+                self.nozzle.get_exit_area())
+
+            # Calculate the nozzle equation validation
+            nozzle_p = total_mass_flow * cea_c_star / (self.nozzle.get_throat_area() * initial_chamber_pressure)
+
+            isp = thrust / total_mass_flow / g0
+
+            # ------------------------------ Results updates --------------------------------
+            self.results['run_values']['time'].append(k * dt)
+            self.results["run_values"]["thrust"].append(thrust)
+            self.results["run_values"]["isp"].append(isp)
+            self.results["run_values"]["pressure"].append(initial_chamber_pressure)
+            self.results["run_values"]["temperature"].append(t_chamber)
+            self.results["run_values"]["of"].append(of_ratio)
+            self.results["run_values"]["Go"].append(g_ox)
+            self.results["run_values"]["nozzle_param"].append(nozzle_p)
+            self.results["run_values"]["c_star"].append(cea_c_star)
+            self.results["run_values"]["chamber_sound_speed"].append(son_vel)
+            self.results["run_values"]["chamber_rho"].append(rho_ch)
+            self.results["run_values"]["mass_flow"].append(total_mass_flow)
+            self.results["run_values"]["mass_flow_ox"].append(ox_flow)
+            self.results["run_values"]["mass_flow_f"].append(m_fuel)
+            self.results["run_values"]["chamber_speed"].append(u_ch)
+
+            # Update the loop
+            k += 1
+
+            # Update the flag for burn-time
+            if max_burn_time:
+                flag_burn = k * dt <= max_burn_time
+
+        # ------------------------ POST-PROCESS ------------------------
+
+        # Convert to numpy arrays
+        self.results['run_values'] = {key: asarray(value) for key, value in self.results["run_values"].items()}
+
+        # Post-process the data
+        self.post_process_data(dt=dt)
 
 
