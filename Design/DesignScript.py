@@ -13,6 +13,7 @@ import numpy as np                                                  # Import num
 import itertools                                                    # Import itertools
 import CombustionModule.RegressionModel as Reg                      # Import the RegressionModel class
 import json                                                         # Import the json library
+from copy import deepcopy                                           # Import the deepcopy method
 
 # -------------------- FUNCTIONS DEFINITIONS ------------------
 
@@ -233,23 +234,26 @@ def single_case_analysis_one_port_image_geometry():
 
     # ---------- Pack the inputs:
 
+    # Define the oxidizer flow
+    ox_flow = 1.2
+
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': SinglePortImageGeometry, 'L': 0.4,
                                                             'externalRadius': 0.05, 'imagePixelSize': 1024,
                                                             'imageMeterSize': 0.1},
 
-                                       'shape_params': {'a': [0,1], 'b': [1, 0, 0],
-                                                            'baseRadius': 0.036, 'branches': 10, 'impact': 0.1,
-                                                            'n': 40},
+                                       'shape_params': {'a':  [1.5, -0.8, 1.5, -1, 1, 0.5], 'b': [],
+                                                            'baseRadius': 0.032, 'branches': 6, 'impact': 0.075,
+                                                            'n': 50},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
 
-                                       'set_nozzle_design': True,
+                                       'set_nozzle_design': False,
 
                                        'design_params': {'gamma': 1.27, 'p_chamber': 3200000, 'p_exit': 100000,
-                                                         'c_star': 1500, 'ox_flow': 1.2, 'OF': 5},
+                                                         'c_star': 1500, 'ox_flow': ox_flow, 'OF': 5},
                                       },
 
 
@@ -257,14 +261,14 @@ def single_case_analysis_one_port_image_geometry():
     simulation_parameters = {
                               'CombustionModel': CombustionObjectImage,
 
-                              'combustion': {'ox_flow': 1, 'safety_thickness': 0.005, 'dt': 0.05,
-                                             'max_burn_time': None},
+                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.000000001, 'dt': 0.05,
+                                             'max_burn_time': 5},
 
-                              'mass_simulator': {'ox_flow': 1, 'burn_time': 'TBD', 'extra_filling': 0.05,
+                              'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.05,
                                                  'injection_loss': 0.5, 'area_injection': 0.000105, 'system' : SystemDynamic},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                             'simulation_time': 100}
+                                             'simulation_time': 60}
                             }
 
     # -------------- Generate the initializer:
@@ -277,6 +281,11 @@ def single_case_analysis_one_port_image_geometry():
 
     simulation_object = SimulationObject(initializer_collection=init_obj)
 
+    # -------------- Generate deep copy of geometry object:
+
+    geometry_object_original = deepcopy(simulation_object.combustion_module.geometry)
+    # geometry_object_original.export_geometry()
+
     # --------------- Run the simulation:
 
     simulation_object.run_simulation_in_batch()
@@ -286,6 +295,9 @@ def single_case_analysis_one_port_image_geometry():
 
     # Print the splitted masses
     print(simulation_object.mass_simulator_module)
+
+    # Print combustion results
+    print(simulation_object.combustion_module)
 
     # --------------- Export results to csv files:
     #
@@ -301,6 +313,12 @@ def single_case_analysis_one_port_image_geometry():
 
     simulation_object.results_collection.elements_list[0].combustion.plot_results()
     simulation_object.results_collection.elements_list[0].trajectory.plot_results()
+
+    # ---------------- Plot the geometries before and after:
+
+    geometry_object_original.draw_geometry()
+    simulation_object.combustion_module.geometry.draw_geometry()
+
 
 
 def single_case_analysis_three_circular_ports():
@@ -385,6 +403,7 @@ def single_case_analysis_three_circular_ports():
 
     simulation_object.results_collection.elements_list[0].combustion.plot_results()
     simulation_object.results_collection.elements_list[0].trajectory.plot_results()
+
 
     # Show any plots
     plt.show()
@@ -643,5 +662,6 @@ if __name__ == '__main__':
     # run_design_cases()
     # single_case_analysis_three_circular_ports()
     # single_case_analysis_one_port_review()
-    # single_case_analysis_one_port_image_geometry()
-    single_case_analysis_one_circular_port()
+    single_case_analysis_one_port_image_geometry()
+    plt.show()
+    # single_case_analysis_one_circular_port()
