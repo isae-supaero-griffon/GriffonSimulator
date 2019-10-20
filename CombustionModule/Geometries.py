@@ -844,7 +844,7 @@ class SinglePortImageGeometry(Geometry):
 
             proxy_image = self.image
             contours, hierarchy = cv2.findContours(proxy_image, 1, 2)
-            cnt = contours[0]
+            cnt = contours[-1]
             (x, y), radius = cv2.minEnclosingCircle(cnt)
 
             return self.externalRadius - radius*self.getMetersPerPixel()
@@ -864,7 +864,7 @@ class SinglePortImageGeometry(Geometry):
             # Extract the first contour of the image
             proxy_image = self.image
             contours, _ = cv2.findContours(proxy_image, 1, 2)
-            cnt = contours[0]
+            cnt = contours[-1]
 
             # Write the file
             with open(file_name, 'w') as f:
@@ -885,6 +885,7 @@ class SinglePortImageGeometry(Geometry):
         fig = plt.figure(facecolor='w', figsize=(15, 15))
         fig.suptitle('Geometry drawing')
         plt.imshow(self.image, cmap='gray')
+
 
     def generatePolynom(self, polynom, baseRadius, branches, n):
 

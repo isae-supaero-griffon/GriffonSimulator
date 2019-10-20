@@ -14,6 +14,7 @@ import itertools                                                    # Import ite
 import CombustionModule.RegressionModel as Reg                      # Import the RegressionModel class
 import json                                                         # Import the json library
 from copy import deepcopy                                           # Import the deepcopy method
+import math as m                                                    # Import the math library
 
 # -------------------- FUNCTIONS DEFINITIONS ------------------
 
@@ -232,6 +233,21 @@ def single_case_analysis_one_port_image_geometry():
 
     json_interpreter = generate_data_layer()
 
+    # ------------ Generate the Fourier Coefficients:
+    #
+    r = 0.2
+    br = 0.3
+    delta = 0.17
+    n_coefs = 100
+    period = 1
+    a_s, b_s = generate_fourier_coefficients(n_coefs, period, my_fun, br, r, delta)
+
+    # n_coefs = 100
+    # period = 1
+    # a_s, b_s = generate_fourier_coefficients(n_coefs, period, my_fun_2, delta1, delta2)
+    # delta1, delta2 = 0.12, 0.3
+
+
     # ---------- Pack the inputs:
 
     # Define the oxidizer flow
@@ -239,12 +255,12 @@ def single_case_analysis_one_port_image_geometry():
 
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': SinglePortImageGeometry, 'L': 0.4,
-                                                            'externalRadius': 0.05, 'imagePixelSize': 1024,
+                                       'geometric_params': {'type': SinglePortImageGeometry, 'L': 0.40,
+                                                            'externalRadius': 0.05, 'imagePixelSize': 2048,
                                                             'imageMeterSize': 0.1},
 
-                                       'shape_params': {'a':  [1.5, -0.8, 1.5, -1, 1, 0.5], 'b': [],
-                                                            'baseRadius': 0.032, 'branches': 6, 'impact': 0.075,
+                                       'shape_params': {'a': a_s, 'b': b_s,
+                                                            'baseRadius': 0.032, 'branches': 12, 'impact': 0.8,
                                                             'n': 50},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
@@ -261,7 +277,7 @@ def single_case_analysis_one_port_image_geometry():
     simulation_parameters = {
                               'CombustionModel': CombustionObjectImage,
 
-                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.000000001, 'dt': 0.05,
+                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.004, 'dt': 0.05,
                                              'max_burn_time': 5},
 
                               'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.05,
@@ -280,15 +296,17 @@ def single_case_analysis_one_port_image_geometry():
     # -------------- Generate the simulation object:
 
     simulation_object = SimulationObject(initializer_collection=init_obj)
+    print("Minimum Thickness Before: {x:5.5f} mm \n".format(x=1000*simulation_object.combustion_module.geometry.min_bloc_thickness()))
 
     # -------------- Generate deep copy of geometry object:
 
     geometry_object_original = deepcopy(simulation_object.combustion_module.geometry)
-    # geometry_object_original.export_geometry()
 
     # --------------- Run the simulation:
 
     simulation_object.run_simulation_in_batch()
+    print("Minimum Thickness After: {x:5.5f} mm \n".format(x=1000*simulation_object.combustion_module.geometry.min_bloc_thickness()))
+
 
     # Print the total mass
     print("\nRockets Total Mass: {0} kgs".format(simulation_object.mass_simulator_module.get_mass()))
@@ -316,6 +334,8 @@ def single_case_analysis_one_port_image_geometry():
 
     # ---------------- Plot the geometries before and after:
 
+    geometry_object_original.export_geometry(file_name="../Design/Design Files/original_geometry.txt")
+    simulation_object.combustion_module.geometry.export_geometry(file_name="../Design/Design Files/geometry_after_burn.txt")
     geometry_object_original.draw_geometry()
     simulation_object.combustion_module.geometry.draw_geometry()
 
@@ -651,6 +671,74 @@ def run_design_cases():
 
     simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
                                                                             file_name_expression]))
+
+
+def generate_fourier_coefficients(n_coefs, period, fun, *args):
+    """ generate_fourier_coefficients for given configuration """
+
+    # Generate the x coordinates
+    x = np.linspace(0, 1, 1000)
+
+    # Preallocate results as numpy arrays
+    a_s = np.empty(shape=(n_coefs,1))
+    b_s = np.empty(shape=(n_coefs,1))
+
+    for i in range(1, n_coefs+1):
+        sin_fourier = lambda x_: m.sin(2 * m.pi * i * x_ / period) * fun(x_, *args)
+        cos_fourier = lambda x_: m.cos(2 * m.pi * i * x_ / period) * fun(x_, *args)
+        sin_fourier = np.vectorize(sin_fourier)
+        cos_fourier = np.vectorize(cos_fourier)
+        a_s[i-1] = 2 / period * trapz(cos_fourier(x), x)
+        b_s[i-1] = 2 / period * trapz(sin_fourier(x), x)
+
+    # Return the results
+    return a_s, b_s
+
+def my_fun_2(x, *args):
+    delta1, delta2 = args[0], args[1]
+    if 0<=x<delta1:
+        return 0
+    elif delta1<=x<delta2:
+        return 0.5
+    elif delta2<=x<1-delta2:
+        return 1 + 0.12*m.fabs(x - 0.5)
+    elif 1-delta2<=x<1-delta1:
+        return 0.5
+    elif 1-delta1<=x<=1:
+        return 0
+
+
+def my_fun(x, *args):
+    """
+    my_fun generates the desired profile for the branch
+    :param x: float with x-coordinate
+    :param br: float with branch radius position
+    :param r: radius
+    :return: value of function
+    """
+    br, r, delta = args[0], args[1], args[2]
+
+    # Check the inputs
+    assert r < 0.5, 'The radius has to be less than 0.5'
+    assert 0<= x <=1, 'x has to be contained between 0 and 1'
+    assert r < br, 'br has to be greater than r'
+
+    if delta <= x <= 1-delta:
+        # Scale x
+        x = (x - delta)/(1 - 2*delta)
+        # Evaluate the function
+        if 0<=x <br-r:
+            return (1-r)/(br-r)*x
+        elif br-r<=x<br:
+            return m.sqrt(r**2 - (x - br)**2) + (1 - r)
+        elif br<=x<1-br:
+            return 1
+        elif 1-br<=x<1-br+r:
+            return sqrt(r**2 - (x - 1 + br)**2) + (1 - r)
+        elif 1-br+r<=x<=1:
+            return (1-r)/(br-r)*(1-x)
+    else:
+        return 0
 
 
 # ----------------------------- MAIN ------------------------------

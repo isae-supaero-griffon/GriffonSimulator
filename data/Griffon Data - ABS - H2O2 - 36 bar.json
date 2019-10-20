@@ -8,9 +8,9 @@
     "m": -0.2,
     "n2": 0.15,
     "m2": -0.2,
-    "maxGo": 140,
+    "maxGo": 64,
     "rho_fuel": 1061,
-    "P_chamber_bar": 36,
+    "P_chamber_bar": 34.7,
     "rho_ox_pure": 1.45,
     "ox_purity": 0.875,
     "combustion_efficiency": 0.9
@@ -101,7 +101,7 @@
           "rocket_structure": {
             "identifier": "rocket_structure",
             "type": "StaticPart",
-            "mass": 20.0
+            "mass": 18.0
           }
           }
         }
