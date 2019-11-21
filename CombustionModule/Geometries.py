@@ -12,6 +12,8 @@ import cv2                                          # Import cv2
 from CombustionModule.Mesher import *               # Import the different kinds of meshes
 from CombustionModule.RegressionModel import *      # Import the regression models
 from scipy.integrate import solve_ivp               # Import solve_ivp method from scipy
+import os.path                                      # Import the OS library
+from Libraries.Interpolator import Interpolator     # Import the interpolator
 
 # ------------------------ FUNCTION DEFINITIONS -----------------
 
@@ -980,6 +982,7 @@ class Geometry1D(ABC):
         :return: UniformSpacedMesh instance
         """
         return UniformlySpacedMesh("Mesh-1D", self, N)
+        # return GeometricMesh("Mesh-1D", self, N, bias=1.01)
 
     @abstractmethod
     def _generate_interpolator(self):
@@ -1006,15 +1009,34 @@ class Geometry1D(ABC):
         pass
 
     @abstractmethod
-    def regress(self, regression_model, m_ox, rho_f, dt):
+    def print_geometry_to_file(self, file_name, time=0):
+        """ print_geometry_to_file prints the local current state of the geometry
+        :param file_name: string containing name of file towards which to print the geometry
+        :param time: simulation time at which to print the geometry
         """
-        regress method performs the regression of the fuel grain. Updates the geometry
-        along the port by updating the cells on the mesh
+        pass
+
+    @abstractmethod
+    def solve_mass_flux(self, regression_model, m_ox, rho_f):
+        """
+        solve_mass_flux solves the equation by using the RK4 method
         :param regression_model: RegressionModel instance.
         :param m_ox: mass flow of oxidizer
         :param rho_f: fuel density
+        :return: solution_vector, mass_flows tupple, mass_fluxes tupple, O/F ratio at the end of port,
+        """
+        pass
+
+    @abstractmethod
+    def regress(self, solution, regression_model, m_ox, dt):
+        """
+        regress method performs the regression of the fuel grain. Updates the geometry
+        along the port by updating the cells on the mesh from the solution obtained in solve_mass_flux
+        :param solution: vector of fuel mass fluxes obtained from solve_mass_flux
+        :param regression_model: RegressionModel instance.
+        :param m_ox: mass flow of oxidizer
         :param dt: time of simulation
-        :return: O/F ratio at end of port, mass_flows tupple, mass_fluxes tupple
+        :return: nothing
         """
         pass
 
@@ -1030,7 +1052,6 @@ class Geometry1D(ABC):
 
         # Return the min block thickness
         return min_block_thickness
-
 
 
 
@@ -1072,18 +1093,35 @@ class SingleCircularPort1D(Geometry1D):
         x, areas, perimeters = self.mesh.return_data()
 
         # Return the output
-        return Interpolator(0, self.L, x, areas, perimeters)
+        # return [Interpolator(0, self.L, x, areas, perimeters)]
+        return [Interpolator(x, areas), Interpolator(x, perimeters)]
 
     def _update_interpolator(self):
         # Collect the area data
-        _, updated_areas, updated_perimeters = self.mesh.return_data()
+        x, updated_areas, updated_perimeters = self.mesh.return_data()
 
         # Set the new areas
-        self.interpolator.set_y_cor(updated_areas)
-        self.interpolator.set_z_cor(updated_perimeters)
+        self.interpolator[0].set_coordinates(x, updated_areas)
+        self.interpolator[1].set_coordinates(x, updated_perimeters)
 
-    def regress(self, regression_model, m_ox, rho_f, dt):
-        """ perform the regression of the fuel geometry """
+    def print_geometry_to_file(self, file_name, time=0):
+        # Append the data to the file
+        if not os.path.isfile(file_name):
+            data_set = [(my_cell.x_cor, my_cell.return_profile_data()) for my_cell in self.mesh.cells]
+            x, profile_data = zip(*data_set)
+            x = [-1] + list(x)
+            profile_data = [time] + list(profile_data)
+            data_set = np.column_stack((np.array(x), np.array(profile_data)))
+        else:
+            data_set = np.genfromtxt(file_name)
+            profile_data = np.array([time]+[my_cell.return_profile_data() for my_cell in self.mesh.cells])
+            data_set = np.hstack((data_set, np.reshape(profile_data, (len(profile_data), 1))))
+
+        # Write the file
+        np.savetxt(file_name, data_set, delimiter=" ", fmt="%15.12f")
+
+    def solve_mass_flux(self, regression_model, m_ox, rho_f):
+        """ perform the solution of the equation of regression of the fuel geometry """
 
         # Define the Runge-Kutta function
         def mass_flux_gradient(x, mass_flux_fuel):
@@ -1095,7 +1133,7 @@ class SingleCircularPort1D(Geometry1D):
             """
 
             # Interpolate the area and perimeter from the mesh
-            area, perimeter = self.interpolator.interpolate(x)
+            area, perimeter = self.interpolator[0].interpolate(x), self.interpolator[1].interpolate(x)
 
             # Calculate fluxes and hydraulic_diameter
             mass_flux_ox = m_ox / area
@@ -1109,8 +1147,20 @@ class SingleCircularPort1D(Geometry1D):
         x_cor = self.mesh.return_x_cor()
 
         # Problem defined as follows
-        solution = solve_ivp(fun=mass_flux_gradient, t_span=(0, self.L), y0=[0], method='RK45', t_eval=x_cor)
+        solution = solve_ivp(fun=mass_flux_gradient, t_span=(x_cor[0], self.L), y0=[0], method='RK45', t_eval=x_cor,
+                             rtol=1e-3)
 
+        # Compute the mass flow rates and mass fluxes and OF at the end of the port
+        end_cell = self.mesh.cells[-1]
+        end_area = end_cell.return_area_data()
+        g_f = solution.y[0][end_cell.number]
+        g_ox = m_ox / end_area
+        m_f = g_f * end_area
+
+        # Return the results
+        return solution, (m_ox, m_f), m_ox / m_f, (g_ox, g_f)
+
+    def regress(self, solution, regression_model, m_ox, dt):
         # Update the profile by regressing it
         for my_cell in self.mesh.cells:
             g_ox = m_ox / my_cell.return_area_data()                                           # Get ox flux
@@ -1119,16 +1169,9 @@ class SingleCircularPort1D(Geometry1D):
             r_dot = regression_model.compute_regression_rate_haltman(my_cell.x_cor, g_tot)     # Calculate regression r
             my_cell.regress(r_dot, dt)
 
-        # Calculate global O/F (at end of grain)
-        # noinspection PyUnboundLocalVariable
-        o_f = g_ox /g_f
-        m_f = g_f * self.mesh.cells[-1].return_area_data()
-
         # Update the interpolator to account for the changes in the geometry
         self._update_interpolator()
 
-        # Return O/F ratio
-        return o_f, (m_ox, m_f), (g_ox, g_f)
 
 
 
