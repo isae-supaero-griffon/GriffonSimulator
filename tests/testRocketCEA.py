@@ -44,7 +44,7 @@ def run_cea():
     """ Run CEA returns runs the code of CEA for the inputted variables """
 
     # Define the parameters of the run
-    params = {'Pc': bar2psia(36), 'eps': 36, 'MR': 5.5, 'short_output': 1}
+    params = {'Pc': bar2psia(36), 'eps': 5.5072, 'MR': 8.3, 'short_output': 1}
     propellant = {'oxName': 'GriffonOxydizer_H2O2', 'fuelName': '3DPrinted_ABS'}
 
     # Instantiate the CEA object
@@ -54,6 +54,10 @@ def run_cea():
     s = ispObj.get_full_cea_output(**params)
 
     # Print the result
+    my_file = 'CEANASA_Results_Equilibrium.txt'
+    with open(my_file, 'w') as f:
+        f.write(s)
+
     print(s)
 
 

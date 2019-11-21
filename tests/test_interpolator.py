@@ -5,7 +5,7 @@
 # ------------------- IMPORT MODULES -----------------------
 
 from random import uniform
-from Libraries.Interpolator import *
+from Libraries.Interpolator_old import *
 from DataLayer.JsonInterpreter import *
 
 # ------------------ FUNCTIONS DEFINITIONS -----------------

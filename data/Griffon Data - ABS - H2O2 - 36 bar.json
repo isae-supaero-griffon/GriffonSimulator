@@ -220,5 +220,189 @@
         }
       ]
     }
+  },
+  "hydraulic_table":  {
+    "fluids": [
+      {
+        "fluid": "Gas",
+        "name": "Air",
+        "gamma": 1.4,
+        "gas_constant": 297,
+        "viscosity": 1.81e-5
+      },
+      {
+        "fluid": "Liquid",
+        "name": "H2O2",
+        "pure_density": 1.45,
+        "purity": 0.875,
+        "viscosity": 1.25e-3
+      }
+    ],
+    "components":
+        [{
+          "identifier": 0,
+          "name": "pressurizer_tank",
+          "type": "PressurizerTank",
+          "fluid": "Air",
+          "volume": 0.001,
+          "initial_pressure": 30000000,
+          "temperature": 298,
+          "cd": 0.001,
+          "exit_area": 7.85e-5,
+          "link": "",
+          "nodes": [
+            {
+              "identifier": 0,
+              "type": "pressure"
+            },
+            {
+              "identifier": 1,
+              "type": "mass"
+            },
+            {
+              "identifier": 2,
+              "type": "pressure"
+            }
+          ]
+        },
+        {
+          "identifier": 1,
+          "name": "pressurizer_valve",
+          "type": "Valve",
+          "length": 0.1,
+          "diameter": 0.01,
+          "fluid": "Air",
+          "roughness": 0.0001,
+          "link": 0,
+          "nodes": [
+            {
+              "identifier": 2,
+              "type": "pressure"
+            },
+            {
+              "identifier": 3,
+              "type": "mass"
+            },
+            {
+              "identifier": 4,
+              "type": "pressure"
+            }
+          ]
+        },
+        {
+          "identifier": 2,
+          "name": "pressure_regulator",
+          "type": "PressureRegulator",
+          "fluid": "Air",
+          "set_point": 5200000,
+          "threshold": 400000,
+          "link": 1,
+          "nodes": [
+            {
+              "identifier": 4,
+              "type": "pressure"
+            },
+            {
+              "identifier": 5,
+              "type": "mass"
+            },
+            {
+              "identifier": 6,
+              "type": "pressure"
+            }
+          ]
+        },
+        {
+          "identifier": 3,
+          "name": "oxidizer_tank",
+          "type": "OxidizerTank",
+          "fluid": "H2O2",
+          "mass": 2,
+          "cd": 0.001,
+          "exit_area": 7.85e-5,
+          "link": "",
+          "nodes": [
+            {
+              "identifier": 6,
+              "type": "pressure"
+            },
+            {
+              "identifier": 7,
+              "type": "mass"
+            },
+            {
+              "identifier": 8,
+              "type": "pressure"
+            }
+          ]
+        },
+      {
+          "identifier": 4,
+          "name": "injector",
+          "type": "Injector",
+          "fluid": "H2O2",
+          "table": [
+                    [
+                      0.35,
+                      8.17
+                    ],
+                    [
+                      0.7,
+                      11.62
+                    ],
+                    [
+                      1.0,
+                      14.224
+                    ],
+                    [
+                      1.5,
+                      16.36
+                    ],
+                    [
+                      2.0,
+                      18.69
+                    ],
+                    [
+                      3.0,
+                      23.13
+                    ],
+                    [
+                      4.0,
+                      25.05
+                    ],
+                    [
+                      6.0,
+                      29.29
+                    ],
+                    [
+                      7.0,
+                      32.52
+                    ],
+                    [
+                      8.0,
+                      33.94
+                    ],
+                    [
+                      16.39066962,
+                      47.391
+                    ]
+          ],
+          "link": 3,
+          "nodes": [
+            {
+              "identifier": 8,
+              "type": "pressure"
+            },
+            {
+              "identifier": 9,
+              "type": "mass"
+            },
+            {
+              "identifier": 10,
+              "type": "pressure"
+            }
+          ]
+        }
+      ]
   }
 }

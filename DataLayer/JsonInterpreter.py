@@ -87,6 +87,14 @@ class JsonInterpreter:
             """
             return self.json_data['propellant_table']
 
+        def return_hydraulic_table(self):
+            """
+            return_hydraulic_table returns the hydraulic components network dictionary that will be used to define
+            the hydraulic module of the system.
+            :return: hydraulic table as a dict.
+            """
+            return self.json_data['hydraulic_table']
+
     # ------------------- Instance:
 
     instance = None
