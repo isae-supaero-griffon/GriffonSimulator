@@ -13,10 +13,11 @@
 
 # ------------------------- IMPORT MODULES --------------------------- #
 
-from abc import ABC, abstractmethod
-import CombustionModule.Geometries as Geom
-import math as m
-import numpy as np
+from abc import ABC, abstractmethod                     # Import abstract class module
+from Libraries.Interpolator import Interpolator         # Import Interpolator
+import CombustionModule.Geometries as Geom              # Import Geometries object
+import math as m                                        # Import math module
+import numpy as np                                      # Import numpy
 
 
 
@@ -92,6 +93,7 @@ class UniformlySpacedMesh(Mesh):
     def __init__(self, name, geometry_obj, n_el):
         """
         class initializer
+        :param name: string defining the name of the Mesh object
         :param geometry_obj: Geometry class instance which defined the domain of the problem.
         :param n_el: number of cells integer.
         """
@@ -113,10 +115,54 @@ class UniformlySpacedMesh(Mesh):
         :return: nothing
         """
 
-        for i in range(0, self.n_el+1):
-            new_cell = cell_factory(i, i*self.dx)
+        for i in range(0, self.n_el):
+            new_cell = cell_factory(i, (i+1)*self.dx)
             self.cells.append(new_cell)
         # TODO: be careful with the definition of the nels
+
+
+class GeometricMesh(Mesh):
+    """
+    The Geometric Mesh inherits from the mesh class and it implements a geometric
+    series to define the mesh.
+    """
+
+    def __init__(self, name, geometry_obj, n_el, bias):
+        """
+        class initializer
+        :param name: string defining the name of the Mesh object
+        :param geometry_obj: Geometry class instance which defined the domain of the problem.
+        :param n_el: number of cells integer.
+        :param bias: bias to apply on the geometric definition of the cells
+        """
+
+        # Call superclass constructor
+        super(GeometricMesh, self).__init__(name, geometry_obj)
+
+        # Check the input
+        assert isinstance(n_el, int), "Failed assertion: check n_el is an int.\n"
+        assert 0 < bias, "Bias has to be strictly greater than 0. \n"
+
+        # Attributes definition
+        self.n_el = n_el
+        self.bias = bias
+        self._generate_cells(geometry_obj.my_cell_factory)
+
+    def _generate_cells(self, cell_factory):
+        """
+        Generate the cells according to the law proposed.
+        :param cell_factory: cell factory method associated to the geometry object
+        :return: nothing
+        """
+
+        # Calculate the initial value displacement
+        initial_dx = self.geometry.L * (1 - self.bias) / (1 - self.bias ** self.n_el)
+        accumulated_distance = float(0)
+
+        for i in range(0, self.n_el+1):
+            new_cell = cell_factory(i, accumulated_distance)
+            self.cells.append(new_cell)
+            accumulated_distance += initial_dx * (self.bias ** i)
 
 
 class Cell(ABC):
@@ -261,56 +307,7 @@ class CircularPortCell(Cell):
 
 
 
-class Interpolator:
-    """
-    Interpolator class helps in the interpolation of the cross section
-    area for the single port.
 
-        Attrs:
-            0. x_cor: coordinates of x
-            1. y_cor: coordinates of y (cross section area of port)
-            2. z_cor: coordinates of z (perimeter of cross section area)
-    """
-
-    def __init__(self, x_min, x_max, x_cor=0, y_cor=0, z_cor=0):
-        """
-        class initializer
-        :param x_min: minimum value admisible for x
-        :param x_max: maximum value admisible for x
-        :param x_cor: initial values for the x_cor
-        :param y_cor: initial values for the y_cor
-        :param z_cor: initial values for the z_cor
-        """
-
-        # Set the attributes
-        self.x_min = x_min
-        self.x_max = x_max
-        self.x_cor = x_cor
-        self.y_cor = y_cor
-        self.z_cor = z_cor
-
-    def set_x_cor(self, x_cor):
-        self.x_cor = x_cor
-
-    def set_y_cor(self, y_cor):
-        self.y_cor = y_cor
-
-    def set_z_cor(self, z_cor):
-        self.z_cor = z_cor
-
-    def interpolate(self, x):
-        """
-        perform the interpolation for the value of x
-        :param x: coordinate x
-        :return: interpolated value
-        """
-
-        # Check the value
-        if x < self.x_min or x > self.x_max:
-            raise ValueError("Interpolated value greater than interp bounds. \n")
-
-        # return value
-        return np.interp(x, self.x_cor, self.y_cor), np.interp(x, self.x_cor, self.z_cor)
 
 # --------------------------- COMMENTS ----------------------------
 #
