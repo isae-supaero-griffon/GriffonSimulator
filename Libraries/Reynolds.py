@@ -45,11 +45,20 @@ def colebrook_equation(x, roughness, hydraulic_diameter, reynolds_number):
     a, b = 2.51 / reynolds_number, roughness / (3.7 * hydraulic_diameter)
     return - 2 * np.log(a * x + b)
 
+def estimate_friction_factor(roughness, hydraulic_diameter):
+    """
+    estimate_friction_factor determines the value of the friction factor for high reynolds numbers
+    :param roughness: pipe roughness
+    :param hydraulic_diameter: hydraulic diameter of the pipe
+    :return: estimate for high reynolds number of the friction factor
+    """
+    return  1 / (2 * np.log(3.7*hydraulic_diameter/roughness)) ** 2
 
-def calculate_darcy_friction_factor(roughness, hydraulic_diameter, reynolds_number):
+def calculate_darcy_friction_factor(f0, roughness, hydraulic_diameter, reynolds_number):
     """
     calculate_darcy_friction_factor determines the friction factor along the pipe based
     on the colebrook equation.
+    :param f0: initial guess for friction factor
     :param roughness: pipe relative roughness
     :param hydraulic_diameter: hydraulic diameter of the pipe [m]
     :param reynolds_number: reynolds number of the flow
@@ -57,12 +66,13 @@ def calculate_darcy_friction_factor(roughness, hydraulic_diameter, reynolds_numb
     """
 
     # Define an initial value, error and tolerance
-    x0 = 0.000001
-    sol = fixed_point(colebrook_equation, [x0], args=(roughness, hydraulic_diameter, reynolds_number),
+    x0 = f0
+    # print("Re:{0} \n".format(reynolds_number))
+    sol = fixed_point(colebrook_equation, [x0], args=(roughness, hydraulic_diameter, np.abs(reynolds_number)),
                       xtol=1e-4, maxiter=300)
 
     # Return result
-    return 1 / sol ** 2
+    return 1 / sol[0] ** 2
 
 # --------------------- CLASSES DEFINITIONS -----------------
 
@@ -78,7 +88,7 @@ class Reynolds:
 
     """
 
-    def __init__(self, roughness, hydraulic_diameter):
+    def __init__(self, roughness, hydraulic_diameter, friction_estimate = 0.0001):
         """
         class initializer
         :param roughness: relative roughness of the pipe
@@ -92,6 +102,7 @@ class Reynolds:
         self.hydraulic_diameter = hydraulic_diameter
         self.roughness = roughness
         self.area = np.pi * self.hydraulic_diameter ** 2 / 4
+        self.friction_estimate = friction_estimate
 
     def solve_for_friction_factor(self, fluid, mass_flow):
         """
@@ -105,5 +116,8 @@ class Reynolds:
         flow_speed = calculate_flow_speed(mass_flow, self.area, fluid.get_density())
         r_number = calculate_reynolds_number(fluid.get_density(), fluid.get_viscosity(), self.hydraulic_diameter,
                                              flow_speed)
+
+        self.friction_estimate = calculate_darcy_friction_factor(self.friction_estimate, self.roughness,
+                                                                 self.hydraulic_diameter, r_number)
         # Return the darcy friction factor
-        return calculate_darcy_friction_factor(self.roughness, self.hydraulic_diameter, r_number)
+        return self.friction_estimate

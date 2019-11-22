@@ -263,8 +263,31 @@
             }
           ]
         },
+        {"identifier": 4,
+          "name": "oxidizer_valve",
+          "type": "Valve",
+          "length": 0.1,
+          "diameter": 0.03,
+          "fluid": "H2O2",
+          "roughness": 1e-7,
+          "link": 3,
+          "nodes": [
         {
-          "identifier": 4,
+              "identifier": 8,
+              "type": "pressure"
+            },
+            {
+              "identifier": 9,
+              "type": "mass"
+            },
+            {
+              "identifier": 10,
+              "type": "pressure"
+            }
+          ]
+          },
+        {
+          "identifier": 5,
           "name": "injector",
           "type": "Injector",
           "fluid": "H2O2",
@@ -314,18 +337,18 @@
                       47.391
                     ]
           ],
-          "link": 3,
+          "link": 4,
           "nodes": [
             {
-              "identifier": 8,
+              "identifier": 10,
               "type": "pressure"
             },
             {
-              "identifier": 9,
+              "identifier": 11,
               "type": "mass"
             },
             {
-              "identifier": 10,
+              "identifier": 12,
               "type": "pressure"
             }
           ]

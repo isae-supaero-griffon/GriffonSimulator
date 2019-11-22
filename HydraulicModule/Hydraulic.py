@@ -85,6 +85,23 @@ class HydraulicModule:
     def node_print(self):
         return "Hydraulic Module:: \n" + str(self.nodes)
 
+    def update(self, dt):
+        """
+        update methods runs the update method on the components that make the hydraulic module
+        :param dt: time-step [sec]
+        :return: nothing
+        """
+        for component in self.components:
+            component.update(dt)
+
+    def checkout_component(self, name):
+        """
+        return_component returns the component specified by the name inputted
+        :param name: string with the name of the component
+        :return: component instance
+        """
+        return next((elem for elem in self.components if elem.name == name), None)
+
     def _initialize(self, hydraulic_table):
         """
         _initialize is a private method of he HydraulicModule class
@@ -223,14 +240,14 @@ class HydraulicModule:
             for value, dof in zip(x, non_fixed_dofs): dof.set_value(scale*value)
 
             # Run the methods from the component
-            for component in self.components: component.my_method()
+            res = np.array([component.my_method() for component in self.components])
 
             # Check the activity, if one component is not active then raise Exception
             self._check_activity()
             if not self.is_active: raise self.RunEndingError("\n At least one of the components is not active \n")
 
             # Get the residual
-            return x - np.array([dof.get_value() for dof in non_fixed_dofs]) / scale
+            return res
 
         def optimize_fun(x):
             """
@@ -238,23 +255,18 @@ class HydraulicModule:
             :param x: on-fixed dof values in iterable format according to the right order
             :return: objective function (norm of residual ---> solution tends to 0)
             """
-            return np.linalg.norm(residual(x)) / np.linalg.norm(x)
+            return np.linalg.norm(residual(x))
 
         # Define the optimization bounds
         bounds = opt.Bounds(lb=np.zeros(shape=(len(non_fixed_dofs), 1)), ub=np.full((len(non_fixed_dofs), 1), np.inf))
         x0_fun = np.vectorize(lambda x: x.get_value())
         x0 = x0_fun(non_fixed_dofs) / scale
 
-        # Solve the problem
-        try:
-            sol = opt.minimize(optimize_fun, x0, method='Nelder-Mead', jac=None, bounds=bounds,
-                               tol=tol, options={'maxiter': maxiter, 'disp': True})
+        # Solve the problem:
+        sol = opt.minimize(optimize_fun, x0, method='Nelder-Mead', jac=None, bounds=bounds,
+                           tol=tol, options={'maxiter': maxiter, 'disp': True})
+        return sol
 
-        except self.RunEndingError:
-            print("Solution Finished")
-
-        finally:
-            return sol
 
 
 

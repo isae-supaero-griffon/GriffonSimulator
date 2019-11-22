@@ -121,18 +121,8 @@ class Component(ABC):
         :param kwargs:
         :return: nothing.
         """
-        if self.pressure_nodes[0].dof.isFixed:
-            # Determine pressure on downstream node
-            self.pressure_nodes[1].dof.set_value(self.pressure_nodes[0].dof.get_value() -
-                                                 self.calculate_delta_p())
-        elif self.pressure_nodes[1].dof.isFixed:
-            # Determine pressure on upstream node
-            self.pressure_nodes[0].dof.set_value(self.pressure_nodes[1].dof.get_value() +
-                                                 self.calculate_delta_p())
-        else:
-            # Determine pressure on downstream node
-            self.pressure_nodes[1].dof.set_value(self.pressure_nodes[0].dof.get_value() -
-                                                 self.calculate_delta_p())
+        return self.pressure_nodes[0].dof.get_value() - self.calculate_delta_p() -\
+               self.pressure_nodes[1].dof.get_value()
 
     @abstractmethod
     def update(self, dt):
@@ -153,31 +143,8 @@ class Component(ABC):
         pass
 
 
-class Tank(Component):
-    """
-    Class Tank is intended to be an abstract class from which the other tanks will derive.
-    Its main difference from the rest of the components is that this class implements a different
-    way my_method. In particular it solves for the mass flow rate
-    """
 
-    @abstractmethod
-    def calculate_mass_flow(self):
-        """
-        calculate_mass_flow determines the mass flow across the component based on the delta P
-        :return: mass flow in kg/sec
-        """
-        pass
-
-    def my_method(self, *args, **kwargs):
-        delta_p = self.pressure_nodes[0].dof.get_value() - self.pressure_nodes[1].dof.get_value()
-        # Set the dof only if its not fixed
-        if delta_p > 0 and not self.mass_node.dof.isFixed:
-            self.mass_node.dof.set_value(self.calculate_mass_flow())
-        elif not self.mass_node.dof.isFixed:
-            self.mass_node.dof.set_value(0)
-
-
-class PressurizerTank(Tank):
+class PressurizerTank(Component):
     """
     PressurizerTank is in charge of describing the physics of the pressurizer tank.
     Since it is a discharge tank it only accepts one node in his NodesCollection.
@@ -290,13 +257,8 @@ class PressurizerTank(Tank):
         # TODO: review if the tanks discharge factor variate with the flow or not
         return self.mass_node.dof.get_value() ** 2 / (2 * self.fluid*get_density() * self.cd ** 2 * self.exit_area ** 2)
 
-    def calculate_mass_flow(self):
-        # Comments: The mass flow is calculated using the discharge factor of the tank
-        delta_p = self.pressure_nodes[0].dof.get_value() - self.pressure_nodes[1].dof.get_value()
-        return self.cd * self.exit_area * np.sqrt(2 * self.fluid.get_density() * delta_p)
 
-
-class OxidizerTank(Tank):
+class OxidizerTank(Component):
     """
     OxidizerTank class implements the behaviour of the oxidizer tank.
         Attributes:
@@ -341,11 +303,6 @@ class OxidizerTank(Tank):
         # TODO: check if the discharge coefficient of the tank varies with the another parameter
         return self.mass_node.dof.get_value() ** 2 / (2 * self.fluid.get_density() * self.cd ** 2 * self.exit_area ** 2)
 
-    def calculate_mass_flow(self):
-        # Comments: The mass flow is calculated using the discharge factor of the tank
-        delta_p = self.pressure_nodes[0].dof.get_value() - self.pressure_nodes[1].dof.get_value()
-        return self.cd * self.exit_area * np.sqrt(2 * self.fluid.get_density() * delta_p)
-
 
 class Valve(Component):
     """
@@ -377,12 +334,9 @@ class Valve(Component):
         self.reynolds = Reynolds(roughness, diameter)
 
     def calculate_delta_p(self):
-        if self.mass_node.dof.get_value() != 0:
-            f = self.reynolds.solve_for_friction_factor(self.fluid, self.mass_node.dof.get_value())
-            return f * self.length * self.mass_node.dof.get_value() ** 2 / \
-                   (2 * self.fluid.get_density() * self.reynolds.hydraulic_diameter * self.reynolds.area ** 2)
-        else:
-            return 0
+        f = self.reynolds.solve_for_friction_factor(self.fluid, self.mass_node.dof.get_value())
+        return f * self.length * self.mass_node.dof.get_value() ** 2 / \
+               (2 * self.fluid.get_density() * self.reynolds.hydraulic_diameter * self.reynolds.area ** 2)
 
     def update(self, dt):
         pass
