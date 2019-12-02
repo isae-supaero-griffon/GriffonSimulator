@@ -181,7 +181,7 @@ def test_hydraulic_module_network_solution():
     my_module = HydraulicModule(hydraulic_table)
 
     # Set the pressure of the oxidizer tank
-    oxidizer_pressure = 54e5
+    oxidizer_pressure = 57e5
     my_dof = my_module.dofs.return_element(criteria=6)
     my_dof.fix()
     my_dof.set_value(value=oxidizer_pressure)
@@ -231,7 +231,7 @@ def test_hydraulic_module_network_solution_transient():
     my_module = HydraulicModule(hydraulic_table)
 
     # Set the pressure of the oxidizer tank
-    oxidizer_pressure = 54e5
+    oxidizer_pressure = 60e5
     tank_pressure = my_module.dofs.return_element(criteria=6)
     tank_pressure.fix()
     tank_pressure.set_value(value=oxidizer_pressure)
@@ -249,7 +249,7 @@ def test_hydraulic_module_network_solution_transient():
     oxidizer_tank.mass_node.dof.set_value(value=ox_flow)
 
     # Define delta T
-    dt = 0.1
+    dt = 0.05
     results = {dof.number:[] for dof in my_module.dofs.elements_list}
     results['time'] = []
     time_count = 0

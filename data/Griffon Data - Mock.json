@@ -267,9 +267,9 @@
           "name": "oxidizer_valve",
           "type": "Valve",
           "length": 0.1,
-          "diameter": 0.03,
+          "diameter": 0.01,
           "fluid": "H2O2",
-          "roughness": 1e-7,
+          "roughness": 1e-3,
           "link": 3,
           "nodes": [
         {
