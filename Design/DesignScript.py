@@ -318,14 +318,14 @@ def single_case_analysis_one_port_image_geometry():
     print(simulation_object.combustion_module)
 
     # --------------- Export results to csv files:
-    #
-    # # data directory
-    # data_directory = "../data/data_tests"
-    #
-    # file_name_expression = "Griffon Output Test {number}.csv"
-    #
-    # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
-    #                                                                         file_name_expression]))
+
+    # data directory
+    data_directory = "../data/data_tests"
+
+    file_name_expression = "Griffon Output Test {number}.csv"
+
+    simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
+                                                                            file_name_expression]))
 
     # --------------- Plot the results
 
