@@ -430,6 +430,7 @@ class PressureRegulator(Component):
             self.is_active = False
 
     def calculate_delta_p(self):
+        # TODO: Implement PressureRegulator class behavior
         return self.pressure_nodes[0].dof.get_value() - self.pressure_nodes[1].dof.get_value()
 
     def my_method(self, *args, **kwargs):
