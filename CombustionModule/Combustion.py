@@ -219,12 +219,12 @@ class CombustionObject0D(CombustionObject):
         1. geometry: Geometry instance used to define the geometry of the port (hybrid rocket)
     """
 
-    def __init__(self, json_interpreter, nozzle_object, geometry_object):
+    def __init__(self, json_interpreter, geometry_object, nozzle_object):
         """
         class initializer
         :param json_interpreter: JsonInterpreter instance used to collect the data
-        :param nozzle_object: Nozzle instance
         :param geometry_object: Geometry instance
+        :param nozzle_object: Nozzle instance
         """
 
         # Assert nature of the inputs
