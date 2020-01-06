@@ -28,7 +28,7 @@ def generate_data_layer(data_file):
     :return JsonInterpreter """
 
     # Pass the file name
-    data_directory = "../data"
+    data_directory = "../data/ONERA Data Files"
 
     # Return the output
     return JsonInterpreter(file_name="/".join([data_directory, data_file]))
@@ -107,7 +107,7 @@ def define_rossiter_modes_hycom_13_test(combustion_module):
 
     # --------------------- Define the test file:
 
-    data_directory = "../data"
+    data_directory = "../data/ONERA Data Files"
     data_file = "Hycom_13_Rossiter_extract.txt"
     test_file_name_complete = "/".join([data_directory, data_file])
     test_name = "Hycom_13"
@@ -172,9 +172,9 @@ def define_onera_physical_hycom_16_test_combustion_object():
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
-    combustion_object = CombustionObjectClassic(json_interpreter=json_interpreter,
-                                                geometry_object=geometry_obj,
-                                                nozzle_object=nozzle_obj)
+    combustion_object = CombustionObjectImage(json_interpreter=json_interpreter,
+                                              geometry_object=geometry_obj,
+                                              nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
@@ -217,7 +217,7 @@ def define_rossiter_modes_hycom_16_test(combustion_module):
 
     # --------------------- Define the test file:
 
-    data_directory = "../data"
+    data_directory = "../data/ONERA Data Files"
     data_file = "Hycom_16_Rossiter_extract.txt"
     test_file_name_complete = "/".join([data_directory, data_file])
     test_name = "Hycom_16"
@@ -275,9 +275,9 @@ def define_onera_physical_hycom_12_test_combustion_object():
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
-    combustion_object = CombustionObject(json_interpreter=json_interpreter,
-                                         geometry_object=geometry_obj,
-                                          nozzle_object=nozzle_obj)
+    combustion_object = CombustionObjectClassic(json_interpreter=json_interpreter,
+                                                geometry_object=geometry_obj,
+                                                nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
@@ -320,7 +320,7 @@ def define_rossiter_modes_hycom_12_test(combustion_module):
 
     # --------------------- Define the test file:
 
-    data_directory = "../data"
+    data_directory = "../data/ONERA Data Files"
     data_file = "Hycom_12_Rossiter_extract.txt"
     test_file_name_complete = "/".join([data_directory, data_file])
     test_name = "Hycom_12"
@@ -378,9 +378,9 @@ def define_onera_physical_hycom_14_test_combustion_object():
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
-    combustion_object = CombustionObject(json_interpreter=json_interpreter,
-                                         geometry_object=geometry_obj,
-                                          nozzle_object=nozzle_obj)
+    combustion_object = CombustionObjectClassic(json_interpreter=json_interpreter,
+                                                geometry_object=geometry_obj,
+                                                nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
