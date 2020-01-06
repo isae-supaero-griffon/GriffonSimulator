@@ -522,6 +522,37 @@ class CombustionObjectImage(CombustionObject0D):
     def run_balanced_nozzle_analysis(self, ox_flow, safety_thickness, dt, max_burn_time=None, tol_press=1e-3, **kwargs):
         pass
 
+    def post_process_data(self, dt):
+        """ exclusive post_process data for CombustionObjectImage
+        class. Enhance polymorphism
+        """
+
+        # Re-map the run results
+        self._remap_run_results(dt)
+
+        # Call superclass post_process_data
+        super(CombustionObjectImage, self).post_process_data(dt)
+
+    def _remap_run_results(self, dt):
+        """
+        _remap_run_results has for function to remap the results obtained by the Image Geometry
+        code.
+        :param dt: time-step
+        :return: nothing
+        """
+
+        # Loop through the variables on run_results and remap by doing interpolation of the results
+        # to increase the density of the array
+        new_time_array = np.arange(0, self.results['run_values']['time'][-1], dt)
+        time_interp = self.results['run_values']['time']
+
+        for key, value in self.results['run_values'].items():
+            if key != 'time':
+                self.results['run_values'][key] = np.interp(new_time_array, time_interp, value)
+
+        # Set new time array
+        self.results['run_values']['time'] = new_time_array
+
     def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time=None, **kwargs):
         """
         Simulate the hybrid rocket burn.
@@ -550,15 +581,13 @@ class CombustionObjectImage(CombustionObject0D):
         # ---------------------------- MAIN SIMULATION LOOP -----------------------------
 
         # Set the flag for the maximum burn-time
+        flag_burn = True
         time = 0
 
         # Get the thickness equivalent to 5 pixels
         dr = self.geometry.getMetersPerPixel() * 5
 
-
-        self.geometry.draw_geometry()
-
-        while self.geometry.min_bloc_thickness() > safety_thickness and time < max_burn_time:
+        while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
 
             # print( self.geometry.totalSurfaceArea() / self.geometry.get_length() / 2 / math.pi)
 
@@ -636,93 +665,16 @@ class CombustionObjectImage(CombustionObject0D):
             self.geometry.regress(ox_flow=ox_flow, dt=delta_t)
             self.nozzle.erode(delta_t)
 
-            # Recalculate the time
             time += delta_t
 
-        self.geometry.draw_geometry()
+            # Update the flag for burn-time
+            if max_burn_time:
+                flag_burn = time <= max_burn_time
 
         # ------------------------ POST-PROCESS ------------------------
 
         # Convert to numpy arrays
         self.results['run_values'] = {key: asarray(value) for key, value in self.results["run_values"].items()}
-
-        #TODO: add specific method for re-sampling of the data
-
-        # Re-sample the data for dt
-        k = 1
-        time = []
-        thrust = []
-        isp = []
-        pressure = []
-        temperature = []
-        of = []
-        Go =[]
-        nozzle_param = []
-        c_star = []
-        chamber_sound_speed = []
-        chamber_rho = []
-        mass_flow = []
-        chamber_speed = []
-        hydraulic_port_diameter = []
-        radius = []
-        regression_rate = []
-
-        for i in range(0, int(self.results['run_values']['time'][-1] / dt)):
-            t = dt * i
-            time.append(t)
-
-            thrust.append(self.results['run_values']['thrust'][k])
-            isp.append(self.results['run_values']['isp'][k])
-            pressure.append(self.results['run_values']['pressure'][k])
-            temperature.append(self.results['run_values']['temperature'][k])
-            of.append(self.results['run_values']['of'][k])
-            Go.append(self.results['run_values']['Go'][k])
-            nozzle_param.append(self.results['run_values']['nozzle_param'][k])
-            c_star.append(self.results['run_values']['c_star'][k])
-            chamber_sound_speed.append(self.results['run_values']['chamber_sound_speed'][k])
-            chamber_rho.append(self.results['run_values']['chamber_rho'][k])
-            mass_flow.append(self.results['run_values']['mass_flow'][k])
-            chamber_speed.append(self.results['run_values']['chamber_speed'][k])
-            hydraulic_port_diameter.append(self.results['run_values']['hydraulic_port_diameter'][k])
-            radius.append(self.results['run_values']['radius'][k])
-            regression_rate.append(self.results['run_values']['regression_rate'][k])
-
-            if self.results['run_values']['time'][k] < t:
-                k += 1
-
-        time.append(time[-1] + dt)
-        thrust.append(self.results['run_values']['thrust'][k])
-        isp.append(self.results['run_values']['isp'][k])
-        pressure.append(self.results['run_values']['pressure'][k])
-        temperature.append(self.results['run_values']['temperature'][k])
-        of.append(self.results['run_values']['of'][k])
-        Go.append(self.results['run_values']['Go'][k])
-        nozzle_param.append(self.results['run_values']['nozzle_param'][k])
-        c_star.append(self.results['run_values']['c_star'][k])
-        chamber_sound_speed.append(self.results['run_values']['chamber_sound_speed'][k])
-        chamber_rho.append(self.results['run_values']['chamber_rho'][k])
-        mass_flow.append(self.results['run_values']['mass_flow'][k])
-        chamber_speed.append(self.results['run_values']['chamber_speed'][k])
-        hydraulic_port_diameter.append(self.results['run_values']['hydraulic_port_diameter'][k])
-        radius.append(self.results['run_values']['radius'][k])
-        regression_rate.append(self.results['run_values']['regression_rate'][k])
-
-        self.results['run_values']['time'] = time
-        self.results["run_values"]["thrust"] = thrust
-        self.results["run_values"]["isp"] = isp
-        self.results["run_values"]["pressure"] = pressure
-        self.results["run_values"]["temperature"] = temperature
-        self.results["run_values"]["of"] = of
-        self.results["run_values"]["Go"] = Go
-        self.results["run_values"]["nozzle_param"] = nozzle_param
-        self.results["run_values"]["c_star"] = c_star
-        self.results["run_values"]["chamber_sound_speed"] = chamber_sound_speed
-        self.results["run_values"]["chamber_rho"] = chamber_rho
-        self.results["run_values"]["mass_flow"] = mass_flow
-        self.results["run_values"]["chamber_speed"] = chamber_speed
-        self.results["run_values"]["hydraulic_port_diameter"] = hydraulic_port_diameter
-        self.results['run_values']['radius'] = radius
-        self.results['run_values']['regression_rate'] = regression_rate
 
         # Post-process the data
         self.post_process_data(dt=dt)
