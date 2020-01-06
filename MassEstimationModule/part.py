@@ -58,7 +58,7 @@ class StaticPart(Part):
         :param kwargs: dictionary of additional part parameters.
 
         """
-        super().__init__(sender, **kwargs)
+        super(StaticPart, self).__init__(sender, **kwargs)
         self.mass = mass
 
     def get_mass(self):
@@ -100,18 +100,18 @@ class Tank(DynamicPart):
         height (real): height of the tank.
 
     """
-    def __init__(self, tank_radius, tank_height, sender, **kwargs):
+    def __init__(self, radius, height, sender, **kwargs):
         """The constructor for a tank part.
 
-        :param tank_radius: radius of the tank
-        :param tank_height: height of the tank.
+        :param radius: radius of the tank
+        :param height: height of the tank.
         :param sender: subsystem which is generating the part.
         :param kwargs: dictionary of additional part parameters.
 
         """
-        super().__init__(sender, **kwargs)
-        self.radius = tank_radius
-        self.height = tank_height
+        super(Tank, self).__init__(sender, **kwargs)
+        self.radius = radius
+        self.height = height
 
     @abstractmethod
     def get_mass(self):
@@ -161,6 +161,25 @@ class DimensionedTank(Tank):
 
     def get_mass(self):
         return self.get_shell_volume() * self.material.density + self.propellant_mass
+    
+
+class TankStatic(Tank):
+    """Class for tanks with already defined mass and dimensions. Inherits from both
+       StaticPart and Tank. 
+    """
+    
+    def __init__(self, radius, height, mass, propellant_mass, sender, **kwargs):
+        """ class initializer """
+        # Call superclass initializer
+        super(TankStatic, self).__init__(radius, height, sender, **kwargs)
+
+        # Set additional attribute
+        self.mass = mass
+        self.propellant_mass = propellant_mass
+
+
+    def get_mass(self):
+        return self.mass + self.propellant_mass
 
 
 class CombustionChamber(DimensionedTank):
@@ -237,6 +256,7 @@ class PartsCatalogue:
                  'OxidantTank': OxidantTank,
                  'PressuriserTank': PressuriserTank,
                  'ThermalLiner': ThermalLiner,
+                 'TankStatic': TankStatic
                  }
 
     @staticmethod
