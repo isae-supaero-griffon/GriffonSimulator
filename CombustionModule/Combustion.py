@@ -10,14 +10,15 @@ from CombustionModule.Geometries import *                                       
 from CombustionModule.Nozzle import *                                               # Import the nozzle class
 import CombustionModule.Isentropic as iso                                           # Import the isoentropic module
 from CombustionModule.Fuel import *                                                 # Import the RocketCEA wrapper
-from CombustionModule.RegressionModel import *                                      # Import the Regression Model
 import math                                                                         # Import math
 import matplotlib.pyplot as plt                                                     # Import matplotlib to plot results
 from matplotlib.ticker import FormatStrFormatter                                    # Import formatter
 from numpy import mean, trapz, asarray, nan, nanmean, nanmax, linspace, nanmin      # Import numpy functions
-from Libraries.Interpolator import Interpolator                                     # Import interpolator
+from Libraries.Interpolator import *                                                # Import interpolator
 from DataLayer.JsonInterpreter import JsonInterpreter                               # Import the JsonInterpreter
 from abc import ABC, abstractmethod                                                 # Import the abstract class mold
+
+
 
 # ------------------------- FUNCTION DEFINITIONS ---------------------------
 
@@ -39,20 +40,28 @@ class CombustionObject(ABC):
     The functionality of the combustion object is to perform the integration of the regression
     rate based on the parameters defined for the rocket engine.
 
+    # Global attributes:
+        simulation_type: simulation type used to interpolate from the CEA table
+
     # Attributes:
         1. data_dictionary: combustion table that contains all of the static data required for
         object to work properly, (mainly constants stored in the json file and uploaded by the
         JsonInterpreter.
-        2. fuel: Fuel object instance, acts as a wrapper of RocketCEA module
-        2. nozzle: Nozzle instance to define the parameters of the nozzle and convert regression rate
+        2. interpolator: Interpolator instance used to process CEA data table
+        3. geometry: Geometry instance used to define the geometry of the port (hybrid rocket)
+        4. nozzle: Nozzle instance to define the parameters of the nozzle and convert regression rate
         into thrust and Isp.
-        3. results
+        5. results
     """
 
-    def __init__(self, json_interpreter, nozzle_object):
+    # Global attribute
+    simulation_type = "THEORETICAL ROCKET PERFORMANCE ASSUMING EQUILIBRIUM"
+
+    def __init__(self, json_interpreter, geometry_object, nozzle_object):
         """
         class initializer
         :param json_interpreter: JsonInterpreter instance used to collect the data
+        :param geometry_object: Geometry instance
         :param nozzle_object: Nozzle instance
 
         """
@@ -60,10 +69,12 @@ class CombustionObject(ABC):
 
         # Assert nature of the inputs - JsonInterpreter is a singleton so it is instantiated once
         assert json_interpreter == JsonInterpreter.instance, "Please insert a valid JsonInterpreter. \n"
+        assert isinstance(geometry_object, Geometry), " Please insert a valid Geometry instance. \n"
         assert isinstance(nozzle_object, Nozzle), " Please insert a valid Nozzle instance. \n"
 
         # Allocate the attributes
         self.data_dictionary = json_interpreter.return_combustion_table()
+        self.geometry = geometry_object
         self.nozzle = nozzle_object
         self.fuel = Fuel(json_interpreter)
         self.results = {
@@ -1046,3 +1057,4 @@ class CombustionObject1D(CombustionObject):
 
         # Post-process the data
         self.post_process_data(dt=dt)
+
