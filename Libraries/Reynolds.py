@@ -37,6 +37,7 @@ def colebrook_equation(x, roughness, hydraulic_diameter, reynolds_number):
     """
     colebrook_equation is the equation implemented for fixed point algorithm
     in the form (fun(x0) = x0)
+    :param x: value of colebrook variable
     :param roughness: pipe relative roughness
     :param hydraulic_diameter: hydraulic diameter of the pipe [m]
     :param reynolds_number: reynolds number of the flow
@@ -104,17 +105,18 @@ class Reynolds:
         self.area = np.pi * self.hydraulic_diameter ** 2 / 4
         self.friction_estimate = friction_estimate
 
-    def solve_for_friction_factor(self, fluid, mass_flow):
+    def solve_for_friction_factor(self, density, viscosity, mass_flow):
         """
         solve_for_friction factor determines the friction factor of the pipe for the flow condition
-        :param fluid: Fluid object of interest
+        :param density: density of fluid in [kg/m^3]
+        :param viscosity: viscosity of fluid
         :param mass_flow: mass flow of fluid flowing through the pipe [kg/sec]
         :return: darcy friction factor
         """
         # Check the inputs
         assert isinstance(fluid, Fluid), "fluid input must be a Fluid instance \n"
-        flow_speed = calculate_flow_speed(mass_flow, self.area, fluid.get_density())
-        r_number = calculate_reynolds_number(fluid.get_density(), fluid.get_viscosity(), self.hydraulic_diameter,
+        flow_speed = calculate_flow_speed(mass_flow, self.area, density)
+        r_number = calculate_reynolds_number(fluid.get_density(), viscosity, self.hydraulic_diameter,
                                              flow_speed)
 
         self.friction_estimate = calculate_darcy_friction_factor(self.friction_estimate, self.roughness,

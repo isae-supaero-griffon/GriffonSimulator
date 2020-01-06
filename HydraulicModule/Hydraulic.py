@@ -109,12 +109,12 @@ class HydraulicModule:
         :return: nothing
         """
         # Generate the fluids
-        self._create_fluid(hydraulic_table['fluids'])
+        self.fluids = {r['name']:r for r in hydraulic_table['fluids']}
         # Instantiate the components
         for component_dict in hydraulic_table['components']:
             self._create_component(component_dict)
         # Check activity
-        self._check_activity()
+        self.check_activity()
 
     def _create_dof(self, number, type):
         """
@@ -126,11 +126,11 @@ class HydraulicModule:
         self.dofs.add_element(Dof(number, type))
         return self.dofs.return_element(number)
 
-    def _create_node(self, node_dict, link=None):
+    def _create_node(self, node_dict, link_iterator=None):
         """
         _create_node instantiates a new Node object and appends it to the nodes list
         :param node_dict: dictionary defining the node keys: ["id", "type"}
-        :param link: Component object which constitutes the link to the current object being created
+        :param link_iterator: iterator of components used for instantiation of the mass dofs
         :return: Node instance
         """
 
@@ -138,8 +138,9 @@ class HydraulicModule:
         node_number, dof_type = node_dict['identifier'], node_dict['type']
 
         # Create associated Dofs and DofCollection
-        if link is not None and dof_type == "mass":
-            my_dof = link.mass_node.get_dof()
+        if dof_type == "mass":
+            link = next(link_iterator)
+            my_dof = link.request_link() if link is not None else self._create_dof(node_number, dof_type)
         else:
             my_dof = self._create_dof(node_number, dof_type)
 
@@ -147,16 +148,25 @@ class HydraulicModule:
         self.nodes.add_element(Node(node_number, my_dof))
         return self.nodes.return_element(node_number)
 
-    def _create_fluid(self, fluid_dictionary):
+    def _create_fluid(self, name, T):
         """
         _create_fluid is a private method who's in charge of generating the fluid
-        :param fluid_dictionary: dictionary containing the fluid declaration
-        :return: Fluid instances dictionary
+        :param name: name of the fluid of interest
+        :param`T: temperature of initialization
+        :return: Fluid instance
         """
+        # Check the inputs
+        assert name in self.fluids, "Fluid requested: {0} not present in fluids list. \n".format(name)
+        assert T > 0, "Temperature declared is in Kelvin \n"
 
-        for fluid in fluid_dictionary:
-            my_init = FluidCatalogue.return_initializer(fluid['fluid'])
-            self.fluids[fluid['name']] = my_init(**fluid)
+        # Extract the fluid dictionary
+        my_dict = self.fluids[name]                                     # Extract the fluid dictionary
+        my_init = FluidCatalogue.return_initializer(my_dict['fluid'])   # Extract the initializer from the catalogue
+        my_obj = my_init(**my_dict)                                     # Create the object
+        my_obj.set_temperature(T)                                       # Set the temperature of the fluid
+
+        # Return the object
+        return my_obj
 
     def return_component(self, number):
         """
@@ -172,12 +182,14 @@ class HydraulicModule:
         :param component_dictionary: dictionary associated to the component definition
         :return: nothing
         """
-        my_dict = dict(component_dictionary)                                # Make deep copy of component_dictionary
-        my_dict['link'] = self.return_component(my_dict['link'])            # Replace the link by the object
-        my_dict['nodes'] = [self._create_node(node_dict, my_dict['link'])
-                            for node_dict in my_dict['nodes']]              # Create the nodes of the system
-        my_dict['fluid'] = self.fluids[my_dict['fluid']]                    # Store the Fluid
-
+        my_dict = dict(component_dictionary)                                            # Make deep copy of component_dictionary
+        my_dict['link'] = [self.return_component(value) for value in my_dict['link']]   # Replace the link by the object
+        my_iter = iter(my_dict['link'])
+        my_dict['nodes'] = [self._create_node(node_dict, my_iter)
+                            for node_dict in my_dict['nodes']]                          # Create the nodes of the system
+        my_dict['fluid'] = [self._create_fluid(**r) for r in my_dict['fluid']]          # Store the fluid
+        if len(my_dict['fluid']) == 1: my_dict['fluid'] = my_dict['fluid'][0]
+        # if len(my_dict['link']) == 1: my_dict['link'] = my_dict['link'][0]
         # Create the component
         my_init = ComponentsCatalogue.return_component(my_dict.pop('type'))
         self.components.append(my_init(**my_dict))
@@ -212,9 +224,9 @@ class HydraulicModule:
         # Set isInitialized
         self.is_initialized = True
 
-    def _check_activity(self):
+    def check_activity(self):
         """
-        _check_activity determines is the network is still operating, if one element of the
+        check_activity determines is the network is still operating, if one element of the
         network is down it shuts-down the object
         :return: nothing
         """
@@ -240,10 +252,10 @@ class HydraulicModule:
             for value, dof in zip(x, non_fixed_dofs): dof.set_value(scale*value)
 
             # Run the methods from the component
-            res = np.array([component.my_method() for component in self.components])
+            res = np.concatenate([component.my_method() for component in self.components], axis=0)
 
             # Check the activity, if one component is not active then raise Exception
-            self._check_activity()
+            self.check_activity()
             if not self.is_active: raise self.RunEndingError("\n At least one of the components is not active \n")
 
             # Get the residual
@@ -258,12 +270,13 @@ class HydraulicModule:
             return np.linalg.norm(residual(x))
 
         # Define the optimization bounds
+        #TODO: review how bounds are implemented
         bounds = opt.Bounds(lb=np.zeros(shape=(len(non_fixed_dofs), 1)), ub=np.full((len(non_fixed_dofs), 1), np.inf))
         x0_fun = np.vectorize(lambda x: x.get_value())
         x0 = x0_fun(non_fixed_dofs) / scale
 
         # Solve the problem:
-        sol = opt.minimize(optimize_fun, x0, method='Nelder-Mead', jac=None, bounds=bounds,
+        sol = opt.minimize(optimize_fun, x0, method='Powell', jac=None, bounds=bounds,
                            tol=tol, options={'maxiter': maxiter, 'disp': True})
         return sol
 

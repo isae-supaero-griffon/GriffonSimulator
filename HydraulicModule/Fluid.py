@@ -53,6 +53,7 @@ class Fluid(ABC):
         self.name = name
         self.density = 0
         self.viscosity = 0
+        self.temperature = 0
 
         # Set remaining properties
         for prop, value in kwargs.items():
@@ -73,6 +74,12 @@ class Fluid(ABC):
 
     def get_viscosity(self):
         return self.viscosity
+
+    def set_temperature(self, temperature):
+        self.temperature = temperature
+
+    def get_temperature(self):
+        return self.temperature
 
     @abstractmethod
     def compute_density(self, *args, **kwargs):
@@ -96,11 +103,11 @@ class Liquid(Fluid):
         # Call superclass initializer
         super(Liquid, self).__init__(name, **kwargs)
         # Compute the density at initialization
-        self.compute_density()
+        self.density = self.compute_density()
 
-    def compute_density(self, *args, **kwargs):
+    def compute_density(self, *args):
         """ compute the density of the liquid """
-        self.density = calculate_liquid_density(self.pure_density, self.purity)
+        return calculate_liquid_density(self.pure_density, self.purity)
 
 
 class Gas(Fluid):
@@ -116,26 +123,19 @@ class Gas(Fluid):
         # Call superclass initializer
         super(Gas, self).__init__(name, **kwargs)
 
-    def compute_density(self, *args, **kwargs):
+    def compute_density(self, *args):
         """ compute the density of the gas
-        :param args: args[0] must be the pressure, args[1] the temperature
-        :param kwargs: dictionary containing the keywords pressure, temperature
+        :param args: pressure, temperature
         :return nothing """
-        if args:
-            pressure, temperature = args[0], args[1]
-        elif {'pressure', 'temperature'} <= set(kwargs):
-            pressure, temperature = kwargs['pressure'], kwargs['temperature']
-        else:
-            raise ValueError("Illegal input error in compute density - Gas \n")
-
         # Compute the density
-        self.density = calculate_gas_density(pressure, temperature, self.gas_constant)
+        assert len(args) == 2, "Incomplete argument number. \n"
+        return calculate_gas_density(args[0], args[1], self.gas_constant)
 
     def compute_local_gas_temperature(self, pressure):
         """ compute_local_gas_temperature determines the instantaneous
         temperature of the gas given the pressure condition, and it's current density
          :return temperature in [K]"""
-        return pressure / (self.gas_constant * self.density)
+        self.set_temperature(pressure / (self.gas_constant * self.density))
 
 
 class FluidCatalogue:
