@@ -319,7 +319,7 @@ def generate_file_from_scratch():
     # Get the data repository
     data_directory = "../data"
     # Generate the cea_table
-    cea_file_name = "Analysis Data 36 bar OF 0,1 to 8,0 H2O2 87,5.txt"
+    cea_file_name = "CEA Output Files H2O2 87,5.txt"
     CEA_Data = generate_cea_table(cea_txt_file="/".join([data_directory, cea_file_name]))
 
     # instantiate the global dictionary
