@@ -869,10 +869,39 @@ class SinglePortImageGeometry(Geometry):
         else:
             raise ValueError("Image is black : please generate geometry")
 
+    def export_geometry(self, file_name='../data/myGeometry.txt'):
+        """
+        export_geometry generates an array of points x,y to describe the image of the geometry.
+        :param file_name: name of the txt file to which we want to export the curve
+        :return: nothing
+        """
+
+        if self.portGeometryIsGenerated:
+
+            # Extract the first contour of the image
+            proxy_image = self.image
+            contours, _ = cv2.findContours(proxy_image, 1, 2)
+            cnt = contours[0]
+
+            # Write the file
+            with open(file_name, 'w') as f:
+                f.write("{x:10s} \t {y:10s} \n".format(x='X [mm]', y='Y [mm]'))
+                for counter in range(0, len(cnt), 2):
+                    couple = cnt[counter]
+                    f.write("{x:5.5f} \t {y:5.5f}\n".format(x=1000*(couple[0][0]*self.getMetersPerPixel() -
+                                                                    self.imageMeterSize/2),
+                                                             y=1000*(couple[0][1]*self.getMetersPerPixel() -
+                                                                     self.imageMeterSize/2)))
+        else:
+            raise ValueError("Image is black : please generate geometry")
+
+
     def draw_geometry(self):
 
+        # Generate the plots
+        fig = plt.figure(facecolor='w', figsize=(15, 15))
+        fig.suptitle('Geometry drawing')
         plt.imshow(self.image, cmap='gray')
-        plt.show()
 
     def generatePolynom(self, polynom, baseRadius, branches, n):
 
