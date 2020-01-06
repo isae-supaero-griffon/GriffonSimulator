@@ -18,13 +18,26 @@ class Collections(ABC):
     Attributes:
         0. elements_list: list of the elements the Collection contains
     """
-
+    def __init__(self, elements, *args):
+        """
+        class initializer
+        :param elements: list of elements, element, or empty list
+        :param args: Class of the element acceptable by the collection
+        """
+        # Set attributes
+        self.elements_list = []  # Initialize the list
+        if elements:
+            if isinstance(elements, Iterable):
+                for element in elements:
+                    self.add_element(element, *args)
+            else:
+                self.add_element(elements, *args)
+    
     def __str__(self):
         """ return a string with a str representation of the desired object """
         return "Collection:: \n" + "\n".join(("{num} \t {value}".format(num=i, value=element)
                           for i, element in zip(range(0, len(self.elements_list)), self.elements_list)))
 
-    @abstractmethod
     def add_element(self, element, *args):
         """
         add a new element to the list of satellites
@@ -32,7 +45,10 @@ class Collections(ABC):
         :param args: Class of the element acceptable by the collection
         :return: nothing
         """
-        pass
+        assert isinstance(element, args[0]), "Only {0} instances can be added to " \
+                                             "the Collection, tried {1} instead".format(args[0].__name__,
+                                                                                        type(element).__name__)
+        self.elements_list.append(element)
 
     def is_empty(self):
         """
@@ -40,24 +56,6 @@ class Collections(ABC):
         :return: boolean
         """
         return len(self.elements_list) == 0
-
-    def contains(self, filter):
-        """
-        contains searches from the elements_list to see if any object of matching criteria has
-        already been instantiated
-        :param filter: lambda function
-        :return: boolean
-        """
-        for element in self.elements_list:
-            if filter(element):
-                return True
-        return False
-
-    @abstractmethod
-    def sort(self):
-        """ sort method is in charge of sorting the elements of the collection based on a given property
-        of the instances. It is an abstract method of the class Collections """
-        pass
 
 
 class UniqueCollections(Collections):
@@ -70,14 +68,8 @@ class UniqueCollections(Collections):
         :param elements: list of elements, element, or empty list
         :param args: Class of the element acceptable by the collection
         """
-        # Set attributes
-        self.elements_list = []  # Initialize the list
-        if elements:
-            if isinstance(elements, Iterable):
-                for element in elements:
-                    self.add_element(element, type(args[0]), args[1])
-            else:
-                self.add_element(elements, type(args[0]), args[1])
+        # Call superclass initializer
+        super(UniqueCollections, self).__init__(elements, *args)
 
     def add_element(self, element, *args):
         assert isinstance(element, args[0]), "Only {0} instances can be added to " \
@@ -85,9 +77,27 @@ class UniqueCollections(Collections):
                                                                                         type(element).__name__)
 
         # Check if object is not present in list, then append, if negative, do nothing
-        if not self.contains(filter=args[1]):
+        if not self.contains(filter_=args[1]):
             self.elements_list.append(element)
+
+    def contains(self, filter_):
+        """
+        contains searches from the elements_list to see if any object of matching criteria has
+        already been instantiated
+        :param filter_: lambda function
+        :return: boolean
+        """
+        for element in self.elements_list:
+            if filter_(element):
+                return True
+        return False
 
     @abstractmethod
     def return_element(self, criteria):
+        pass
+
+    @abstractmethod
+    def sort(self):
+        """ sort method is in charge of sorting the elements of the collection based on a given property
+        of the instances. It is an abstract method of the class Collections """
         pass

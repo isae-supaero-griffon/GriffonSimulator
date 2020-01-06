@@ -416,7 +416,7 @@ class InitializerCollection(Collections):
         :param initializer_obj: Initializer instance, iterable of Initializer, or empty list
         """
         # Call superclass method
-        super().__init__(initializer_obj, Initializer)
+        super(InitializerCollection, self).__init__(initializer_obj, Initializer)
 
     def add_element(self, element, *args):
         """ Override method from parent class"""
