@@ -18,6 +18,7 @@ from numpy import mean, trapz, asarray, nan, nanmean, nanmax, linspace, nanmin  
 from Libraries.Interpolator import Interpolator                                     # Import interpolator
 from DataLayer.JsonInterpreter import JsonInterpreter                               # Import the JsonInterpreter
 from abc import ABC, abstractmethod                                                 # Import the abstract class mold
+from HydraulicModule.Hydraulic import *                                             # Import the Hydraulic Module
 
 
 
@@ -190,6 +191,30 @@ class CombustionObject(ABC):
         """
         pass
 
+    @ abstractmethod
+    def _solve_coupled_analysis(self, hydraulic_module, pression_chambre, rho_fuel, tol_press):
+        """
+        solved_coupled_analysis solves for the coupling of the hydraulic module with the combustion chamber phenomena.
+        :param hydraulic_module: HydraulicModule class instance PREVIOUSLY INITIALIZED
+        :param hyd_params: hydraulic module solution parameters
+        :param rho_fuel: density of the fuel in [kg/m^3]
+        :param tol_press: tolerance on the pressure value
+        :return: TBD
+        """
+        pass
+
+    @abstractmethod
+    def _solve_pressure_loop(self, pression_chambre, ox_flow, rho_fuel, tol_press):
+        """
+        _solve_pressure_loop solves the internal pressure loop for the combustion chamber. Private method
+        :param pression_chambre: initial value of the chamber pressure [Pa]
+        :param ox_flow: oxidizer flow [kg/s]
+        :param rho_fuel: fuel density [kg/m^3]
+        :param tol_press: tolerance on the pressure value
+        :return: TBD
+        """
+        pass
+
     @abstractmethod
     def run_balanced_nozzle_analysis(self, ox_flow, safety_thickness, dt, max_burn_time=None, tol_press=1e-3, **kwargs):
         """
@@ -204,9 +229,18 @@ class CombustionObject(ABC):
         """
         pass
 
-    # @abstractmethod
-    # def run_coupled_hydraulic_analysis(self):
-    #     pass
+    @abstractmethod
+    def run_full_flow_analysis(self, hydraulic_module, safety_thickness, dt, tol_press=1e-3, **kwargs):
+        """
+        run_full_flow_analysis executes the multidisciplinary simulation of the hydraulic_module and the
+        combustion_module
+        :param hydraulic_module: Hydraulic Module instance.
+        :param safety_thickness: minimum allowed thickness for fuel slivers, which conditions burn termination
+        :param dt: time increment
+        :param tol_press: tolerance for the pressure loop solver
+        :return: TBD
+        """
+        pass
 
 # ------------------------- 0D COMBUSTION DEFINITIONS ----------------------
 
@@ -281,6 +315,87 @@ class CombustionObject0D(CombustionObject):
     def return_results(self):
         """ return the results from the simulation """
         return self.results
+
+    def _solve_pressure_loop(self, pression_chambre, ox_flow, rho_fuel, tol_press):
+        """
+        _solve_pressure_loop solves the internal pressure loop for the combustion chamber. Private method
+        :param pression_chambre: initial value of the chamber pressure [Pa]
+        :param ox_flow: oxidizer flow [kg/s]
+        :param rho_fuel: fuel density [kg/m^3]
+        :param tol_press: tolerance on the pressure value
+        :return: of_ratio, fuel_flow, total_mass_flow, oxidizer_flux, fuel_flux, chamber_pressure, chamber_temperature,
+        gamma, gas_molar_mass, cea_c_star, sonic_velocity, chamber_density
+        """
+        error = 1e3  # Define initial value for the error
+
+        while tol_press < error:
+
+            # -------------- Regression rate and mass flow calculations -------------------
+
+            m_fuel = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
+            of_ratio = ox_flow / m_fuel
+
+            # --------------------- Run Thermochemical Analysis ---------------------------
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.run_thermochemical_analysis(
+                of_ratio, pression_chambre / 10 ** 5)
+
+            # --------------------- Calculate remaining variables -------------------------
+            area_section = self.geometry.totalCrossSectionArea()
+            g_ox, g_f = ox_flow / area_section, m_fuel / area_section
+            total_mass_flow = ox_flow + m_fuel
+
+            # Compute by fixed point method the new value of the chamber pressure [Pa]
+            old_pressure = pression_chambre
+            pression_chambre = total_mass_flow * cea_c_star / self.nozzle.get_throat_area()
+            error = np.abs(pression_chambre - old_pressure)
+
+        # Return the results of the loop
+        # noinspection PyUnboundLocalVariable
+        return of_ratio, m_fuel, total_mass_flow, g_ox, g_f, pression_chambre, t_chamber, gamma,\
+               gas_molar_mass, cea_c_star, son_vel, rho_ch
+
+    def _solve_coupled_analysis(self, hydraulic_module, pression_chambre, rho_fuel, tol_press):
+        """
+        _solve_pressure_loop solves the internal pressure loop for the combustion chamber. Private method
+        :param pression_chambre: initial value of the chamber pressure [Pa]
+        :param ox_flow: oxidizer flow [kg/s]
+        :param rho_fuel: fuel density [kg/m^3]
+        :param tol_press: tolerance on the pressure value
+        :return: TBD
+        """
+        error = 1e3  # Define initial value for the error
+
+        while tol_press < error:
+
+            # ----------- Set the chamber pressure of the Hydraulic Module and Solve ------
+
+            hydraulic_module.set_chamber_pressure(pression_chambre)
+            hydraulic_module.run_simulation()
+            m_ox = hydraulic_module.return_exit_flow()
+
+            # -------------- Regression rate and mass flow calculations -------------------
+
+            m_fuel = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=m_ox)
+            of_ratio = ox_flow / m_fuel
+
+            # --------------------- Run Thermochemical Analysis ---------------------------
+            t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.run_thermochemical_analysis(
+                of_ratio, pression_chambre / 10 ** 5)
+
+            # --------------------- Calculate remaining variables -------------------------
+            area_section = self.geometry.totalCrossSectionArea()
+            g_ox, g_f = ox_flow / area_section, m_fuel / area_section
+            total_mass_flow = ox_flow + m_fuel
+
+            # Compute by fixed point method the new value of the chamber pressure [Pa]
+            old_pressure = pression_chambre
+            pression_chambre = total_mass_flow * cea_c_star / self.nozzle.get_throat_area()
+            error = np.abs(pression_chambre - old_pressure)
+
+        # Return the results of the loop
+        # noinspection PyUnboundLocalVariable
+        return of_ratio, m_fuel, m_ox, total_mass_flow, g_ox, g_f, pression_chambre, t_chamber, gamma,\
+               gas_molar_mass, cea_c_star, son_vel, rho_ch
 
     def plot_results(self):
         """
@@ -388,17 +503,6 @@ class CombustionObjectClassic(CombustionObject0D):
         super().__init__(json_interpreter, geometry_object, nozzle_object)
 
     def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time=None, **kwargs):
-        """
-        Simulate the hybrid rocket burn.
-        Every value is expressed in ISU unless specified otherwise. Simulation is only valid for normal ground
-        atmosphere conditions (1 bar, 293 K).
-        :param ox_flow: value of input oxidizer flow
-        :param safety_thickness: minimum allowed thickness for fuel slivers, which conditions burn termination
-        :param dt: time increment
-        :param max_burn_time: maximum burn time (if inputted)
-        :return: TBD
-        """
-
         # Check the inputs
         assert ox_flow > 0, "Oxidizer flow not greater than 0, check your inputs to CombustionModule. \n"
         assert safety_thickness > 0, "Safety thickness not greater than 0, check your inputs to CombustionModule. \n"
@@ -422,10 +526,10 @@ class CombustionObjectClassic(CombustionObject0D):
         while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
 
             # Regression rate and mass flow calculations
-            fuel_flow = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
-            total_mass_flow = ox_flow + fuel_flow
-            of_ratio = ox_flow / fuel_flow
-            Go = ox_flow / self.geometry.totalCrossSectionArea()
+            m_fuel = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
+            total_mass_flow = ox_flow + m_fuel
+            of_ratio = ox_flow / m_fuel
+            g_ox = ox_flow / self.geometry.totalCrossSectionArea()
 
             # Call CEA process to obtain thermochemical variables
             t_chamber, gamma, gas_molar_mass, cea_c_star, son_vel, rho_ch = self.run_thermochemical_analysis(
@@ -461,14 +565,14 @@ class CombustionObjectClassic(CombustionObject0D):
             self.results["run_values"]["pressure"].append(pression_chambre)
             self.results["run_values"]["temperature"].append(t_chamber)
             self.results["run_values"]["of"].append(of_ratio)
-            self.results["run_values"]["Go"].append(Go)
+            self.results["run_values"]["Go"].append(g_ox)
             self.results["run_values"]["nozzle_param"].append(nozzle_p)
             self.results["run_values"]["c_star"].append(cea_c_star)
             self.results["run_values"]["chamber_sound_speed"].append(son_vel)
             self.results["run_values"]["chamber_rho"].append(rho_ch)
             self.results["run_values"]["mass_flow"].append(total_mass_flow)
             self.results["run_values"]["mass_flow_ox"].append(ox_flow)
-            self.results["run_values"]["mass_flow_f"].append(fuel_flow)
+            self.results["run_values"]["mass_flow_f"].append(m_fuel)
             self.results["run_values"]["chamber_speed"].append(u_ch)
             self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
 
@@ -486,11 +590,11 @@ class CombustionObjectClassic(CombustionObject0D):
                 self.results["run_values"]["radius"].append(nan)
                 self.results["run_values"]["regression_rate"].append(nan)
 
-            # Update the geometry and nozzle
+            # ------------------- Update the geometry and nozzle ----------------------
             self.geometry.regress(ox_flow=ox_flow, dt=dt)
             self.nozzle.erode(dt)
 
-            # Update the loop
+            # -------------------------- Update the loop ------------------------------
             k += 1
 
             # Update the flag for burn-time
@@ -506,7 +610,221 @@ class CombustionObjectClassic(CombustionObject0D):
         self.post_process_data(dt=dt)
 
     def run_balanced_nozzle_analysis(self, ox_flow, safety_thickness, dt, max_burn_time=None, tol_press=1e-3, **kwargs):
-        pass
+
+        # Check the inputs
+        assert ox_flow > 0, "Oxidizer flow not greater than 0, check your inputs to CombustionModule. \n"
+        assert safety_thickness > 0, "Safety thickness not greater than 0, check your inputs to CombustionModule. \n"
+        assert dt > 0, "Simulation time-increment not greater than 0, check your inputs to CombustionModule. \n"
+
+        # Call for workspace definition methods
+        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure, eta_comb = self.unpack_data_dictionary()
+
+        # -------------------- Initialize simulation_variables if required -------------
+
+        pression_chambre = initial_chamber_pressure
+
+        # ---------------------------- MAIN SIMULATION LOOP -----------------------------
+
+        # Set a counter to keep-track of the loop
+        k = 1
+
+        # Set the flag for the maximum burn-time
+        flag_burn = True
+
+        while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
+
+            # ------------------- Perform block solution with pressure coupling  ---------------------
+
+            of_ratio, m_fuel, total_mass_flow, g_ox, g_f, pression_chambre, t_chamber, gamma, \
+            gas_molar_mass, cea_c_star, son_vel, rho_ch = self._solve_pressure_loop(pression_chambre,
+                                                                                    ox_flow, rho_fuel, tol_press)
+            r = R / gas_molar_mass  # Specific gaz constant
+
+            # Determine the flow port-speed
+            u_ch = calculate_flow_speed(cross_section=self.geometry.totalCrossSectionArea(),
+                                        mass_flow=total_mass_flow,
+                                        density=rho_ch)
+
+            # Calculate chamber conditions and motor performance
+            mach_exit = iso.exit_mach_via_expansion(gamma=gamma, expansion=self.nozzle.get_expansion_ratio(),
+                                                    supersonic=True)
+            exit_pressure = pression_chambre / iso.pressure_ratio(gamma, mach_exit)
+            t_exit = t_chamber / iso.temperature_ratio(gamma, mach_exit)
+            v_exit = math.sqrt(gamma * r * t_exit) * mach_exit
+
+            thrust = self.nozzle.get_nozzle_effeciency() * (
+            total_mass_flow * v_exit + (exit_pressure - pression_atmo) *
+            self.nozzle.get_exit_area())
+
+            # Calculate the nozzle equation validation
+            nozzle_p = total_mass_flow * cea_c_star / (self.nozzle.get_throat_area() * pression_chambre)
+
+            isp = thrust / total_mass_flow / g0
+
+            # Results updates
+            self.results['run_values']['time'].append(k * dt)
+            self.results["run_values"]["thrust"].append(thrust)
+            self.results["run_values"]["isp"].append(isp)
+            self.results["run_values"]["pressure"].append(pression_chambre)
+            self.results["run_values"]["temperature"].append(t_chamber)
+            self.results["run_values"]["of"].append(of_ratio)
+            self.results["run_values"]["Go"].append(g_ox)
+            self.results["run_values"]["nozzle_param"].append(nozzle_p)
+            self.results["run_values"]["c_star"].append(cea_c_star)
+            self.results["run_values"]["chamber_sound_speed"].append(son_vel)
+            self.results["run_values"]["chamber_rho"].append(rho_ch)
+            self.results["run_values"]["mass_flow"].append(total_mass_flow)
+            self.results["run_values"]["mass_flow_ox"].append(ox_flow)
+            self.results["run_values"]["mass_flow_f"].append(m_fuel)
+            self.results["run_values"]["chamber_speed"].append(u_ch)
+            self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
+
+            # TODO: modify the implementation of the radius storage
+            # Verify it is a single port_number before updating the port number
+            if isinstance(self.geometry, (OneCircularPort,
+                                          ThreeCircularPorts)):
+                self.results["run_values"]["radius"].append(self.geometry.get_port_radius())
+
+                # Compute regression rate
+                delta_r = self.results["run_values"]["radius"][k] - self.results["run_values"]["radius"][k - 1]
+                self.results["run_values"]["regression_rate"].append(delta_r / dt)
+            else:
+                # Append a 0 if there it is not a OneCircularPort geometry
+                self.results["run_values"]["radius"].append(nan)
+                self.results["run_values"]["regression_rate"].append(nan)
+
+            # ---------------- Perform the regression of the block and erode ----------------
+            self.geometry.regress(ox_flow=ox_flow, dt=dt)
+            self.nozzle.erode(dt)
+
+            # ------------------------------ Update the loop --------------------------------
+            k += 1
+
+            # Update the flag for burn-time
+            if max_burn_time:
+                flag_burn = k * dt <= max_burn_time
+
+        # ------------------------ POST-PROCESS ------------------------
+
+        # Convert to numpy arrays
+        self.results['run_values'] = {key: asarray(value) for key, value in self.results["run_values"].items()}
+
+        # Post-process the data
+        self.post_process_data(dt=dt)
+
+    def run_full_flow_analysis(self, hydraulic_module, safety_thickness, dt, tol_press=1e-3, **kwargs):
+        # Check the inputs
+        assert isinstance(hydraulic_module, HydraulicModule), "Hydraulic Module has to be a HydraulicModule class " \
+                                                              "instance.\n"
+        assert safety_thickness > 0, "Safety thickness not greater than 0, check your inputs to CombustionModule. \n"
+        assert dt > 0, "Simulation time-increment not greater than 0, check your inputs to CombustionModule. \n"
+
+        # Call for workspace definition methods
+        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure, eta_comb = self.unpack_data_dictionary()
+
+        # -------------------- Initialize simulation_variables if required -------------
+
+        pression_chambre = initial_chamber_pressure
+        # TODO: perform initialization of hydraulic module in proper initializer...
+
+        # ---------------------------- MAIN SIMULATION LOOP -----------------------------
+
+        # Set a counter to keep-track of the loop
+        k = 1
+
+        # Set the flag for the maximum burn-time
+        flag_burn = True
+
+        while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
+
+            # Execute block inside try-except to catch exception
+            try:
+
+                # ------------------- Perform block solution with pressure coupling  ---------------------
+                of_ratio, m_fuel, m_ox, total_mass_flow, g_ox, g_f, pression_chambre, t_chamber, gamma, \
+                gas_molar_mass, cea_c_star, son_vel, rho_ch = self._solve_coupled_analysis(hydraulic_module,
+                                                                                           pression_chambre,
+                                                                                           rho_fuel,
+                                                                                           tol_press)
+            # End the burn by setting the flag_burn to False
+            except HydraulicModule.RunEndingError:
+                flag_burn = False
+
+            # -------------------------- Execute remaining part of the code -------------------------
+            finally:
+                r = R / gas_molar_mass  # Specific gaz constant
+
+                # Determine the flow port-speed
+                u_ch = calculate_flow_speed(cross_section=self.geometry.totalCrossSectionArea(),
+                                            mass_flow=total_mass_flow,
+                                            density=rho_ch)
+
+                # Calculate chamber conditions and motor performance
+                mach_exit = iso.exit_mach_via_expansion(gamma=gamma, expansion=self.nozzle.get_expansion_ratio(),
+                                                        supersonic=True)
+                exit_pressure = pression_chambre / iso.pressure_ratio(gamma, mach_exit)
+                t_exit = t_chamber / iso.temperature_ratio(gamma, mach_exit)
+                v_exit = math.sqrt(gamma * r * t_exit) * mach_exit
+
+                thrust = self.nozzle.get_nozzle_effeciency() * (
+                total_mass_flow * v_exit + (exit_pressure - pression_atmo) *
+                self.nozzle.get_exit_area())
+
+                # Calculate the nozzle equation validation
+                nozzle_p = total_mass_flow * cea_c_star / (self.nozzle.get_throat_area() * pression_chambre)
+
+                isp = thrust / total_mass_flow / g0
+
+                # Results updates
+                self.results['run_values']['time'].append(k * dt)
+                self.results["run_values"]["thrust"].append(thrust)
+                self.results["run_values"]["isp"].append(isp)
+                self.results["run_values"]["pressure"].append(pression_chambre)
+                self.results["run_values"]["temperature"].append(t_chamber)
+                self.results["run_values"]["of"].append(of_ratio)
+                self.results["run_values"]["Go"].append(g_ox)
+                self.results["run_values"]["nozzle_param"].append(nozzle_p)
+                self.results["run_values"]["c_star"].append(cea_c_star)
+                self.results["run_values"]["chamber_sound_speed"].append(son_vel)
+                self.results["run_values"]["chamber_rho"].append(rho_ch)
+                self.results["run_values"]["mass_flow"].append(total_mass_flow)
+                self.results["run_values"]["mass_flow_ox"].append(m_ox)
+                self.results["run_values"]["mass_flow_f"].append(m_fuel)
+                self.results["run_values"]["chamber_speed"].append(u_ch)
+                self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
+
+                # TODO: modify the implementation of the radius storage
+                # Verify it is a single port_number before updating the port number
+                if isinstance(self.geometry, (OneCircularPort,
+                                              ThreeCircularPorts)):
+                    self.results["run_values"]["radius"].append(self.geometry.get_port_radius())
+
+                    # Compute regression rate
+                    delta_r = self.results["run_values"]["radius"][k] - self.results["run_values"]["radius"][k - 1]
+                    self.results["run_values"]["regression_rate"].append(delta_r / dt)
+                else:
+                    # Append a 0 if there it is not a OneCircularPort geometry
+                    self.results["run_values"]["radius"].append(nan)
+                    self.results["run_values"]["regression_rate"].append(nan)
+
+                # ---------------- Perform the regression of the block and erode ----------------
+                self.geometry.regress(ox_flow=m_ox, dt=dt)
+                self.nozzle.erode(dt)
+
+                # ------------------------------ Update the loop --------------------------------
+                k += 1
+
+                # Update the flag for burn-time
+                if max_burn_time:
+                    flag_burn = k * dt <= max_burn_time
+
+        # ------------------------ POST-PROCESS ------------------------
+
+        # Convert to numpy arrays
+        self.results['run_values'] = {key: asarray(value) for key, value in self.results["run_values"].items()}
+
+        # Post-process the data
+        self.post_process_data(dt=dt)
 
 
 class CombustionObjectImage(CombustionObject0D):
@@ -520,9 +838,6 @@ class CombustionObjectImage(CombustionObject0D):
 
         # Call superclass initializer
         super().__init__(json_interpreter, geometry_object, nozzle_object)
-
-    def run_balanced_nozzle_analysis(self, ox_flow, safety_thickness, dt, max_burn_time=None, tol_press=1e-3, **kwargs):
-        pass
 
     def post_process_data(self, dt):
         """ exclusive post_process data for CombustionObjectImage
@@ -556,17 +871,6 @@ class CombustionObjectImage(CombustionObject0D):
         self.results['run_values']['time'] = new_time_array
 
     def run_simulation_constant_fuel_sliver(self, ox_flow, safety_thickness, dt, max_burn_time=None, **kwargs):
-        """
-        Simulate the hybrid rocket burn.
-        Every value is expressed in ISU unless specified otherwise. Simulation is only valid for normal ground
-        atmosphere conditions (1 bar, 293 K).
-        :param ox_flow: value of input oxidizer flow
-        :param safety_thickness: minimum allowed thickness for fuel slivers, which conditions burn termination
-        :param dt: time-step for the simulation
-        :param max_burn_time: maximum burn time (if inputted)
-        :return: TBD
-        """
-
         # Check the inputs
         assert ox_flow > 0, "Oxidizer flow not greater than 0, check your inputs to CombustionModule. \n"
         assert safety_thickness > 0, "Safety thickness not greater than 0, check your inputs to CombustionModule. \n"
@@ -576,8 +880,6 @@ class CombustionObjectImage(CombustionObject0D):
 
         # -------------------- Initialize simulation_variables if required -------------
 
-        # regression_rate, fuel_flow, total_mass_flow, OF, T_chambre, gamma, masse_molaire_gaz, c_star = \
-        #     self.initialize_variables()
         pression_chambre = initial_chamber_pressure
 
         # ---------------------------- MAIN SIMULATION LOOP -----------------------------
@@ -591,13 +893,11 @@ class CombustionObjectImage(CombustionObject0D):
 
         while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
 
-            # print( self.geometry.totalSurfaceArea() / self.geometry.get_length() / 2 / math.pi)
-
             # Regression rate and mass flow calculations
-            fuel_flow = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
-            total_mass_flow = ox_flow + fuel_flow
-            of_ratio = ox_flow / fuel_flow
-            Go = ox_flow / self.geometry.totalCrossSectionArea()
+            m_fuel = self.geometry.compute_fuel_rate(rho=rho_fuel, ox_flow=ox_flow)
+            total_mass_flow = ox_flow + m_fuel
+            of_ratio = ox_flow / m_fuel
+            g_ox = ox_flow / self.geometry.totalCrossSectionArea()
             delta_t = dr / self.geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow)
 
             # Call CEA process to obtain thermochemical variables
@@ -610,12 +910,8 @@ class CombustionObjectImage(CombustionObject0D):
                                         mass_flow=total_mass_flow,
                                         density=rho_ch)
 
-            # Calculate cea_c_star to consider the combustion efficiency parameter
-            # cea_c_star = eta_comb * cea_c_star
-
             # Calculate chamber conditions and motor performance
             # Chamber pressure is not recalculated as it is assumed constant
-
             mach_exit = iso.exit_mach_via_expansion(gamma=gamma, expansion=self.nozzle.get_expansion_ratio(),
                                                     supersonic=True)
             exit_pressure = pression_chambre / iso.pressure_ratio(gamma, mach_exit)
@@ -639,14 +935,14 @@ class CombustionObjectImage(CombustionObject0D):
             self.results["run_values"]["pressure"].append(pression_chambre)
             self.results["run_values"]["temperature"].append(t_chamber)
             self.results["run_values"]["of"].append(of_ratio)
-            self.results["run_values"]["Go"].append(Go)
+            self.results["run_values"]["Go"].append(g_ox)
             self.results["run_values"]["nozzle_param"].append(nozzle_p)
             self.results["run_values"]["c_star"].append(cea_c_star)
             self.results["run_values"]["chamber_sound_speed"].append(son_vel)
             self.results["run_values"]["chamber_rho"].append(rho_ch)
             self.results["run_values"]["mass_flow"].append(total_mass_flow)
             self.results["run_values"]["mass_flow_ox"].append(ox_flow)
-            self.results["run_values"]["mass_flow_f"].append(fuel_flow)
+            self.results["run_values"]["mass_flow_f"].append(m_fuel)
             self.results["run_values"]["chamber_speed"].append(u_ch)
             self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
 
@@ -663,10 +959,11 @@ class CombustionObjectImage(CombustionObject0D):
                 self.results["run_values"]["radius"].append(nan)
                 self.results["run_values"]["regression_rate"].append(nan)
 
-            # Update the geometry and nozzle
+            # ---------------- Perform the regression of the block and erode ----------------
             self.geometry.regress(ox_flow=ox_flow, dt=delta_t)
             self.nozzle.erode(delta_t)
 
+            # ------------------------------ Update the loop --------------------------------
             time += delta_t
 
             # Update the flag for burn-time
@@ -680,6 +977,112 @@ class CombustionObjectImage(CombustionObject0D):
 
         # Post-process the data
         self.post_process_data(dt=dt)
+
+    def run_balanced_nozzle_analysis(self, ox_flow, safety_thickness, dt, max_burn_time=None, tol_press=1e-3, **kwargs):
+        # Check the inputs
+        assert ox_flow > 0, "Oxidizer flow not greater than 0, check your inputs to CombustionModule. \n"
+        assert safety_thickness > 0, "Safety thickness not greater than 0, check your inputs to CombustionModule. \n"
+
+        # Call for workspace definition methods
+        g0, R, pression_atmo, a, n, m, rho_fuel, initial_chamber_pressure, eta_comb = self.unpack_data_dictionary()
+
+        # -------------------- Initialize simulation_variables if required -------------
+
+        pression_chambre = initial_chamber_pressure
+
+        # ---------------------------- MAIN SIMULATION LOOP -----------------------------
+
+        # Set the flag for the maximum burn-time
+        flag_burn = True
+        time = 0
+
+        # Get the thickness equivalent to 5 pixels
+        dr = self.geometry.getMetersPerPixel() * 5
+
+        while self.geometry.min_bloc_thickness() > safety_thickness and flag_burn:
+
+            # ------------------- Perform block solution with pressure coupling  ---------------------
+
+            of_ratio, m_fuel, total_mass_flow, g_ox, g_f, pression_chambre, t_chamber, gamma, \
+            gas_molar_mass, cea_c_star, son_vel, rho_ch = self._solve_pressure_loop(pression_chambre,
+                                                                                    ox_flow, rho_fuel, tol_press)
+            r = R / gas_molar_mass  # Specific gaz constant
+            delta_t = dr / self.geometry.regressionModel.computeRegressionRate(self.geometry, ox_flow)
+
+            # Determine the flow port-speed
+            u_ch = calculate_flow_speed(cross_section=self.geometry.totalCrossSectionArea(),
+                                        mass_flow=total_mass_flow,
+                                        density=rho_ch)
+
+            # Calculate chamber conditions and motor performance
+            mach_exit = iso.exit_mach_via_expansion(gamma=gamma, expansion=self.nozzle.get_expansion_ratio(),
+                                                    supersonic=True)
+            exit_pressure = pression_chambre / iso.pressure_ratio(gamma, mach_exit)
+            t_exit = t_chamber / iso.temperature_ratio(gamma, mach_exit)
+            v_exit = math.sqrt(gamma * r * t_exit) * mach_exit
+
+            thrust = self.nozzle.get_nozzle_effeciency() * (
+            total_mass_flow * v_exit + (exit_pressure - pression_atmo) *
+            self.nozzle.get_exit_area())
+
+            # Calculate the nozzle equation validation
+            nozzle_p = total_mass_flow * cea_c_star / (self.nozzle.get_throat_area() * pression_chambre)
+            # print(nozzle_p)
+
+            isp = thrust / total_mass_flow / g0
+
+            # Results updates
+            self.results['run_values']['time'].append(time)
+            self.results["run_values"]["thrust"].append(thrust)
+            self.results["run_values"]["isp"].append(isp)
+            self.results["run_values"]["pressure"].append(pression_chambre)
+            self.results["run_values"]["temperature"].append(t_chamber)
+            self.results["run_values"]["of"].append(of_ratio)
+            self.results["run_values"]["Go"].append(g_ox)
+            self.results["run_values"]["nozzle_param"].append(nozzle_p)
+            self.results["run_values"]["c_star"].append(cea_c_star)
+            self.results["run_values"]["chamber_sound_speed"].append(son_vel)
+            self.results["run_values"]["chamber_rho"].append(rho_ch)
+            self.results["run_values"]["mass_flow"].append(total_mass_flow)
+            self.results["run_values"]["mass_flow_ox"].append(ox_flow)
+            self.results["run_values"]["mass_flow_f"].append(m_fuel)
+            self.results["run_values"]["chamber_speed"].append(u_ch)
+            self.results["run_values"]["hydraulic_port_diameter"].append(self.geometry.get_hydraulic_diameter())
+
+            # Verify it is a single port_number before updating the port number
+            if isinstance(self.geometry, (OneCircularPort,
+                                          ThreeCircularPorts,
+                                          MultipleCircularPortsWithCircularCenter)):
+                self.results["run_values"]["radius"].append(self.geometry.get_port_radius())
+
+                # Compute regression rate
+                self.results["run_values"]["regression_rate"].append(dr / delta_t)
+            else:
+                # Append a 0 if there it is not a OneCircularPort geometry
+                self.results["run_values"]["radius"].append(nan)
+                self.results["run_values"]["regression_rate"].append(nan)
+
+            # ---------------- Perform the regression of the block and erode ----------------
+            self.geometry.regress(ox_flow=ox_flow, dt=delta_t)
+            self.nozzle.erode(delta_t)
+
+            # ------------------------------ Update the loop --------------------------------
+            time += delta_t
+
+            # Update the flag for burn-time
+            if max_burn_time:
+                flag_burn = time <= max_burn_time
+
+        # ------------------------ POST-PROCESS ------------------------
+
+        # Convert to numpy arrays
+        self.results['run_values'] = {key: asarray(value) for key, value in self.results["run_values"].items()}
+
+        # Post-process the data
+        self.post_process_data(dt=dt)
+
+    def run_full_flow_analysis(self, hydraulic_module, safety_thickness, dt, tol_press=1e-3, **kwargs):
+        pass
 
 
 # ----------------------------- COMBUSTION OBJECT 1D -----------------------------
@@ -852,7 +1255,6 @@ class CombustionObject1D(CombustionObject):
             # noinspection PyArgumentList
             solution, mass_flows, of_ratio, mass_fluxes = self.geometry.solve_mass_flux(self.regression_model,
                                                                                         ox_flow, rho_fuel)
-            self.geometry.regress(solution, self.regression_model, ox_flow, dt)
             m_ox, m_fuel = mass_flows
             g_ox, g_f = mass_fluxes
             total_mass_flow = m_ox + m_fuel
@@ -900,7 +1302,11 @@ class CombustionObject1D(CombustionObject):
             self.results["run_values"]["mass_flow_f"].append(m_fuel)
             self.results["run_values"]["chamber_speed"].append(u_ch)
 
-            # Update the loop
+            # ---------------- Perform the regression of the block and erode ----------------
+            self.geometry.regress(solution, self.regression_model, ox_flow, dt)
+            self.nozzle.erode(dt)
+
+            # ------------------------------ Update the loop --------------------------------
             k += 1
 
             # Update the flag for burn-time
@@ -914,6 +1320,9 @@ class CombustionObject1D(CombustionObject):
 
         # Post-process the data
         self.post_process_data(dt=dt)
+
+    def _solve_coupled_analysis(self, hydraulic_module, pression_chambre, rho_fuel, tol_press):
+        pass
 
     def _solve_pressure_loop(self, pression_chambre, ox_flow, rho_fuel, tol_press):
         """
@@ -984,9 +1393,6 @@ class CombustionObject1D(CombustionObject):
             g_ox, g_f, pression_chambre, t_chamber, gamma, \
             gas_molar_mass, cea_c_star, son_vel, rho_ch = self._solve_pressure_loop(pression_chambre,
                                                                                     ox_flow, rho_fuel, tol_press)
-
-            # ----------------------- Perform the regression of the block ---------------
-            self.geometry.regress(solution, self.regression_model, ox_flow, dt)
             r = R / gas_molar_mass  # Specific gaz constant
 
             # Determine the flow port exit-speed
@@ -1027,14 +1433,17 @@ class CombustionObject1D(CombustionObject):
             self.results["run_values"]["mass_flow_f"].append(m_fuel)
             self.results["run_values"]["chamber_speed"].append(u_ch)
 
+            # ---------------- Perform the regression of the block and erode ----------------
+            self.geometry.regress(solution, self.regression_model, ox_flow, dt)
+            self.nozzle.erode(dt)
 
-            # ------------------------- Output the Geometry to file -----------------------
+            # ------------------------- Output the Geometry to file -------------------------
 
             if flag_output:
                 if k * dt in kwargs['times']:
                     self.geometry.print_geometry_to_file(kwargs['file_name'], k * dt)
 
-            # Update the loop
+            # ------------------------------ Update the loop --------------------------------
             k += 1
 
             # Update the flag for burn-time
@@ -1048,4 +1457,7 @@ class CombustionObject1D(CombustionObject):
 
         # Post-process the data
         self.post_process_data(dt=dt)
+
+    def run_full_flow_analysis(self, hydraulic_module, safety_thickness, dt, tol_press=1e-3, **kwargs):
+        pass
 

@@ -118,7 +118,6 @@ class UniformlySpacedMesh(Mesh):
         for i in range(0, self.n_el):
             new_cell = cell_factory(i, (i+1)*self.dx)
             self.cells.append(new_cell)
-        # TODO: be careful with the definition of the nels
 
 
 class GeometricMesh(Mesh):
@@ -303,29 +302,3 @@ class CircularPortCell(Cell):
         self.profile += local_r_dot * dt
         # Update the minimum thickness
         self.update_min_thickness()
-
-
-
-
-
-
-# --------------------------- COMMENTS ----------------------------
-#
-# class FlowCell(Cell):
-#     """
-#     FlowCell is a class which inherits from cell in order to separate the geometric data from the flow data.
-#     This eases the code's readability and helps in the future to separate the behavior.
-#         Attributes:
-#
-#     """
-#
-#     def __init__(self, num, x):
-#         """
-#         class initializer
-#         :param num: integer indicating the cell number.
-#         :param x: float which indicates the cell position.
-#         """
-#
-#         super(FlowCell, self).__init__(num, x)
-#
-#         # Define flow variables as attributes of the flow cell
