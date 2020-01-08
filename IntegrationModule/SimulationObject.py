@@ -222,7 +222,7 @@ class SimulationObject:
 
         # ------------------------ RUN COMBUSTION MODULE ----------------------
 
-        self.combustion_module.run_simulation_constant_fuel_sliver(
+        self.combustion_module.run_balanced_nozzle_analysis(
             **self.initialization_object.simulation_parameters['combustion'])
 
         # ------------------------ RUN MASS ESTIMATION ------------------------
