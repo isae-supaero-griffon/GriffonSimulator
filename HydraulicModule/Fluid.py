@@ -24,6 +24,15 @@ def calculate_liquid_density(pure_relative_density, purity):
     water_density = 1000  # Define the water density
     return water_density / (1 - purity * (1 - 1 / pure_relative_density))
 
+def calculate_specific_gravity(rho):
+    """
+    calculate_specific_gravity determines the specific gravity of the fluid with respect to water
+    (only liquids)
+    :param rho: density of the fluid [kg/m^3]
+    :return: specific gravity
+    """
+    return rho / 1000
+
 def calculate_gas_density(pressure, temperature, gas_constant):
     """
     calculate_gas_density determines the density of the gas based on the ideal gas law
@@ -52,6 +61,7 @@ class Fluid(ABC):
         # Set the attributes
         self.name = name
         self.density = 0
+        self.sp = 0
         self.viscosity = 0
         self.temperature = 0
 
@@ -82,12 +92,11 @@ class Fluid(ABC):
         return self.temperature
 
     @abstractmethod
-    def compute_density(self, *args, **kwargs):
+    def compute_density(self, *args):
         """
         compute_density is an abstract method that can have multiple implementations
         depending on the inherited class, thus its multiple input definition.
         :param args: multiple arguments accepted
-        :param kwargs: multiple key, value pair arguments accepted
         :return: nothing
         """
         pass
@@ -103,11 +112,12 @@ class Liquid(Fluid):
         # Call superclass initializer
         super(Liquid, self).__init__(name, **kwargs)
         # Compute the density at initialization
-        self.density = self.compute_density()
+        self.density = calculate_liquid_density(self.pure_density, self.purity)
+        self.sp = calculate_specific_gravity(self.density)
 
     def compute_density(self, *args):
         """ compute the density of the liquid """
-        return calculate_liquid_density(self.pure_density, self.purity)
+        return self.density
 
 
 class Gas(Fluid):

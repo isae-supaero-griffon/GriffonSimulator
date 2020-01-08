@@ -60,6 +60,7 @@ def circle_area(diameter):
     """
     return np.pi * diameter ** 2 / 4
 
+
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
 
@@ -655,7 +656,7 @@ class DualPhaseTank(Accumulator):
 
 class Valve(FlowPassage):
     """
-    Valve class implements a standard valve with constants given.
+    Valve class is an abstract class which serves as a parent class for Valves.
 
         Attributes:
             1. flow_factor: flow factor of the valve (constant)
@@ -680,6 +681,40 @@ class Valve(FlowPassage):
     def calculate_delta_p(self):
         rho_ = self.determine_mean_density()
         return 1e5 * self.mass_node.dof.get_value() ** 2 / (1000 * rho_ * self.flow_factor ** 2)
+
+
+class LiquidValve(Valve):
+    """
+    LiquidValve implements the Delta P formula applied to a liquid valve
+    """
+    def __init__(self, name, identifier, nodes, fluid, link, flow_factor):
+        # Check the input
+        assert isinstance(fluid, Liquid), "The Fluid must be a Liquid. \n"
+        # Call superclass initializer
+        super(LiquidValve, self).__init__(name, identifier, nodes, fluid, link, flow_factor)
+
+    def calculate_delta_p(self):
+        rho_ = self.determine_mean_density()                        # Get the density of the fluid
+        sp_g = self.fluid.sp                                        # Get the specific gravity
+        volume_flow = self.mass_node.dot.get_value() / rho_         # Get the volume flow
+        return 1e5 * sp_g * (volume_flow / self.flow_factor) ** 2
+
+
+class GasValve(Valve):
+    """
+    GasValve implements the Delta P formula applied to a Gas Valve considering the constants
+    are defined for standard flow.
+    """
+    def __init__(self, name, identifier, nodes, fluid, link, flow_factor):
+        # Check the input
+        assert isinstance(fluid, Gas), "The Fluid must be a Gas. \n"
+        # Call superclass initializer
+        super(GasValve, self).__init__(name, identifier, nodes, fluid, link, flow_factor)
+
+    def calculate_delta_p(self):
+        volume_flow = self.mass_node.dof.get_value() / self.fluid.std_density           # Get the standard flow
+        sp_g = self.fluid.sp                                                            # Get the specific gravity
+        return 1e5 * sp_g * (volume_flow / self.flow_factor) ** 2
 
 
 class Pipe(FlowPassage):
@@ -718,6 +753,39 @@ class Pipe(FlowPassage):
                (2 * self.rho_ * self.reynolds.hydraulic_diameter * self.reynolds.area ** 2)
 
 
+class Fitting(FlowPassage):
+    """
+    Fitting class implements a standard fitting with classic resistance coefficient
+
+        Attributes:
+            1. coefficient: resistance coefficient (non-dimensional)
+    """
+
+    def __init__(self, name, identifier, nodes, fluid, link, coefficient, diameter):
+        """
+        class initializer
+        :param name: string which defines the name of the component
+        :param identifier: integer which defines the identifier of the component
+        :param nodes: nodes associated to the valve
+        :param fluid: Fluid instance defining the fluid type that is present in the component
+        :param link: associated component of the hydraulic network
+        :param coefficient: resistance coefficient of the fitting
+        :param diameter: diameter of piping
+        """
+        # Check the inputs
+        assert coefficient > 0, "Resistance coefficient must be greater than 0. \n"
+        assert diameter > 0, "Diameter of pipe must be greater than 0. \n"
+        # Call superclass initializer
+        super(Fitting, self).__init__(name, identifier, link, fluid, nodes)
+
+        # Set other attributes
+        self.coefficient = coefficient
+        self.area = circle_area(diameter)
+
+    def calculate_delta_p(self):
+        rho_ = self.determine_mean_density()
+        return 0.5 * self.coefficient * (self.mass_node.dof.get_value() / self.area) ** 2 / rho_
+
 
 class Injector(FlowPassage):
     """
@@ -737,6 +805,8 @@ class Injector(FlowPassage):
         :param link: associated component of the hydraulic network
         :param table: json table to be implemented in the interpolator
         """
+        # Check the fluid is correct
+        assert isinstance(fluid, Liquid), "Fluid instance at injector must be of Liquid type. \n"
         # Call superclass initializer
         super(Injector, self).__init__(name, identifier, link, fluid, nodes)
 
@@ -809,8 +879,10 @@ class ComponentsCatalogue:
     components = {'PressurizerTank': PressurizerTank,
                   'OxidizerTank': DualPhaseTank,
                   'PressureRegulator': PressureRegulator,
-                  'Valve': Valve,
+                  'LiquidValve': LiquidValve,
+                  'GasValve': GasValve,
                   'Pipe': Pipe,
+                  'Fitting': Fitting,
                   'Injector': Injector}
 
     @staticmethod

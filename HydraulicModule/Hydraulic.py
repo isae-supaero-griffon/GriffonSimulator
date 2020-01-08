@@ -71,13 +71,17 @@ class HydraulicModule:
         self.dofs = DofCollection([])
         self.is_initialized = False
         self.is_active = True
+        self.solver_params = {'name':'Nelder-Mead','tol':1e-3, 'maxiter':100, 'scale':1e5}
 
         # Initialize the network
         self._initialize(hydraulic_table)
 
     def __str__(self):
-        presentation_text = "Hydraulic Module:: \n " + "\n".join((str(obj) for obj in self.components))
+        presentation_text = "Hydraulic Module:: \n " + self.solver_print() + "\n".join((str(obj) for obj in self.components))
         return presentation_text
+
+    def solver_print(self):
+        return "\n" + ", ".join(("{0}: {1}".format(key, value) for key, value in self.solver_params.items()))
 
     def dof_print(self):
         return "Hydraulic Module:: \n" + str(self.dofs)
@@ -113,6 +117,8 @@ class HydraulicModule:
         # Instantiate the components
         for component_dict in hydraulic_table['components']:
             self._create_component(component_dict)
+        # Set the solver params
+        if 'solver' in hydraulic_table: self.solver_params = hydraulic_table['solver']
         # Check activity
         self.check_activity()
 
@@ -232,7 +238,14 @@ class HydraulicModule:
         """
         self.is_active = bool(np.prod([component.is_active for component in self.components]))
 
-    def run_simulation(self, tol=1e-3, maxiter=100, scale=1e5):
+    def return_exit_flow(self):
+        """
+        return_exit_flow returns the flow at the end of the hydraulic module. Typically an injector
+        :return: exit flow in [kg/s]
+        """
+        return self.components[-1].mass_dof.dof.get_value()
+
+    def run_simulation(self):
         """
         run_simulation method solves for the current state of the hydraulic network provided that boundary
         conditions have already been set.
@@ -240,6 +253,7 @@ class HydraulicModule:
         """
 
         # Search dofs that are not fixed
+        scale = self.solver_params['scale']
         non_fixed_dofs = self.dofs.search("isFixed", False)
 
         def residual(x):
@@ -276,8 +290,9 @@ class HydraulicModule:
         x0 = x0_fun(non_fixed_dofs) / scale
 
         # Solve the problem:
-        sol = opt.minimize(optimize_fun, x0, method='Powell', jac=None, bounds=bounds,
-                           tol=tol, options={'maxiter': maxiter, 'disp': True})
+        sol = opt.minimize(optimize_fun, x0, method=self.solver_params['name'], jac=None, bounds=bounds,
+                           tol=self.solver_params['tol'],
+                           options={'maxiter': self.solver_params['maxiter'], 'disp': False})
         return sol
 
 
