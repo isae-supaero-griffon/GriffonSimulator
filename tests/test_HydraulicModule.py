@@ -113,7 +113,7 @@ def test_hydraulic_module_network_solution():
     pressurizer_tank.mass_node[1].dof.set_value(value=pressurizer_flow)
 
     # Solve the module
-    sol = my_module.run_simulation(tol=1e-6, maxiter=2000, scale=1e5)
+    sol = my_module.run_simulation()
 
     # Calculate deltap
     output = []
@@ -173,7 +173,7 @@ def test_hydraulic_module_network_solution_transient():
     # Run a transient loop
     while True:
         try:
-            _ = my_module.run_simulation(tol=1e-3, maxiter=500, scale=1e6)
+            _ = my_module.run_simulation()
             for dof in my_module.dofs.elements_list:
                 results[dof.number].append(dof.get_value())
             results['time'].append(time_count)
@@ -225,7 +225,7 @@ def test_hydraulic_module_valve():
     my_dof.set_value(value=p2)
 
     # Solve the module
-    sol = my_module.run_simulation(tol=1e-6, maxiter=500, scale=1e6)
+    sol = my_module.run_simulation()
 
     # print the module dofs
     print(my_module.dof_print())

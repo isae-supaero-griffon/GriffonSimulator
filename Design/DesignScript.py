@@ -340,7 +340,6 @@ def single_case_analysis_one_port_image_geometry():
     simulation_object.combustion_module.geometry.draw_geometry()
 
 
-
 def single_case_analysis_three_circular_ports():
     """
     Study the behavior of the rocket for a single case with ThreeCircularPort
