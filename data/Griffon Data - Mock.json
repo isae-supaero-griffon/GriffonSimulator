@@ -220,13 +220,16 @@
     }
   },
   "hydraulic_table":  {
+    "solver": {"name": "Powell", "tol": 1e-6, "maxiter": 2000, "scale": 1e5},
     "fluids": [
       {
         "fluid": "Gas",
         "name": "Air",
         "gamma": 1.4,
         "gas_constant": 297.0,
-        "viscosity": 1.81e-5
+        "viscosity": 1.81e-5,
+        "sp": 1,
+        "std_density": 1.225
       },
       {
         "fluid": "Liquid",
@@ -265,31 +268,9 @@
         },
         {
           "identifier": 1,
-          "name": "pressurizer_valve",
-          "type": "Valve",
-          "fluid": [{"name": "Air", "T": 298.0}],
-          "flow_factor": 0.15,
-          "link": [0],
-          "nodes": [
-            {
-              "identifier": 2,
-              "type": "pressure"
-            },
-            {
-              "identifier": 3,
-              "type": "mass"
-            },
-            {
-              "identifier": 4,
-              "type": "pressure"
-            }
-          ]
-        },
-        {
-          "identifier": 2,
           "name": "pressure_regulator",
           "type": "PressureRegulator",
-          "link": [1],
+          "link": [0],
           "fluid": [{"name": "Air", "T": 298.0}],
           "table": [
                     {
@@ -660,6 +641,28 @@
                     ],
           "nodes": [
             {
+              "identifier": 2,
+              "type": "pressure"
+            },
+            {
+              "identifier": 3,
+              "type": "mass"
+            },
+            {
+              "identifier": 4,
+              "type": "pressure"
+            }
+          ]
+        },
+        {
+          "identifier": 2,
+          "name": "pressurizer_valve",
+          "type": "GasValve",
+          "fluid": [{"name": "Air", "T": 298.0}],
+          "flow_factor": 0.15,
+          "link": [1],
+          "nodes": [
+            {
               "identifier": 4,
               "type": "pressure"
             },
@@ -713,7 +716,7 @@
         {
           "identifier": 4,
           "name": "oxidizer_valve",
-          "type": "Valve",
+          "type": "LiquidValve",
           "link": [3],
           "fluid": [{"name": "H2O2", "T": 298}],
           "flow_factor": 4,
@@ -734,6 +737,29 @@
           },
         {
           "identifier": 5,
+          "name": "flexible_tube",
+          "type": "Fitting",
+          "fluid": [{"name": "H2O2", "T": 298.0}],
+          "link": [4],
+          "coefficient": 1,
+          "diameter": 12.7e-3,
+          "nodes": [
+            {
+              "identifier": 12,
+              "type": "pressure"
+            },
+            {
+              "identifier": 13,
+              "type": "mass"
+            },
+            {
+              "identifier": 14,
+              "type": "pressure"
+            }
+          ]
+        },
+        {
+          "identifier": 6,
           "name": "injector",
           "type": "Injector",
           "fluid": [{"name": "H2O2", "T": 298.0}],
@@ -783,18 +809,18 @@
                       47.391
                     ]
           ],
-          "link": [4],
+          "link": [5],
           "nodes": [
             {
-              "identifier": 12,
+              "identifier": 14,
               "type": "pressure"
             },
             {
-              "identifier": 13,
+              "identifier": 15,
               "type": "mass"
             },
             {
-              "identifier": 14,
+              "identifier": 16,
               "type": "pressure"
             }
           ]
