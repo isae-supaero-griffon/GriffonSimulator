@@ -163,7 +163,7 @@ def define_onera_physical_hycom_16_test_combustion_object():
 
     nozzle_params = {'At': 4.243e-5, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
-    simulation_params = {'ox_flow': 0.0975, 'safety_thickness': 0.005, 'max_burn_time': 7.5}
+    simulation_params = {'ox_flow': 0.0975, 'safety_thickness': 0.005, 'dt': 0.05, 'max_burn_time': 7.5}
 
     # ------------- Generate objects:
 
@@ -178,7 +178,7 @@ def define_onera_physical_hycom_16_test_combustion_object():
 
     # -------------- Run simulation & Plot:
 
-    combustion_object.run_simulation_constant_fuel_sliver_image_geometry(**simulation_params)
+    combustion_object.run_simulation_constant_fuel_sliver(**simulation_params)
 
     # Return the combustion object
     return combustion_object
@@ -396,7 +396,7 @@ def define_onera_physical_hycom_14_test_combustion_object():
 if __name__ == '__main__':
 
     # Define the test name
-    test_name = 'hycom_13'
+    test_name = 'hycom_16'
     # Call the methods
     if test_name == 'hycom_12':
         combustion_obj = define_onera_physical_hycom_12_test_combustion_object()
