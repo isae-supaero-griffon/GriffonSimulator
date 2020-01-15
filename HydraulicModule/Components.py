@@ -60,6 +60,13 @@ def circle_area(diameter):
     """
     return np.pi * diameter ** 2 / 4
 
+def cv_2_kv(a):
+    """
+    cv_2_kv converts from the US units flow coefficient to the flow factor
+    :param a: flow coefficient in US units
+    :return: flow factor in SI units [m^3/h*sqrt(bar)]
+    """
+    return 0.865*a
 
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
@@ -378,13 +385,12 @@ class SinglePhaseTank(Accumulator):
         return self.fluid.compute_density(mean_pressure, self.fluid.get_temperature())
 
     def calculate_delta_p_inlet(self):
-        # self.mass_node.dof.get_value() ** 2 / (1000 * rho_ * self.flow_factor ** 2)
         rho_ = self.determine_density_at_inlet()
-        return 1e5 * (self.mass_node[0].dof.get_value()) ** 2 / (1000 * rho_ * self.flow_factors[0] ** 2)
+        return 0.5 * self.flow_factors[0] * (self.mass_node[0].dof.get_value() / self.inlet_area) ** 2 / rho_
 
     def calculate_delta_p_outlet(self):
-        rho_ = self.determine_density_at_outlet()
-        return 1e5 * (self.mass_node[1].dof.get_value()) ** 2 / (1000 * rho_ * self.flow_factors[1] ** 2)
+        rho_ = self.determine_density_at_inlet()
+        return 0.5 * self.flow_factors[1] * (self.mass_node[1].dof.get_value() / self.outlet_area) ** 2 / rho_
 
     def update(self, dt):
         """update the mass of the system"""
@@ -676,11 +682,7 @@ class Valve(FlowPassage):
         super(Valve, self).__init__(name, identifier, link, fluid, nodes)
 
         # Set other attributes
-        self.flow_factor = flow_factor
-
-    def calculate_delta_p(self):
-        rho_ = self.determine_mean_density()
-        return 1e5 * self.mass_node.dof.get_value() ** 2 / (1000 * rho_ * self.flow_factor ** 2)
+        self.flow_factor = cv_2_kv(flow_factor)
 
 
 class LiquidValve(Valve):
@@ -696,7 +698,7 @@ class LiquidValve(Valve):
     def calculate_delta_p(self):
         rho_ = self.determine_mean_density()                        # Get the density of the fluid
         sp_g = self.fluid.sp                                        # Get the specific gravity
-        volume_flow = self.mass_node.dot.get_value() / rho_         # Get the volume flow
+        volume_flow = 3600 *self.mass_node.dot.get_value() / rho_   # Get the volume flow in m^3/h
         return 1e5 * sp_g * (volume_flow / self.flow_factor) ** 2
 
 
@@ -712,7 +714,7 @@ class GasValve(Valve):
         super(GasValve, self).__init__(name, identifier, nodes, fluid, link, flow_factor)
 
     def calculate_delta_p(self):
-        volume_flow = self.mass_node.dof.get_value() / self.fluid.std_density           # Get the standard flow
+        volume_flow = 3600 *self.mass_node.dof.get_value() / self.fluid.std_density     # Get the standard flow [m^3/h]
         sp_g = self.fluid.sp                                                            # Get the specific gravity
         return 1e5 * sp_g * (volume_flow / self.flow_factor) ** 2
 
@@ -854,6 +856,14 @@ class PressureRegulator(FlowPassage):
 
         # Set the remaining attributes
         self.interpolator = interp2d(x, y, z, kind='linear')
+
+    @staticmethod
+    def _recondition_data(record):
+        """
+        _recondition_data takes the record from the json file and outputs the x,y,z vectors
+        :param record:
+        :return:
+        """
 
     def determine_mean_density(self):
         """ determine the mean density at the inlet """
