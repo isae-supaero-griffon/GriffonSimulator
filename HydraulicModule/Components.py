@@ -68,6 +68,14 @@ def cv_2_kv(a):
     """
     return 0.865*a
 
+def std_ft_min_2_std_l_min(a):
+    """
+    std_ft_min_2_std_l_min converts from std ft3 per minute to std m3 per min
+    :param a: float in std ft3 per minute
+    :return: float in std m3 per minute
+    """
+    return 28.316847 * a
+
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
 
@@ -775,7 +783,7 @@ class Fitting(FlowPassage):
         :param diameter: diameter of piping
         """
         # Check the inputs
-        assert coefficient > 0, "Resistance coefficient must be greater than 0. \n"
+        assert coefficient >= 0, "Resistance coefficient must be greater than 0. \n"
         assert diameter > 0, "Diameter of pipe must be greater than 0. \n"
         # Call superclass initializer
         super(Fitting, self).__init__(name, identifier, link, fluid, nodes)
@@ -834,7 +842,7 @@ class PressureRegulator(FlowPassage):
             2. threshold: minimum DeltaP above which the instrument can regulate the pressure to the output given
     """
 
-    def __init__(self, name, identifier, nodes, fluid, link, table):
+    def __init__(self, name, identifier, nodes, fluid, link, set_pressure, table):
         """
         class initializer
         :param name: string which defines the name of the component
@@ -842,28 +850,35 @@ class PressureRegulator(FlowPassage):
         :param nodes: nodes associated to the valve
         :param fluid: Fluid instance defining the fluid type that is present in the component
         :param link: associated component of the hydraulic network
+        :param set_pressure: desired setting pressure in bars for the pressure regulator
         :param table: json table to be implemented in the interpolator
         """
         # Call superclass initializer
         super(PressureRegulator, self).__init__(name, identifier, link, fluid, nodes)
 
         # Set the other attributes
-        curves = [np.append(record['pressure'] * np.ones((len(record['curve']), 1)),
-                            np.array(record['curve']), axis=1) for record in table]
-        curves = np.concatenate(curves, axis=0)
-        f = np.vectorize(psig_2_bar)
-        x, y, z = f(curves[:, 0]), curves[:, 1], f(curves[:, 2])
+        x1, y1, z1, set_p1 = self._recondition_data(table[0])
+        _, _, z2, set_p2 = self._recondition_data(table[1])
+        z = set_pressure / set_p1 * z1 + set_pressure / set_p2 * z2
 
         # Set the remaining attributes
         self.interpolator = interp2d(x, y, z, kind='linear')
 
     @staticmethod
-    def _recondition_data(record):
+    def _recondition_data(table):
         """
         _recondition_data takes the record from the json file and outputs the x,y,z vectors
-        :param record:
-        :return:
+        :param table: data coming from the json file for one set pressure
+        :return: x, y, z, set_pressure
         """
+        curves = [np.append(record['pressure'] * np.ones((len(record['curve']), 1)),
+                            np.array(record['curve']), axis=1) for record in table['data']]
+        curves = np.concatenate(curves, axis=0)
+        f = np.vectorize(std_ft_min_2_std_l_min)
+        x, y, z = curves[:, 0], f(curves[:, 1]), curves[:, 2]
+        set_p = z[0]
+        # Return the output
+        return x, y, z, set_p
 
     def determine_mean_density(self):
         """ determine the mean density at the inlet """
@@ -872,14 +887,11 @@ class PressureRegulator(FlowPassage):
         return self.fluid.compute_density(inlet_pressure, self.request_link_temperature())      # Compute the density of the fluid
 
     def calculate_delta_p(self):
-        rho_ = self.determine_mean_density()                                                    # Calculate the density
-        standard_rho = rho_ * 1.013 / pascals_2_bar(self.pressure_nodes[0].dof.get_value())     # Calculate std density
-        standard_flow = self.mass_node.dof.get_value() / standard_rho                           # Calculate std flow
-        inlet_pressure = self.pressure_nodes[0].dof.get_value()                                 # Extract internal p
-
-        # Interpolate the delta P
-        delta_p = inlet_pressure - bar_2_pascals(self.interpolator(pascals_2_bar(inlet_pressure), standard_flow))
-        return delta_p
+        volume_flow = 60 * 1000 * self.mass_node.dof.get_value() / self.fluid.std_density  # Get the standard flow [l/min]
+        inlet_pressure = pascals_2_bar(self.pressure_nodes[0].dof.get_value())             # Get the inlet pressure in bars
+        outlet_pressure = self.interpolator(inlet_pressure, volume_flow)                   # Compute outlet pressure
+        delta_p = inlet_pressure - outlet_pressure
+        return bar_2_pascals(delta_p)
 
 
 class ComponentsCatalogue:
