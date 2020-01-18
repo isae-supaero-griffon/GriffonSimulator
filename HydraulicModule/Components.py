@@ -11,7 +11,7 @@
 
 from abc import ABC, abstractmethod                                                 # Import the abstract class mold
 import numpy as np                                                                  # Import  numpy
-from scipy.interpolate import interp2d                                              # Import interp2d from scipy
+from scipy.interpolate import interp2d, griddata                                    # Import interp2d, griddata from scipy
 import math as m                                                                    # Import math library
 from HydraulicModule.Fluid import *                                                 # Import the Fluids
 from HydraulicModule.Network import *                                               # Import the Network
@@ -68,6 +68,7 @@ def cv_2_kv(a):
     """
     return 0.865*a
 
+
 def std_ft_min_2_std_l_min(a):
     """
     std_ft_min_2_std_l_min converts from std ft3 per minute to std m3 per min
@@ -75,6 +76,7 @@ def std_ft_min_2_std_l_min(a):
     :return: float in std m3 per minute
     """
     return 28.316847 * a
+
 
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
@@ -107,6 +109,20 @@ class Component(ABC):
         self.mass_node = None
         self.link = link
 
+    def __str__(self):
+        link_text = "Link:" + "\t".join([str(link.number) for link in self.link if link is not None])
+        res_str = "Residual: \t" + ", ".join(("{num:10.5f} bar".format(num=pascals_2_bar(num)) for num
+                                              in self.my_method()))
+        nodes_str = self._nodes_str()
+        presentation_text = "\nComponent:: \n\t ID: {id} \n\t Name: {name} \n\t isActive: {act} " \
+                            "\n\t {link} \n\t {res} \n\t {nod}".format(id=self.number,
+                                                                       name=self.name,
+                                                                       act=self.is_active,
+                                                                       link=link_text,
+                                                                       res=res_str,
+                                                                       nod=nodes_str)
+        return presentation_text
+
     @abstractmethod
     def _set_nodes(self, nodes):
         """
@@ -129,7 +145,17 @@ class Component(ABC):
         request_link_temperature returns the stored temperature of the link
         :return: link temperature, provided by its fluid
         """
-        return self.link[0].fluid.get_temperature()
+        my_link = self.link[0]
+        temperature = my_link.return_temperature() if my_link is not None else self.return_temperature()
+        return temperature
+
+    @abstractmethod
+    def return_temperature(self):
+        """
+        return the temperature of the fluid
+        :return:
+        """
+        pass
 
     @abstractmethod
     def calculate_delta_p(self):
@@ -168,6 +194,22 @@ class Component(ABC):
         """
         pass
 
+    @abstractmethod
+    def _nodes_str(self):
+        """
+        _nodes_str is a private method which returns the nodes text as a string
+        :return: nodes string already formatted
+        """
+        pass
+
+    # @abstractmethod
+    # def _parameters_str(self):
+    #     """
+    #     _parameters_str is a private method which returns the parameters associated to the object itself
+    #     :return: parameters string already formatted
+    #     """
+    #     pass
+
 
 class FlowPassage(Component):
     """
@@ -203,17 +245,8 @@ class FlowPassage(Component):
         # Set the nodes
         self._set_nodes(nodes)
 
-    def __str__(self):
-        nodes_text = "Nodes:: \n\t" + "\n\t".join([str(node) for node in self.pressure_nodes + [self.mass_node]])
-        link_text = "Link:" + "\t".join([str(link.number) for link in self.link if link is not None])
-        presentation_text = "\nComponent:: \n\t ID: {id} \n\t Name: {name} \n\t Fluid: {fluid} \n\t isActive: {act} " \
-                            "\n\t {link} \n\t {nod}".format(id=self.number,
-                                                            name=self.name,
-                                                            fluid=self.fluid.name,
-                                                            act=self.is_active,
-                                                            link=link_text,
-                                                            nod=nodes_text)
-        return presentation_text
+    def _nodes_str(self):
+        return "Nodes:: \n\t" + "\n\t".join([str(node) for node in self.pressure_nodes + [self.mass_node]])
 
     def _set_nodes(self, nodes):
         self.pressure_nodes = []        # Define the pressure_nodes as a list
@@ -229,6 +262,9 @@ class FlowPassage(Component):
         """ return the mass node dof """
         return self.mass_node.get_dof()
 
+    def return_temperature(self):
+        return self.fluid.get_temperature()
+
     def determine_mean_density(self):
         """
         determine_mean_density gives the average density of the fluid as a function of the pressure
@@ -243,7 +279,7 @@ class FlowPassage(Component):
     def my_method(self, *args, **kwargs):
         residual = self.pressure_nodes[0].dof.get_value() - self.pressure_nodes[1].dof.get_value() - \
                    self.calculate_delta_p()
-        return np.array([pascals_2_bar(residual)])
+        return np.array([residual])
 
     def update(self, dt):
         pass
@@ -280,16 +316,8 @@ class Accumulator(Component):
         # Set the attributes
         self._set_nodes(nodes)
 
-    def __str__(self):
-        nodes_text = "Nodes:: \n\t" + "\n\t".join([str(node) for node in self.pressure_nodes + self.mass_node])
-        link_text = "Link:" + "\t".join([str(link.number) for link in self.link if link is not None])
-        presentation_text = "\nComponent:: \n\t ID: {id} \n\t Name: {name} \n\t isActive: {act} " \
-                            "\n\t {link} \n\t {nod}".format(id=self.number,
-                                                            name=self.name,
-                                                            act=self.is_active,
-                                                            link=link_text,
-                                                            nod=nodes_text)
-        return presentation_text
+    def _nodes_str(self):
+        return "Nodes:: \n\t" + "\n\t".join([str(node) for node in self.pressure_nodes + self.mass_node])
 
     def _set_nodes(self, nodes):
         self.pressure_nodes = []        # Set the pressure_nodes list
@@ -330,9 +358,8 @@ class Accumulator(Component):
     def my_method(self, *args, **kwargs):
         delta_p_1 = self.pressure_nodes[0].dof.get_value() - self.pressure_nodes[1].dof.get_value()
         delta_p_2 = self.pressure_nodes[1].dof.get_value() - self.pressure_nodes[2].dof.get_value()
-        vf = np.vectorize(pascals_2_bar)
         residual = np.subtract(np.array([delta_p_1, delta_p_2]), self.calculate_delta_p())
-        return vf(residual)
+        return residual
 
 
 class SinglePhaseTank(Accumulator):
@@ -373,6 +400,9 @@ class SinglePhaseTank(Accumulator):
         self.inlet_area = circle_area(inlet_diameter)
         self.outlet_area = circle_area(outlet_diameter)
         self.fluid_mass = initial_mass
+
+    def return_temperature(self):
+        return self.fluid.get_temperature()
 
     def set_volume(self, new_volume):
         self.volume = new_volume
@@ -639,15 +669,18 @@ class DualPhaseTank(Accumulator):
         fake_node.dof.fix()
 
         # Create the first gas tank
-        tank_1 = GasTank('FakeTank0',0, link[0], [self.pressure_nodes[0], self.pressure_nodes[1], self.pressure_nodes[1]]
+        tank_1 = GasTank('FakeTank0',0, [link[0]], [self.pressure_nodes[0], self.pressure_nodes[1], self.pressure_nodes[1]]
                          + [self.mass_node[0], fake_node], fluid[0], (1-filling)*volume, [flow_factors[0], np.nan],
                          inlet_diameter, np.nan, initial_pressure)
         # Create the second liquid tank
-        tank_2 = LiquidTank('FakeTank1', 1, link[1], [self.pressure_nodes[1], self.pressure_nodes[1],
+        tank_2 = LiquidTank('FakeTank1', 1, [link[1]], [self.pressure_nodes[1], self.pressure_nodes[1],
                             self.pressure_nodes[2]] + [fake_node, self.mass_node[1]], fluid[1], volume,
                             [np.nan, flow_factors[1]], np.nan, outlet_diameter, filling)
         # Return the tanks
         return [tank_1, tank_2]
+
+    def return_temperature(self):
+        return self.phases_tanks[1].return_temperature()
 
     def calculate_delta_p_inlet(self):
         return self.phases_tanks[0].calculate_delta_p_inlet()
@@ -706,8 +739,9 @@ class LiquidValve(Valve):
     def calculate_delta_p(self):
         rho_ = self.determine_mean_density()                        # Get the density of the fluid
         sp_g = self.fluid.sp                                        # Get the specific gravity
-        volume_flow = 3600 *self.mass_node.dot.get_value() / rho_   # Get the volume flow in m^3/h
-        return 1e5 * sp_g * (volume_flow / self.flow_factor) ** 2
+        volume_flow = 3600 *self.mass_node.dof.get_value() / rho_   # Get the volume flow in m^3/h
+        delta_p = sp_g * (volume_flow / self.flow_factor) ** 2      # Calculate the delta p
+        return bar_2_pascals(delta_p)
 
 
 class GasValve(Valve):
@@ -722,9 +756,12 @@ class GasValve(Valve):
         super(GasValve, self).__init__(name, identifier, nodes, fluid, link, flow_factor)
 
     def calculate_delta_p(self):
-        volume_flow = 3600 *self.mass_node.dof.get_value() / self.fluid.std_density     # Get the standard flow [m^3/h]
+        volume_flow = 60* 1000 *self.mass_node.dof.get_value() / self.fluid.std_density # Get the standard flow [l/min]
         sp_g = self.fluid.sp                                                            # Get the specific gravity
-        return 1e5 * sp_g * (volume_flow / self.flow_factor) ** 2
+        t0 = self.request_link_temperature()                                            # Get the temperature [K]
+        p0 = pascals_2_bar(self.pressure_nodes[0].dof.get_value())                      # Get upstream pressure [bars]
+        delta_p = (1/8062**2) * (t0/p0) * sp_g * (volume_flow / self.flow_factor) ** 2  # Get the deltaP
+        return bar_2_pascals(delta_p)
 
 
 class Pipe(FlowPassage):
@@ -794,8 +831,8 @@ class Fitting(FlowPassage):
 
     def calculate_delta_p(self):
         rho_ = self.determine_mean_density()
-        return 0.5 * self.coefficient * (self.mass_node.dof.get_value() / self.area) ** 2 / rho_
-
+        delta_p = 0.5 * self.coefficient * (self.mass_node.dof.get_value() / self.area) ** 2 / rho_
+        return delta_p
 
 class Injector(FlowPassage):
     """
@@ -842,6 +879,50 @@ class PressureRegulator(FlowPassage):
             2. threshold: minimum DeltaP above which the instrument can regulate the pressure to the output given
     """
 
+    class PressureRegulatorInterpolator:
+        """
+        PressureRegulatorInterpolator constitutes a nested class which serves
+        for interpolating the data of the pressure regulator
+            Attrs:
+                1. interpolator: interp2d object each with their set
+                3. weight: compute the weight of the interpolator
+        """
+        def __init__(self, curves_data):
+            """
+            class initializer
+            :param curves_data: dictionary containing the data from the curves
+            """
+
+            # Process the data
+            curves = [np.append(record['pressure'] * np.ones((len(record['curve']), 1)),
+                      np.array(record['curve']), axis=1) for record in curves_data['data']]         # Extract the curves
+            curves = np.concatenate(curves, axis=0)                                                 # Concatenate them
+            f = np.vectorize(std_ft_min_2_std_l_min)                                                # Vectorize the func
+            curves[:, 1] = f(curves[:,1])
+            points, values = curves[:,:2], curves[:,2]
+
+            # Set the attributes
+            self.set_p = values[0]
+            self.points = points
+            self.values = values
+            self.point = np.empty(shape=(1,2))
+            self.weight = None
+
+        def set_weight(self, variance, set_pressure):
+            """
+            set_weight computes the weight of the interpolator
+            :param variance: variance of pressure
+            :param set_pressure: desired pressure for the regulator
+            :return: nothing
+            """
+            self.weight = 1 - np.abs(self.set_p - set_pressure)/variance
+
+        def interpolate(self, x, y):
+            """ interpolate the data with griddata """
+            self.point[0][0], self.point[0][1] = x, y
+            z = griddata(self.points, self.values, self.point)
+            return z[0]
+
     def __init__(self, name, identifier, nodes, fluid, link, set_pressure, table):
         """
         class initializer
@@ -857,39 +938,26 @@ class PressureRegulator(FlowPassage):
         super(PressureRegulator, self).__init__(name, identifier, link, fluid, nodes)
 
         # Set the other attributes
-        x1, y1, z1, set_p1 = self._recondition_data(table[0])
-        _, _, z2, set_p2 = self._recondition_data(table[1])
-        z = set_pressure / set_p1 * z1 + set_pressure / set_p2 * z2
+        self.set_pressure = set_pressure
+        self.interpolator = [self.PressureRegulatorInterpolator(curve) for curve in table]
 
-        # Set the remaining attributes
-        self.interpolator = interp2d(x, y, z, kind='linear')
-
-    @staticmethod
-    def _recondition_data(table):
-        """
-        _recondition_data takes the record from the json file and outputs the x,y,z vectors
-        :param table: data coming from the json file for one set pressure
-        :return: x, y, z, set_pressure
-        """
-        curves = [np.append(record['pressure'] * np.ones((len(record['curve']), 1)),
-                            np.array(record['curve']), axis=1) for record in table['data']]
-        curves = np.concatenate(curves, axis=0)
-        f = np.vectorize(std_ft_min_2_std_l_min)
-        x, y, z = curves[:, 0], f(curves[:, 1]), curves[:, 2]
-        set_p = z[0]
-        # Return the output
-        return x, y, z, set_p
+        # Compute the variance
+        variance = np.abs(self.interpolator[1].set_p - self.interpolator[0].set_p)      # Get the interpolator variance
+        self.interpolator[0].set_weight(variance, self.set_pressure)
+        self.interpolator[1].set_weight(variance, self.set_pressure)
 
     def determine_mean_density(self):
-        """ determine the mean density at the inlet """
-        # First compute the density at the components mean pressure
-        inlet_pressure = self.pressure_nodes[0].dof.get_value()                                 # Get the pressure at the inlet
-        return self.fluid.compute_density(inlet_pressure, self.request_link_temperature())      # Compute the density of the fluid
+       """ determine the mean density at the inlet """
+       # First compute the density at the components mean pressure
+       inlet_pressure = self.pressure_nodes[0].dof.get_value()                                 # Get the pressure at the inlet
+       return self.fluid.compute_density(inlet_pressure, self.request_link_temperature())      # Compute the density of the fluid
 
     def calculate_delta_p(self):
         volume_flow = 60 * 1000 * self.mass_node.dof.get_value() / self.fluid.std_density  # Get the standard flow [l/min]
-        inlet_pressure = pascals_2_bar(self.pressure_nodes[0].dof.get_value())             # Get the inlet pressure in bars
-        outlet_pressure = self.interpolator(inlet_pressure, volume_flow)                   # Compute outlet pressure
+        inlet_pressure = pascals_2_bar(self.pressure_nodes[0].dof.get_value())             # Get the inlet pressure in bar
+        out_p1 = self.interpolator[1].interpolate(inlet_pressure, volume_flow)             # Get the first outlet pressure
+        out_p0 = self.interpolator[0].interpolate(inlet_pressure, volume_flow)             # Get the second outlet pressure
+        outlet_pressure = self.interpolator[0].weight*out_p0 + self.interpolator[1].weight*out_p1
         delta_p = inlet_pressure - outlet_pressure
         return bar_2_pascals(delta_p)
 

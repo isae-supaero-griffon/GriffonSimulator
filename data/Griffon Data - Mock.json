@@ -220,7 +220,8 @@
     }
   },
   "hydraulic_table":  {
-    "solver": {"name": "Powell", "tol": 1e-6, "maxiter": 2000, "scale": 1e5},
+    "solver": {"name": "Nelder-Mead", "tol": 1e-2, "scale": 1e6,
+      "options":{"maxiter": 5000, "disp": "False", "adaptive": "True"}},
     "fluids": [
       {
         "fluid": "Gas",
@@ -248,7 +249,7 @@
           "fluid": [{"name": "Air", "T": 298.0}],
           "volume": 1e-3,
           "outlet_diameter": 0.01,
-          "initial_pressure": 300e5,
+          "initial_pressure": 290e5,
           "flow_factor": 0.78,
           "link": [""],
           "nodes": [
@@ -295,7 +296,7 @@
           "type": "PressureRegulator",
           "link": [1],
           "fluid": [{"name": "Air", "T": 298.0}],
-          "set_pressure": 57,
+          "set_pressure": 65,
           "table": [{"Set":1, "data":
   [{"pressure": 68.9,"curve":[[0.011433242562353346,35.836355084138532],[0.60366315353432876,35.082430822473576],[1.4925275199141932,34.202527829746579],[2.3821711361769191,33.699099936675275],[3.4697442226855415,33.19534735615278],[4.3591280889873154,32.566427763196259],[5.4467011754959369,32.062675182673765],[6.2371203066747531,31.433917933442835],[7.4239178782672841,31.055494709079962]]},
    {"pressure":206.0,"curve":[[0.20910296284729651,35.710538696802125],[1.1958930645063004,34.328506560808584],[3.0746645320766075,33.572471830710853],[5.54722441038459,32.815463038259587],[9.1086561250059823,32.182160164711952],[13.3638799853318,32.049687684626129],[16.925571449914138,31.54187651096375],[21.180795310239958,31.409404030877933],[24.742746524783247,31.027084557100768],[27.710649578627883,30.520247445791963],[31.074151823003355,29.887269259695554],[34.239984347093895,29.380107460935555],[36.713842975206653,29.250557167910458]]},
@@ -325,7 +326,7 @@
           "name": "pressurizer_valve",
           "type": "GasValve",
           "fluid": [{"name": "Air", "T": 298.0}],
-          "flow_factor": 0.15,
+          "flow_factor": 0.45,
           "link": [2],
           "nodes": [
             {
@@ -365,7 +366,7 @@
             }
           ]
         },
-          {
+        {
           "identifier": 5,
           "name": "oxidizer_tank",
           "type": "OxidizerTank",
@@ -377,7 +378,7 @@
           "flow_factors": [0.9801, 3],
           "inlet_diameter": 0.01,
           "outlet_diameter": 0.01,
-          "initial_pressure": 52e5,
+          "initial_pressure": 60e5,
           "filling": 0.85,
           "nodes": [
             {
@@ -435,15 +436,15 @@
           "diameter": 15e-3,
           "nodes": [
             {
-              "identifier": 17,
+              "identifier": 16,
               "type": "pressure"
             },
             {
-              "identifier": 18,
+              "identifier": 17,
               "type": "mass"
             },
             {
-              "identifier": 19,
+              "identifier": 18,
               "type": "pressure"
             }
           ]
@@ -454,18 +455,18 @@
           "type": "LiquidValve",
           "link": [7],
           "fluid": [{"name": "H2O2", "T": 298}],
-          "flow_factor": 4,
+          "flow_factor": 4.38,
           "nodes": [
             {
-              "identifier": 19,
+              "identifier": 18,
               "type": "pressure"
             },
             {
-              "identifier": 20,
+              "identifier": 19,
               "type": "mass"
             },
             {
-              "identifier": 21,
+              "identifier": 20,
               "type": "pressure"
             }
           ]
@@ -473,22 +474,21 @@
         {
           "identifier": 9,
           "name": "manual_valve",
-          "type": "Fitting",
-          "fluid": [{"name": "H2O2", "T": 298.0}],
+          "type": "LiquidValve",
           "link": [8],
-          "coefficient": 0,
-          "diameter": 12.7e-3,
+          "fluid": [{"name": "H2O2", "T": 298}],
+          "flow_factor": 6.42,
           "nodes": [
             {
-              "identifier": 21,
+              "identifier": 20,
               "type": "pressure"
             },
             {
-              "identifier": 22,
+              "identifier": 21,
               "type": "mass"
             },
             {
-              "identifier": 23,
+              "identifier": 22,
               "type": "pressure"
             }
           ]
@@ -503,15 +503,15 @@
           "diameter": 12.7e-3,
           "nodes": [
             {
-              "identifier": 23,
+              "identifier": 22,
               "type": "pressure"
             },
             {
-              "identifier": 24,
+              "identifier": 23,
               "type": "mass"
             },
             {
-              "identifier": 25,
+              "identifier": 24,
               "type": "pressure"
             }
           ]
@@ -570,15 +570,15 @@
           "link": [10],
           "nodes": [
             {
-              "identifier": 25,
+              "identifier": 24,
               "type": "pressure"
             },
             {
-              "identifier": 26,
+              "identifier": 25,
               "type": "mass"
             },
             {
-              "identifier": 27,
+              "identifier": 26,
               "type": "pressure"
             }
           ]

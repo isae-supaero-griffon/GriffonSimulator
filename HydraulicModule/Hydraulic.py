@@ -81,7 +81,7 @@ class HydraulicModule:
         return presentation_text
 
     def solver_print(self):
-        return "\n" + ", ".join(("{0}: {1}".format(key, value) for key, value in self.solver_params.items()))
+        return "\n Solver:: " + ", ".join(("{0}: {1}".format(key, value) for key, value in self.solver_params.items()))
 
     def dof_print(self):
         return "Hydraulic Module:: \n" + str(self.dofs)
@@ -262,8 +262,13 @@ class HydraulicModule:
             :param x: non-fixed dof values in iterable format according to the right order
             :return: residual value
             """
-            # Set their value
-            for value, dof in zip(x, non_fixed_dofs): dof.set_value(scale*value)
+            # Set their value - only for pressure dofs
+            for value, dof in zip(x, non_fixed_dofs):
+                if dof.type == "pressure":
+                    dof.set_value(scale*value)
+                else:
+                    dof.set_value(value)
+
 
             # Run the methods from the component
             res = np.concatenate([component.my_method() for component in self.components], axis=0)
@@ -281,18 +286,17 @@ class HydraulicModule:
             :param x: on-fixed dof values in iterable format according to the right order
             :return: objective function (norm of residual ---> solution tends to 0)
             """
-            return np.linalg.norm(residual(x))
+            return np.linalg.norm(residual(x))/scale
 
         # Define the optimization bounds
-        #TODO: review how bounds are implemented
-        bounds = opt.Bounds(lb=np.zeros(shape=(len(non_fixed_dofs), 1)), ub=np.full((len(non_fixed_dofs), 1), np.inf))
-        x0_fun = np.vectorize(lambda x: x.get_value())
-        x0 = x0_fun(non_fixed_dofs) / scale
+        #TODO: implement a solver for root finding, investigate if its better than optimize
+        x0_fun = np.vectorize(lambda x: x.get_value()/scale if x.type == "pressure" else x.get_value())
+        x0 = x0_fun(non_fixed_dofs)
 
         # Solve the problem:
-        sol = opt.minimize(optimize_fun, x0, method=self.solver_params['name'], jac=None, bounds=bounds,
+        sol = opt.minimize(optimize_fun, x0, method=self.solver_params['name'], jac=None,
                            tol=self.solver_params['tol'],
-                           options={'maxiter': self.solver_params['maxiter'], 'disp': False})
+                           options=self.solver_params['options'])
         return sol
 
 

@@ -55,7 +55,7 @@ def test_hydraulic_module_initiation():
     json_interpreter = generate_data_layer("Griffon Data - Mock.json")
     hydraulic_table = json_interpreter.return_hydraulic_table()
 
-    # Generate the hydraulic module
+    # Generate the hydraulic module/
     my_module = HydraulicModule(hydraulic_table)
 
     # Set the exit chamber pressure
@@ -106,7 +106,7 @@ def test_hydraulic_module_network_solution():
     my_module.initialize_pressure_dofs()
 
     # Initialize the mass flow
-    ox_flow, pressurizer_flow = 1, 0.001
+    ox_flow, pressurizer_flow = 1.17484, 0.01137
     oxidizer_tank = my_module.checkout_component("oxidizer_tank")
     oxidizer_tank.mass_node[1].dof.set_value(value=ox_flow)
     pressurizer_tank = my_module.checkout_component("pressurizer_tank")
@@ -121,7 +121,7 @@ def test_hydraulic_module_network_solution():
         output.append(comp.my_method())
 
     # Concatenate the arrays
-    output = np.concatenate([ar for ar in output])
+    output = np.concatenate([ar for ar in output])/1e5
 
     print(output)
 
@@ -266,8 +266,8 @@ if __name__ == '__main__':
 
     # Call the test method
     # test_hydraulic_table_generation()
-    test_hydraulic_module_initiation()
-    # test_hydraulic_module_network_solution()
+    # test_hydraulic_module_initiation()
+    test_hydraulic_module_network_solution()
     # test_hydraulic_module_network_solution_transient()
     # test_hydraulic_module_valve()
     # generate_injector_json_table()
