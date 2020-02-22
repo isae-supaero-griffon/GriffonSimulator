@@ -179,7 +179,6 @@ def single_case_analysis_one_port_review():
                             }
 
     # -------------- Generate the initializer:
-
     init_obj = Initializer(init_parameters=init_parameters,
                            simulation_parameters=simulation_parameters,
                            json_interpreter=json_interpreter)
@@ -231,7 +230,7 @@ def single_case_analysis_one_port_image_geometry():
 
     # ------------ Generate the data-layer:
 
-    json_interpreter = generate_data_layer()
+    json_interpreter = generate_data_layer("Griffon Data - Mock.json")
 
     # ------------ Generate the Fourier Coefficients:
     #
@@ -247,15 +246,15 @@ def single_case_analysis_one_port_image_geometry():
     # a_s, b_s = generate_fourier_coefficients(n_coefs, period, my_fun_2, delta1, delta2)
     # delta1, delta2 = 0.12, 0.3
 
-
     # ---------- Pack the inputs:
 
     # Define the oxidizer flow
-    ox_flow = 1.2
+    ox_flow = 1.08
 
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': SinglePortImageGeometry, 'L': 0.40,
+                                                            'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel,
                                                             'externalRadius': 0.05, 'imagePixelSize': 2048,
                                                             'imageMeterSize': 0.1},
 
@@ -319,10 +318,121 @@ def single_case_analysis_one_port_image_geometry():
 
     # --------------- Export results to csv files:
 
+    # # data directory
+    # data_directory = "../data/data_tests"
+    #
+    # file_name_expression = "Griffon Output Test {number}.csv"
+    #
+    # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
+    #                                                                         file_name_expression]))
+
+    # --------------- Plot the results
+
+    simulation_object.results_collection.elements_list[0].combustion.plot_results()
+    simulation_object.results_collection.elements_list[0].trajectory.plot_results()
+
+    # ---------------- Plot the geometries before and after:
+
+    # simulation_object.combustion_module.geometry.export_geometry(
+    #     file_name="../Design/Design Files/geometry_after_burn.txt")
+    # geometry_object_original.export_geometry(file_name="../Design/Design Files/original_geometry.txt")
+    geometry_object_original.draw_geometry()
+    simulation_object.combustion_module.geometry.draw_geometry()
+
+
+def single_case_analysis_1d_single_port():
+    """ case study for 1D geometry design """
+
+    # ------------ Generate the data-layer:
+
+    json_interpreter = generate_data_layer("Griffon Data - Mock.json")
+
+    # ---------- Pack the inputs:
+
+    # Define the oxidizer flow
+    ox_flow = 1.08
+
+    init_parameters = {
+                        'combustion': {
+                                       'geometric_params': {
+                                                            'type': ConicCircularPort1D,
+                                                            'L': 0.4,
+                                                            'r_init': 0.06/2,
+                                                            'r_final': 0.09/2,
+                                                            'depth': 0.2,
+                                                            'r_ext': 0.05,
+                                                            'N': 100,
+                                                            'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel
+                                                            },
+
+                                       'nozzle_params': {
+                                                         'At': 0.000589,
+                                                         'expansion': 5.7,
+                                                         'lambda_e': 0.98,
+                                                         'erosion': 0},
+
+                                       'set_nozzle_design': False,
+
+                                       'design_params': {
+                                                         'gamma': 1.27,
+                                                         'p_chamber': 3400000,
+                                                         'p_exit': 100000,
+                                                         'c_star': 1500,
+                                                         'ox_flow': ox_flow,
+                                                         'OF': 5},
+                                      },
+
+
+                      }
+
+
+    simulation_parameters = {
+                              'CombustionModel': CombustionObject1D,
+
+                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.0001, 'dt': 0.02,
+                                             'max_burn_time': 5},
+
+                              'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.05,
+                                                 'injection_loss': 0.5, 'area_injection': 0.000105, 'system': SystemDynamic},
+
+                              'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
+                                             'simulation_time': 60}
+                            }
+
+    # -------------- Generate the initializer:
+    init_obj = Initializer(init_parameters=init_parameters,
+                           simulation_parameters=simulation_parameters,
+                           json_interpreter=json_interpreter)
+
+    # -------------- Generate the simulation object:
+
+    simulation_object = SimulationObject(initializer_collection=init_obj)
+    print("Minimum Thickness Before: {x:5.5f} mm \n".format(x=1000*simulation_object.combustion_module.geometry.min_bloc_thickness()))
+
+    # -------------- Generate deep copy of geometry object:
+
+    geometry_object_original = deepcopy(simulation_object.combustion_module.geometry)
+
+    # --------------- Run the simulation:
+
+    simulation_object.run_simulation_in_batch()
+    print("Minimum Thickness After: {x:5.5f} mm \n".format(x=1000*simulation_object.combustion_module.geometry.min_bloc_thickness()))
+
+    # Print the total mass
+    print("\nRockets Total Mass: {0} kgs".format(simulation_object.mass_simulator_module.get_mass()))
+
+    # Print the splitted masses
+    print(simulation_object.mass_simulator_module)
+
+    # Print combustion results
+    print(simulation_object.combustion_module)
+
+    # --------------- Export results to csv files:
+
     # data directory
     data_directory = "../data/data_tests"
 
-    file_name_expression = "Griffon Output Test {number}.csv"
+    file_name_expression = "Griffon Output Test 1D - {number}.csv"
 
     simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
                                                                             file_name_expression]))
@@ -334,315 +444,11 @@ def single_case_analysis_one_port_image_geometry():
 
     # ---------------- Plot the geometries before and after:
 
-    geometry_object_original.export_geometry(file_name="../Design/Design Files/original_geometry.txt")
-    simulation_object.combustion_module.geometry.export_geometry(file_name="../Design/Design Files/geometry_after_burn.txt")
+    simulation_object.combustion_module.geometry.export_geometry(
+        file_name="../Design/Design Files/geometry_after_burn_1D.txt")
+    geometry_object_original.export_geometry(file_name="../Design/Design Files/original_geometry_1D.txt")
     geometry_object_original.draw_geometry()
     simulation_object.combustion_module.geometry.draw_geometry()
-
-
-def single_case_analysis_three_circular_ports():
-    """
-    Study the behavior of the rocket for a single case with ThreeCircularPort
-    :return: nothing
-    """
-
-    # ------------ Generate the data-layer:
-
-    json_interpreter = generate_data_layer("Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json")
-
-    # ---------- Pack the inputs:
-
-    # Set the ox_flow
-    ox_flow = 1.12
-
-    init_parameters = {
-                        'combustion': {
-                                       'geometric_params': {'type': ThreeCircularPorts, 'L': 0.325,
-                                                                'portsIntialRadius': 0.016,
-                                                                'r_ext': 0.07,
-                                                                'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel},
-
-                                       'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
-                                                         'erosion': 0},
-
-                                       'set_nozzle_design': True,
-
-                                       'design_params': {'gamma': 1.27, 'p_chamber': 3600000, 'p_exit': 100000,
-                                                         'c_star': 1500, 'ox_flow': ox_flow, 'OF': 5},
-                                      },
-
-
-                      }
-    simulation_parameters = {
-                              'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.01,
-                                             'max_burn_time': 5},
-
-                              'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
-                                                 'system': SystemDynamic,'extra_filling': 0.1,
-                                                 'injection_loss': 0.5, 'area_injection': 0.000105},
-
-                              'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                             'simulation_time': 60}
-                            }
-
-    # -------------- Generate the initializer:
-
-    init_obj = Initializer(init_parameters=init_parameters,
-                           simulation_parameters=simulation_parameters,
-                           json_interpreter=json_interpreter)
-
-    # -------------- Generate the simulation object:
-
-    simulation_object = SimulationObject(initializer_collection=init_obj)
-
-    # --------------- Run the simulation:
-
-    simulation_object.run_simulation_in_batch()
-
-    # Print the total mass
-    print("\nRockets Total Mass: {0} kgs".format(simulation_object.mass_simulator_module.get_mass()))
-
-    # Print the splitted masses
-    print(simulation_object.mass_simulator_module)
-
-    # # data directory
-    # data_directory = "../data/data_tests"
-    #
-    # file_name_expression = "Tentative Design {number}.csv"
-    #
-    # simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
-    #                                                                         file_name_expression]))
-    #
-    # # Save to json the mass simulator dict
-    # output_file = "Tentative Design 1.json"
-    # with open("/".join([data_directory, output_file]), 'w') as f:
-    #     json.dump(simulation_object.mass_simulator_module.dict, f)
-
-    # --------------- Plot the results
-
-    simulation_object.results_collection.elements_list[0].combustion.plot_results()
-    simulation_object.results_collection.elements_list[0].trajectory.plot_results()
-
-
-    # Show any plots
-    plt.show()
-
-
-def generate_analysis_cases_three_port_geometry():
-    """ generate analysis cases generates the associated dictionaries that will be used in the
-        run in batch method.
-        :return InitializerCollection"""
-
-    # ------------ Generate the data-layer:
-
-    json_interpreter = generate_data_layer("Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json")
-
-    # Set the parameters over which we want to iterate
-    burn_time = None
-    external_radius = 0.01*np.linspace(5, 8, 10)
-    chamber_length = 0.4
-    internal_radius = 0.015
-    ox_flows = 0.001*np.linspace(50, 1000, 20)
-
-    # Get the Initializer Collection
-    collection = InitializerCollection([])
-    combinations = list(itertools.product(external_radius, ox_flows))
-
-    for r_ext, ox_flow in combinations:
-
-        # ---------- Pack the inputs:
-
-        init_parameters = {
-                            'combustion': {
-                                           'geometric_params': {'type': ThreeCircularPorts, 'L': chamber_length,
-                                                                'portsIntialRadius': internal_radius,
-                                                                'r_ext': r_ext,
-                                                                'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
-
-                                           'nozzle_params': {'At': 0.000589,
-                                                             'expansion': 5.7,
-                                                             'lambda_e': 0.98,
-                                                             'erosion': 0},
-
-                                           'set_nozzle_design': True,
-
-                                           'design_params': {'gamma': 1.27,
-                                                             'p_chamber': 3600000,
-                                                             'p_exit': 100000,
-                                                             'c_star': 1500,
-                                                             'ox_flow': ox_flow,
-                                                             'OF': 5},
-                                          },
-
-
-                            }
-
-        simulation_parameters = {
-                                  'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.0025, 'dt': 0.05,
-                                                 'max_burn_time': burn_time},
-
-                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
-                                                     'system': SystemDynamic, 'extra_filling': 0.1,
-                                                     'injection_loss': 0.5, 'area_injection': 0.000105},
-
-                                  'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                                 'simulation_time': 60}
-                                }
-
-        # Add initializer to the collection
-        new = Initializer(init_parameters=init_parameters,
-                          simulation_parameters=simulation_parameters,
-                          json_interpreter=json_interpreter)
-        collection.add_element(new)
-
-    # Return the collection
-    return collection
-
-
-def generate_analysis_cases_port_geometry():
-    """ generate analysis cases generates the associated dictionaries that will be used in the
-        run in batch method.
-        :return InitializerCollection"""
-
-    # ------------ Generate the data-layer:
-
-    json_interpreter = generate_data_layer("Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json")
-
-    # Set the parameters over which we want to iterate
-    chamber_length = 0.3
-    external_radius = 0.05
-    internal_radius = 0.01*np.linspace(1, 3, 10)
-    ox_flows = 0.001*np.linspace(50, 200, 10)
-
-    # Get the Initializer Collection
-    collection = InitializerCollection([])
-    combinations = list(itertools.product(internal_radius, ox_flows))
-
-    for r_int, ox_flow in combinations:
-
-        # ---------- Pack the inputs:
-
-        init_parameters = {
-                            'combustion': {
-                                           'geometric_params': {'type': OneCircularPort, 'L': chamber_length,
-                                                                'rintInitial': r_int,
-                                                                'rext0': external_radius,
-                                                                'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
-
-                                           'nozzle_params': {'At': 0.000589,
-                                                             'expansion': 5.7,
-                                                             'lambda_e': 0.98,
-                                                             'erosion': 0},
-
-                                           'set_nozzle_design': True,
-
-                                           'design_params': {'gamma': 1.27,
-                                                             'p_chamber': 3600000,
-                                                             'p_exit': 100000,
-                                                             'c_star': 1500,
-                                                             'ox_flow': ox_flow,
-                                                             'OF': 5},
-                                          },
-
-
-                            }
-
-        simulation_parameters = {
-                                  'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.005, 'dt': 0.05,
-                                                 'max_burn_time': 8},
-
-                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
-                                                     'system': SystemDynamic, 'extra_filling': 0.05,
-                                                     'injection_loss': 0.5, 'area_injection': 0.000105},
-
-                                  'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                                 'simulation_time': 60}
-                                }
-
-        # Add initializer to the collection
-        new = Initializer(init_parameters=init_parameters,
-                          simulation_parameters=simulation_parameters,
-                          json_interpreter=json_interpreter)
-        collection.add_element(new)
-
-    # Return the collection
-    return collection
-
-
-def generate_analysis_cases_multi_port_geometry():
-    """ generate analysis cases generates the associated dictionaries that will be used in the
-        run in batch method.
-        :return InitializerCollection"""
-
-    # ------------ Generate the data-layer:
-
-    json_interpreter = generate_data_layer("Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json")
-
-    # Set the parameters over which we want to iterate
-    ports_number = 4
-    burn_time = 5
-    external_radius = 0.08
-    chamber_length = 0.4
-    internal_radius = 0.01*np.linspace(0.5, 2, 10)
-    r_center = 0.01
-    ox_flows = 0.001*np.linspace(50, 400, 10)
-
-    # Get the Initializer Collection
-    collection = InitializerCollection([])
-    combinations = list(itertools.product(internal_radius, ox_flows))
-
-    for r_int, ox_flow in combinations:
-
-        # ---------- Pack the inputs:
-
-        init_parameters = {
-                            'combustion': {
-                                           'geometric_params': {'type': MultipleCircularPortsWithCircularCenter,
-                                                                'L': chamber_length,
-                                                                'N': ports_number,
-                                                                'ringPortsIntialRadius': r_int,
-                                                                'centralPortInitialRadius': r_center,
-                                                                'r_ext': external_radius,
-                                                                'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
-
-                                           'nozzle_params': {'At': 0.000589,
-                                                             'expansion': 5.7,
-                                                             'lambda_e': 0.98,
-                                                             'erosion': 0},
-
-                                           'set_nozzle_design': True,
-
-                                           'design_params': {'gamma': 1.27,
-                                                             'p_chamber': 3600000,
-                                                             'p_exit': 100000,
-                                                             'c_star': 1500,
-                                                             'ox_flow': ox_flow,
-                                                             'OF': 5},
-                                          },
-
-
-                            }
-
-        simulation_parameters = {
-                                  'combustion': {'ox_flow': ox_flow, 'safety_thickness': 0.0025, 'dt': 0.05,
-                                                 'max_burn_time': burn_time},
-
-                                  'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD',
-                                                     'system': SystemDynamic, 'extra_filling': 0.05,
-                                                     'injection_loss': 0.5, 'area_injection': 0.000105},
-
-                                  'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
-                                                 'simulation_time': 60}
-                                }
-
-        # Add initializer to the collection
-        new = Initializer(init_parameters=init_parameters,
-                          simulation_parameters=simulation_parameters,
-                          json_interpreter=json_interpreter)
-        collection.add_element(new)
-
-    # Return the collection
-    return collection
 
 
 def run_design_cases():
@@ -692,6 +498,7 @@ def generate_fourier_coefficients(n_coefs, period, fun, *args):
 
     # Return the results
     return a_s, b_s
+
 
 def my_fun_2(x, *args):
     delta1, delta2 = args[0], args[1]
@@ -750,5 +557,6 @@ if __name__ == '__main__':
     # single_case_analysis_three_circular_ports()
     # single_case_analysis_one_port_review()
     single_case_analysis_one_port_image_geometry()
+    # single_case_analysis_1d_single_port()
     plt.show()
     # single_case_analysis_one_circular_port()
