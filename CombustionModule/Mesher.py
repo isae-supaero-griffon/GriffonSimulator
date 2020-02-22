@@ -84,7 +84,6 @@ class Mesh(ABC):
         return np.array(x), np.array(areas), np.array(perimeters)
 
 
-
 class UniformlySpacedMesh(Mesh):
     """
     The UniformlySpacedMesh inherits from the Mesh class.

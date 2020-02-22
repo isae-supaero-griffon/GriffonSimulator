@@ -881,7 +881,7 @@ class SinglePortImageGeometry(Geometry):
             # Extract the first contour of the image
             proxy_image = self.image
             contours, _ = cv2.findContours(proxy_image, 1, 2)
-            cnt = contours[0]
+            cnt = max(contours, key=lambda x: x.shape[0])
 
             # Write the file
             with open(file_name, 'w') as f:
@@ -894,7 +894,6 @@ class SinglePortImageGeometry(Geometry):
                                                                      self.imageMeterSize/2)))
         else:
             raise ValueError("Image is black : please generate geometry")
-
 
     def draw_geometry(self):
 
@@ -980,10 +979,9 @@ class Geometry1D(ABC):
         3. min_thickness: min material thickness with the external part of the cylinder
         3. interpolator: method used to aid in the interpolation of the geometries
     """
+    # TODO: associate the Geometry1D model with the Geometry - 0D models in a redesign of the code
 
-    #TODO: associate the Geometry1D model with the Geometry - 0D models in a redesign of the code
-
-    def __init__(self, L, N, r_ext):
+    def __init__(self, L, N, r_ext, regressionModel):
         """
         Class initializer
         :param L: float containing the grain-length
@@ -994,14 +992,16 @@ class Geometry1D(ABC):
         super(Geometry1D, self).__init__()
 
         # Check the inputs
-        assert  L > 0, "Grain length (L) must be greater than 0 \n"
-        assert  r_ext > 0, "Grain external radius (r_ext) must be greater than 0 \n"
-        assert  N > 0, "Number of nodes (N) must be greater than 0 \n"
-        assert  isinstance(N, int), "Number of nodes (N) must be an integer \n"
+        assert L > 0, "Grain length (L) must be greater than 0 \n"
+        assert r_ext > 0, "Grain external radius (r_ext) must be greater than 0 \n"
+        assert N > 0, "Number of nodes (N) must be greater than 0 \n"
+        assert isinstance(N, int), "Number of nodes (N) must be an integer \n"
+        assert isinstance(regressionModel, RegressionModel), "Please insert a valid RegressionModel instance. \n"
 
         # Set attributes
         self.L = L
         self.r_ext = r_ext
+        self.regression_model = regressionModel
         self.interpolator = None
 
     def _generate_mesh(self, N):
@@ -1011,14 +1011,17 @@ class Geometry1D(ABC):
         :return: UniformSpacedMesh instance
         """
         return UniformlySpacedMesh("Mesh-1D", self, N)
-        # return GeometricMesh("Mesh-1D", self, N, bias=1.01)
 
-    @abstractmethod
     def _generate_interpolator(self):
         """
         _generate_interpolator handles the geneation of the interpolator object.
         :return: interpolator object or collection of interpolators
         """
+        # Collect the area data
+        x, areas, perimeters = self.mesh.return_data()
+
+        # Return the output
+        return [Interpolator(x, areas), Interpolator(x, perimeters)]
 
     @abstractmethod
     def my_cell_factory(self, i, x):
@@ -1030,102 +1033,10 @@ class Geometry1D(ABC):
         """
         pass
 
-    @abstractmethod
     def _update_interpolator(self):
         """ _update_interpolator updates the values present in the interpolator to the
         values present in the cells.
         """
-        pass
-
-    @abstractmethod
-    def print_geometry_to_file(self, file_name, time=0):
-        """ print_geometry_to_file prints the local current state of the geometry
-        :param file_name: string containing name of file towards which to print the geometry
-        :param time: simulation time at which to print the geometry
-        """
-        pass
-
-    @abstractmethod
-    def solve_mass_flux(self, regression_model, m_ox, rho_f):
-        """
-        solve_mass_flux solves the equation by using the RK4 method
-        :param regression_model: RegressionModel instance.
-        :param m_ox: mass flow of oxidizer
-        :param rho_f: fuel density
-        :return: solution_vector, mass_flows tupple, mass_fluxes tupple, O/F ratio at the end of port,
-        """
-        pass
-
-    @abstractmethod
-    def regress(self, solution, regression_model, m_ox, dt):
-        """
-        regress method performs the regression of the fuel grain. Updates the geometry
-        along the port by updating the cells on the mesh from the solution obtained in solve_mass_flux
-        :param solution: vector of fuel mass fluxes obtained from solve_mass_flux
-        :param regression_model: RegressionModel instance.
-        :param m_ox: mass flow of oxidizer
-        :param dt: time of simulation
-        :return: nothing
-        """
-        pass
-
-    def min_bloc_thickness(self):
-        """
-        min_block_thickness returns the minimum thickness of the block
-        :return: min_block thickness
-        """
-        min_block_thickness = self.r_ext
-        for my_cell in self.mesh.cells:
-            if my_cell.min_thickness < min_block_thickness:
-                min_block_thickness = my_cell.min_thickness
-
-        # Return the min block thickness
-        return min_block_thickness
-
-
-
-class SingleCircularPort1D(Geometry1D):
-    """
-    SingleCircularPort1D class inherits from the Geometry1D class and implements
-    the case of a single circular port. For such case then, the profile expected for the
-    port is a circle of constant radius.
-
-    Attributes:
-        1. r_int: float indicating the internal radius
-    """
-
-    def __init__(self, L, r_ext, N, r_init):
-        """
-        class initializer
-        :param r_init: float indicating the internal radius.
-        """
-
-        # Call parent class constructor
-        super(SingleCircularPort1D, self).__init__(L, N, r_ext)
-
-        # Check the inputs
-        assert  r_init > 0, "Internal radius (r_init) has to be greater than 0 \n"
-
-        # Set the properties
-        self.r_init = r_init
-        self.mesh = self._generate_mesh(N)
-        self.interpolator = self._generate_interpolator()
-
-    def my_cell_factory(self, i, x):
-        """ implement cell factory for single circular port """
-        return CircularPortCell(i, x, self.r_init, self.r_ext)
-
-    def _generate_interpolator(self):
-        """ generate the interpolator """
-
-        # Collect the area data
-        x, areas, perimeters = self.mesh.return_data()
-
-        # Return the output
-        # return [Interpolator(0, self.L, x, areas, perimeters)]
-        return [Interpolator(x, areas), Interpolator(x, perimeters)]
-
-    def _update_interpolator(self):
         # Collect the area data
         x, updated_areas, updated_perimeters = self.mesh.return_data()
 
@@ -1134,6 +1045,10 @@ class SingleCircularPort1D(Geometry1D):
         self.interpolator[1].set_coordinates(x, updated_perimeters)
 
     def print_geometry_to_file(self, file_name, time=0):
+        """ print_geometry_to_file prints the local current state of the geometry
+        :param file_name: string containing name of file towards which to print the geometry
+        :param time: simulation time at which to print the geometry
+        """
         # Append the data to the file
         if not os.path.isfile(file_name):
             data_set = [(my_cell.x_cor, my_cell.return_profile_data()) for my_cell in self.mesh.cells]
@@ -1143,15 +1058,29 @@ class SingleCircularPort1D(Geometry1D):
             data_set = np.column_stack((np.array(x), np.array(profile_data)))
         else:
             data_set = np.genfromtxt(file_name)
-            profile_data = np.array([time]+[my_cell.return_profile_data() for my_cell in self.mesh.cells])
+            profile_data = np.array([time] + [my_cell.return_profile_data() for my_cell in self.mesh.cells])
             data_set = np.hstack((data_set, np.reshape(profile_data, (len(profile_data), 1))))
 
         # Write the file
         np.savetxt(file_name, data_set, delimiter=" ", fmt="%15.12f")
 
-    def solve_mass_flux(self, regression_model, m_ox, rho_f):
-        """ perform the solution of the equation of regression of the fuel geometry """
+    def export_geometry(self, file_name):
+        # Extract the data
+        data_set = [(my_cell.x_cor, my_cell.return_profile_data()) for my_cell in self.mesh.cells]
 
+        # Write the file
+        with open(file_name, 'w') as f:
+            f.write("{x:10s} \t {y:10s} \n".format(x='X [mm]', y='Y [mm]'))
+            for x, data in data_set:
+                f.write("{x:5.5f} \t {y:5.5f}\n".format(x=1000*x, y=1000*data))
+
+    def solve_mass_flux(self, m_ox, rho_f):
+        """
+        solve_mass_flux solves the equation by using the RK4 method
+        :param m_ox: mass flow of oxidizer
+        :param rho_f: fuel density
+        :return: solution_vector, mass_flows tupple, mass_fluxes tupple, O/F ratio at the end of port,
+        """
         # Define the Runge-Kutta function
         def mass_flux_gradient(x, mass_flux_fuel):
             """
@@ -1170,7 +1099,8 @@ class SingleCircularPort1D(Geometry1D):
             total_mass_flux = mass_flux_fuel + mass_flux_ox
 
             # Return the output of the fuel flux
-            return 4 * rho_f * regression_model.compute_regression_rate_haltman(x, total_mass_flux) / hydraulic_diameter
+            return 4 * rho_f * self.regression_model.compute_regression_rate_haltman(x,
+                                                                            total_mass_flux) / hydraulic_diameter
 
         # Implement the Runge-Kutta solver for the cells coordinates
         x_cor = self.mesh.return_x_cor()
@@ -1189,19 +1119,120 @@ class SingleCircularPort1D(Geometry1D):
         # Return the results
         return solution, (m_ox, m_f), m_ox / m_f, (g_ox, g_f)
 
-    def regress(self, solution, regression_model, m_ox, dt):
+    def regress(self, solution, m_ox, dt):
+        """
+        regress method performs the regression of the fuel grain. Updates the geometry
+        along the port by updating the cells on the mesh from the solution obtained in solve_mass_flux
+        :param solution: vector of fuel mass fluxes obtained from solve_mass_flux
+        :param m_ox: mass flow of oxidizer
+        :param dt: time of simulation
+        :return: nothing
+        """
         # Update the profile by regressing it
         for my_cell in self.mesh.cells:
-            g_ox = m_ox / my_cell.return_area_data()                                           # Get ox flux
-            g_f = solution.y[0][my_cell.number]                                                # Get fuel flux
-            g_tot = g_f  +  g_ox                                                               # Get the total mass flux
-            r_dot = regression_model.compute_regression_rate_haltman(my_cell.x_cor, g_tot)     # Calculate regression r
+            g_ox = m_ox / my_cell.return_area_data()  # Get ox flux
+            g_f = solution.y[0][my_cell.number]  # Get fuel flux
+            g_tot = g_f + g_ox  # Get the total mass flux
+            r_dot = self.regression_model.compute_regression_rate_haltman(my_cell.x_cor, g_tot)  # Calculate regression r
             my_cell.regress(r_dot, dt)
 
         # Update the interpolator to account for the changes in the geometry
         self._update_interpolator()
 
+    def min_bloc_thickness(self):
+        """
+        min_block_thickness returns the minimum thickness of the block
+        :return: min_block thickness
+        """
+        min_block_thickness = self.r_ext
+        for my_cell in self.mesh.cells:
+            if my_cell.min_thickness < min_block_thickness:
+                min_block_thickness = my_cell.min_thickness
 
+        # Return the min block thickness
+        return min_block_thickness
+
+
+class SingleCircularPort1D(Geometry1D):
+    """
+    SingleCircularPort1D class inherits from the Geometry1D class and implements
+    the case of a single circular port. For such case then, the profile expected for the
+    port is a circle of constant radius.
+
+    Attributes:
+        1. r_int: float indicating the internal radius
+    """
+
+    def __init__(self, L, r_ext, N, regressionModel, r_init):
+        """
+        class initializer
+        :param r_init: float indicating the internal radius.
+        """
+
+        # Call parent class constructor
+        super(SingleCircularPort1D, self).__init__(L, N, r_ext, regressionModel)
+
+        # Check the inputs
+        assert r_ext > r_init > 0, "Internal radius (r_init) has to be greater than 0 and smaller than External radius " \
+                                   "(r_ext).\n"
+
+        # Set the properties
+        self.r_init = r_init
+        self.mesh = self._generate_mesh(N)
+        self.interpolator = self._generate_interpolator()
+
+    def my_cell_factory(self, i, x):
+        """ implement cell factory for single circular port """
+        return CircularPortCell(i, x, self.r_init, self.r_ext)
+
+
+class ConicCircularPort1D(Geometry1D):
+    """
+    ConicCircularPort1D inherits from SingleCircularPort1D and implements a conic port
+    defined by its initial and final port radius.
+
+        Attributes:
+            1. r_init: initial radius of the port origin [m]
+            2. r_final: radius at the end of the port [m]
+    """
+
+    def __init__(self, L, r_ext, N, regressionModel, r_init, r_final, depth, **kwargs):
+        """
+        class initializer
+        :param r_init: initial radius of the port 0 [m]
+        :param r_final: radius at the end of the port [m]
+        """
+
+        # Call the parent class constructor
+        super(ConicCircularPort1D, self).__init__(L, N, r_ext, regressionModel)
+
+        # Check the inputs
+        assert r_ext > r_init > 0, "Origin internal radius (r_init) has to be greater than 0 and smaller than " \
+                                   "External radius (r_ext).\n"
+        assert r_ext > r_final > 0, "Final internal radius (r_init) has to be greater than 0 and smaller than " \
+                                    "External radius (r_ext).\n"
+
+        # Set the properties
+        self.r_init, self.r_final, self.depth = r_init, r_final, depth
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+        self.mesh = self._generate_mesh(N)
+        self.interpolator = self._generate_interpolator()
+
+    def my_cell_factory(self, i, x):
+        """ implement the cell factory for the class """
+        return CircularPortCell(i, x, self.my_function(x), self.r_ext)
+
+    def my_function(self, x):
+        delta_h = self.r_final - self.r_init
+        epsilon = 1e-4
+        c = np.log(delta_h / epsilon - 1) / self.depth
+        if x < self.L - self.exit_depth:
+            r = self.r_init + delta_h / (1 + np.exp(-1 * c * (x - self.depth)))
+        else:
+            r_i = self.r_init + delta_h / (1 + np.exp(-1 * c * (self.L - self.exit_depth - self.depth)))
+            r = self.r_exit - (self.r_exit - r_i) * (self.L - x) / self.exit_depth
+        return r
 
 
 
