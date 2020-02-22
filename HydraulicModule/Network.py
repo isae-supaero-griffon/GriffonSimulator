@@ -15,6 +15,7 @@ from Libraries.Collections import Collections, UniqueCollections                
 
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
+
 class Dof:
     """
     Dof is a class associated to the degree of freedom of the network.
@@ -25,30 +26,45 @@ class Dof:
             2. value: float indicating the value of the degree of freedom
     """
 
-    def __init__(self, number, type, value=0):
+    def __init__(self, number, type, scale=1, value=0):
         """
         class constructor
         :param number: degree of freedom number
         :param type: string variable the dof is associated with
+        :param scale: scale to which responds the degree of freedom
         :param value: float containing the value of the degree of freedom.
         By default it is initialized to 0.
         """
         # Check the inputs and set the attributes
         assert isinstance(number, int), "Dof number has to be an integer \n"
+        assert scale > 0, "The scaling factor for the degrees of freedom must be greater than 0.\n"
 
         self.number = number
         self.type = type
         self.isFixed = False
+        self._scale = scale
         self.value = value
 
     def __str__(self):
-        return "Dof:: Type: {type:10s}, ID: {id:5d}, isFixed: {fix:6b},Value: {val:10.5f}".format(type=self.type,
-                                                                                                  id=self.number,
-                                                                                                  val=self.value,
-                                                                                                  fix=self.isFixed)
+        return "Dof:: Type: {type:10s}, ID: {id:5d}, isFixed: {fix:6b},Value: {val:>10.5f}".format(type=self.type,
+                                                                                                   id=self.number,
+                                                                                                   val=self.value,
+                                                                                                   fix=self.isFixed)
 
     def set_value(self, value):
         self.value = value
+
+    def set_scale(self, value):
+        self._scale = value
+
+    def get_scale(self):
+        return self._scale
+
+    def set_scaled_value(self, value):
+        self.value = self._scale * value
+
+    def get_scaled_value(self):
+        return self.value / self._scale
 
     def get_value(self):
         return self.value

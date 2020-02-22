@@ -24,6 +24,7 @@ import scipy.optimize as opt                                                    
 
 # ------------------------- FUNCTION DEFINITIONS ---------------------------.
 
+
 def compute_error(old_vector, new_vector):
     """
     compute_error calculates the relative error on the norm of two different vectors.
@@ -37,7 +38,12 @@ def compute_error(old_vector, new_vector):
     else:
         raise ZeroDivisionError("Norm of vector already 0 \n")
 
+
+def get_x_activity(x):
+    return x.is_active
+
 # -------------------------- CLASS DEFINITIONS -----------------------------
+
 
 class HydraulicModule:
     """
@@ -52,6 +58,9 @@ class HydraulicModule:
             4. dofs: list of dofs that integrate the hydraulic network
     """
 
+    # Define useful functions to be generated once during the simulation
+    activity_function = np.vectorize(get_x_activity)
+
     class RunEndingError(Exception):
         """
         RunEndingException is a nested class of the HydraulicModule. It shall be explicitly used
@@ -65,19 +74,21 @@ class HydraulicModule:
         :param hydraulic_table: dictionary defining the data necessary for the hydraulic module
         """
         # Initialize attributes as lists
+        self._dimension = 0
         self.fluids = {}
         self.components = []
         self.nodes = NodesCollection([])
         self.dofs = DofCollection([])
         self.is_initialized = False
         self.is_active = True
-        self.solver_params = {'name':'Nelder-Mead','tol':1e-3, 'maxiter':100, 'scale':1e5}
+        self.solver_params = {'name': 'Nelder-Mead', 'tol': 1e-3, 'maxiter': 100, 'scale': 1e5}
 
         # Initialize the network
         self._initialize(hydraulic_table)
 
     def __str__(self):
-        presentation_text = "Hydraulic Module:: \n " + self.solver_print() + "\n".join((str(obj) for obj in self.components))
+        presentation_text = "Hydraulic Module:: \n " + self.solver_print() + "\n".join((str(obj)
+                                                                                        for obj in self.components))
         return presentation_text
 
     def solver_print(self):
@@ -113,12 +124,13 @@ class HydraulicModule:
         :return: nothing
         """
         # Generate the fluids
-        self.fluids = {r['name']:r for r in hydraulic_table['fluids']}
+        self.fluids = {r['name']: r for r in hydraulic_table['fluids']}
         # Instantiate the components
         for component_dict in hydraulic_table['components']:
             self._create_component(component_dict)
         # Set the solver params
-        if 'solver' in hydraulic_table: self.solver_params = hydraulic_table['solver']
+        if 'solver' in hydraulic_table:
+            self.solver_params = hydraulic_table['solver']
         # Check activity
         self.check_activity()
 
@@ -129,7 +141,13 @@ class HydraulicModule:
         :param type: objects variable type
         :return: Dof instance of interest
         """
-        self.dofs.add_element(Dof(number, type))
+
+        # Define the scale for the degree of freedom
+        if type == "pressure":
+            s = self.solver_params['scale']
+        else:
+            s = 1
+        self.dofs.add_element(Dof(number, type, s))
         return self.dofs.return_element(number)
 
     def _create_node(self, node_dict, link_iterator=None):
@@ -188,17 +206,21 @@ class HydraulicModule:
         :param component_dictionary: dictionary associated to the component definition
         :return: nothing
         """
-        my_dict = dict(component_dictionary)                                            # Make deep copy of component_dictionary
+        my_dict = dict(component_dictionary)                                            # Make deep copy of dict
         my_dict['link'] = [self.return_component(value) for value in my_dict['link']]   # Replace the link by the object
         my_iter = iter(my_dict['link'])
         my_dict['nodes'] = [self._create_node(node_dict, my_iter)
                             for node_dict in my_dict['nodes']]                          # Create the nodes of the system
         my_dict['fluid'] = [self._create_fluid(**r) for r in my_dict['fluid']]          # Store the fluid
-        if len(my_dict['fluid']) == 1: my_dict['fluid'] = my_dict['fluid'][0]
-        # if len(my_dict['link']) == 1: my_dict['link'] = my_dict['link'][0]
+        if len(my_dict['fluid']) == 1:
+            my_dict['fluid'] = my_dict['fluid'][0]
+
         # Create the component
         my_init = ComponentsCatalogue.return_component(my_dict.pop('type'))
-        self.components.append(my_init(**my_dict))
+        new_component = my_init(**my_dict)
+        new_component.set_queue(range(self._dimension, self._dimension + new_component.dimension))
+        self.components.append(new_component)
+        self._dimension += new_component.dimension
 
     def set_chamber_pressure(self, value):
         """
@@ -220,7 +242,8 @@ class HydraulicModule:
         x, y = zip(*[(dof.number, dof.get_value()) for dof in pressure_dofs if dof.isFixed])
 
         # Check that there are fixed pressure dofs
-        if not x: raise ValueError("No Fixed pressure nodes are present \n")
+        if not x:
+            raise ValueError("No Fixed pressure nodes are present \n")
 
         # Interpolate the values
         f_interp = interp.interp1d(x, y, bounds_error=False, fill_value='extrapolate')
@@ -236,7 +259,7 @@ class HydraulicModule:
         network is down it shuts-down the object
         :return: nothing
         """
-        self.is_active = bool(np.prod([component.is_active for component in self.components]))
+        self.is_active = bool(np.prod(self.activity_function(self.components)))
 
     def return_exit_flow(self):
         """
@@ -255,6 +278,7 @@ class HydraulicModule:
         # Search dofs that are not fixed
         scale = self.solver_params['scale']
         non_fixed_dofs = self.dofs.search("isFixed", False)
+        res = np.empty(shape=(self._dimension, 1))
 
         def residual(x):
             """
@@ -264,18 +288,11 @@ class HydraulicModule:
             """
             # Set their value - only for pressure dofs
             for value, dof in zip(x, non_fixed_dofs):
-                if dof.type == "pressure":
-                    dof.set_value(scale*value)
-                else:
-                    dof.set_value(value)
-
+                dof.set_scaled_value(value)
 
             # Run the methods from the component
-            res = np.concatenate([component.my_method() for component in self.components], axis=0)
-
-            # Check the activity, if one component is not active then raise Exception
-            self.check_activity()
-            if not self.is_active: raise self.RunEndingError("\n At least one of the components is not active \n")
+            for comp in self.components:
+                comp.my_method(res)
 
             # Get the residual
             return res
@@ -289,20 +306,17 @@ class HydraulicModule:
             return np.linalg.norm(residual(x))/scale
 
         # Define the optimization bounds
-        #TODO: implement a solver for root finding, investigate if its better than optimize
+        # TODO: implement a solver for root finding, investigate if its better than optimize - bounds definition
         x0_fun = np.vectorize(lambda x: x.get_value()/scale if x.type == "pressure" else x.get_value())
         x0 = x0_fun(non_fixed_dofs)
+
+        # Check the activity of the system
+        self.check_activity()
+        if not self.is_active:
+            raise self.RunEndingError("\n At least one of the components is not active \n")
 
         # Solve the problem:
         sol = opt.minimize(optimize_fun, x0, method=self.solver_params['name'], jac=None,
                            tol=self.solver_params['tol'],
                            options=self.solver_params['options'])
-        return sol
-
-
-
-
-
-
-
-
+        return sol, res
