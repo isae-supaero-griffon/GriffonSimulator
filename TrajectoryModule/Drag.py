@@ -57,7 +57,7 @@ class Drag(ABC):
         compute_drag_force computes the drag force present based on the
         :param speed: float- speed [m/sec]
         :param altitude: float-altitude [m]
-        :return: float-drag force [N]
+        :return: float-drag force [nodes_number]
         """
 
         # Compute the drag coefficient

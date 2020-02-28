@@ -16,10 +16,81 @@ import json                                                         # Import the
 from copy import deepcopy                                           # Import the deepcopy method
 import math as m                                                    # Import the math library
 
+# -------------------- FOURIER FUNCTIONs ------------------
+
+
+def generate_fourier_coefficients(n_coefs, period, fun, *args):
+    """ generate_fourier_coefficients for given configuration """
+
+    # Generate the x coordinates
+    x = np.linspace(0, 1, 1000)
+
+    # Preallocate results as numpy arrays
+    a_s = np.empty(shape=(n_coefs,1))
+    b_s = np.empty(shape=(n_coefs,1))
+
+    for i in range(1, n_coefs+1):
+        sin_fourier = lambda x_: m.sin(2 * m.pi * i * x_ / period) * fun(x_, *args)
+        cos_fourier = lambda x_: m.cos(2 * m.pi * i * x_ / period) * fun(x_, *args)
+        sin_fourier = np.vectorize(sin_fourier)
+        cos_fourier = np.vectorize(cos_fourier)
+        a_s[i-1] = 2 / period * trapz(cos_fourier(x), x)
+        b_s[i-1] = 2 / period * trapz(sin_fourier(x), x)
+
+    # Return the results
+    return a_s, b_s
+
+
+def my_fun_2(x, *args):
+    delta1, delta2 = args[0], args[1]
+    if 0<=x<delta1:
+        return 0
+    elif delta1<=x<delta2:
+        return 0.5
+    elif delta2<=x<1-delta2:
+        return 1 + 0.12*m.fabs(x - 0.5)
+    elif 1-delta2<=x<1-delta1:
+        return 0.5
+    elif 1-delta1<=x<=1:
+        return 0
+
+
+def my_fun(x, *args):
+    """
+    my_fun generates the desired profile for the branch
+    :param x: float with x-coordinate
+    :param br: float with branch radius position
+    :param r: radius
+    :return: value of function
+    """
+    br, r, delta = args[0], args[1], args[2]
+
+    # Check the inputs
+    assert r < 0.5, 'The radius has to be less than 0.5'
+    assert 0<= x <=1, 'x has to be contained between 0 and 1'
+    assert r < br, 'br has to be greater than r'
+
+    if delta <= x <= 1-delta:
+        # Scale x
+        x = (x - delta)/(1 - 2*delta)
+        # Evaluate the function
+        if 0<=x <br-r:
+            return (1-r)/(br-r)*x
+        elif br-r<=x<br:
+            return m.sqrt(r**2 - (x - br)**2) + (1 - r)
+        elif br<=x<1-br:
+            return 1
+        elif 1-br<=x<1-br+r:
+            return sqrt(r**2 - (x - 1 + br)**2) + (1 - r)
+        elif 1-br+r<=x<=1:
+            return (1-r)/(br-r)*(1-x)
+    else:
+        return 0
+
 # -------------------- FUNCTIONS DEFINITIONS ------------------
 
 
-def generate_data_layer(data_file="Griffon Data - ABS - H2O2 - 36 bar.json"):
+def generate_data_layer(data_file="Griffon Data - Mock.json"):
     """ generate_data_layer instantiates all of the objects that
     are required as data layer for the program to run properly.
     :param data_file: name of the json file to be used as reference for the simulation (str)
@@ -39,20 +110,18 @@ def single_case_analysis_one_circular_port():
     """
 
     # ------------ Generate the data-layer:
-
-    json_interpreter = generate_data_layer("Griffon Data - ABS - H2O2 - 36 bar - Mock.json")
+    json_interpreter = generate_data_layer()
 
     # ---------- Pack the inputs:
-
     ox_flow = 1.09
 
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': OneCircularPort,
-                                                            'L': 0.325,
-                                                            'rintInitial': 0.03,
-                                                            'rext0': 0.05,
-                                                            'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel},
+                                                            'length': 0.325,
+                                                            'r_int_initial': 0.03,
+                                                            'r_ext': 0.05,
+                                                            'regression_model': Reg.TwoRegimesMarxmanAndFloodedModel},
 
                                        'nozzle_params': {'At': 0.000545, 'expansion': 4.96559, 'lambda_e': 0.98,
                                                          'erosion': 0},
@@ -83,17 +152,14 @@ def single_case_analysis_one_circular_port():
                             }
 
     # -------------- Generate the initializer:
-
     init_obj = Initializer(init_parameters=init_parameters,
                            simulation_parameters=simulation_parameters,
                            json_interpreter=json_interpreter)
 
     # -------------- Generate the simulation object:
-
     simulation_object = SimulationObject(initializer_collection=init_obj)
 
     # --------------- Run the simulation:
-
     simulation_object.run_simulation_in_batch()
 
     # Print the total mass
@@ -105,10 +171,12 @@ def single_case_analysis_one_circular_port():
     # Print combustion results
     print(simulation_object.combustion_module)
 
-    # --------------- Plot the results
+    # --------------- Plot the results:
 
     simulation_object.results_collection.elements_list[0].combustion.plot_results()
     simulation_object.results_collection.elements_list[0].trajectory.plot_results()
+
+    # ---------------- Save the results:
 
     # # data directory
     # data_directory = "../data/data_tests"
@@ -134,20 +202,18 @@ def single_case_analysis_one_port_review():
     """
 
     # ------------ Generate the data-layer:
-
-    json_interpreter = generate_data_layer("Thermodynamic Data 36 bar OF 0,1 to 8,0 H2O2 87,5.json")
+    json_interpreter = generate_data_layer()
 
     # ---------- Pack the inputs:
-
     ox_flow = 1.09
-
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {'type': OneCircularPort,
-                                                            'L': 0.325,
-                                                            'rintInitial': 0.03,
-                                                            'rext0': 0.05,
-                                                            'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel},
+                                                            'length': 0.325,
+                                                            'r_int_initial': 0.03,
+                                                            'r_ext': 0.05,
+                                                            'regression_model':
+                                                                Reg.MarxmanAndConstantFloodingRegimeModel},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
                                                          'erosion': 0},
@@ -208,6 +274,8 @@ def single_case_analysis_one_port_review():
     simulation_object.results_collection.elements_list[0].combustion.plot_results()
     simulation_object.results_collection.elements_list[0].trajectory.plot_results()
 
+    # ---------------- Save the results:
+
     # # data directory
     # data_directory = "../Design/Design Files/Proposed Designs/Single Port Geometry/"
     #
@@ -233,33 +301,22 @@ def single_case_analysis_one_port_image_geometry():
     json_interpreter = generate_data_layer("Griffon Data - Mock.json")
 
     # ------------ Generate the Fourier Coefficients:
-    #
-    r = 0.2
-    br = 0.3
-    delta = 0.17
-    n_coefs = 100
-    period = 1
+    r, br, delta, n_coefs, period = 0.2, 0.3, 0.17, 100, 1
     a_s, b_s = generate_fourier_coefficients(n_coefs, period, my_fun, br, r, delta)
-
-    # n_coefs = 100
-    # period = 1
-    # a_s, b_s = generate_fourier_coefficients(n_coefs, period, my_fun_2, delta1, delta2)
-    # delta1, delta2 = 0.12, 0.3
 
     # ---------- Pack the inputs:
 
     # Define the oxidizer flow
     ox_flow = 1.08
-
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': SinglePortImageGeometry, 'L': 0.40,
-                                                            'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel,
-                                                            'externalRadius': 0.05, 'imagePixelSize': 2048,
-                                                            'imageMeterSize': 0.1},
+                                       'geometric_params': {'type': SinglePortImageGeometry, 'length': 0.40,
+                                                            'regression_model': Reg.TwoRegimesMarxmanAndFloodedModel,
+                                                            'r_ext': 0.05, 'image_pixel_size': 2048,
+                                                            'image_meter_size': 0.1},
 
                                        'shape_params': {'a': a_s, 'b': b_s,
-                                                            'baseRadius': 0.032, 'branches': 12, 'impact': 0.8,
+                                                            'base_radius': 0.032, 'branches': 12, 'impact': 0.8,
                                                             'n': 50},
 
                                        'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
@@ -280,14 +337,14 @@ def single_case_analysis_one_port_image_geometry():
                                              'max_burn_time': 5},
 
                               'mass_simulator': {'ox_flow': ox_flow, 'burn_time': 'TBD', 'extra_filling': 0.05,
-                                                 'injection_loss': 0.5, 'area_injection': 0.000105, 'system' : SystemDynamic},
+                                                 'injection_loss': 0.5, 'area_injection': 0.000105,
+                                                 'system': SystemDynamic},
 
                               'trajectory': {'initial_conditions': {'h0': 0, 'v0': 0, 'm0': 'TBD'},
                                              'simulation_time': 60}
                             }
 
     # -------------- Generate the initializer:
-
     init_obj = Initializer(init_parameters=init_parameters,
                            simulation_parameters=simulation_parameters,
                            json_interpreter=json_interpreter)
@@ -305,7 +362,6 @@ def single_case_analysis_one_port_image_geometry():
 
     simulation_object.run_simulation_in_batch()
     print("Minimum Thickness After: {x:5.5f} mm \n".format(x=1000*simulation_object.combustion_module.geometry.min_bloc_thickness()))
-
 
     # Print the total mass
     print("\nRockets Total Mass: {0} kgs".format(simulation_object.mass_simulator_module.get_mass()))
@@ -344,25 +400,25 @@ def single_case_analysis_1d_single_port():
     """ case study for 1D geometry design """
 
     # ------------ Generate the data-layer:
-
     json_interpreter = generate_data_layer("Griffon Data - Mock.json")
 
     # ---------- Pack the inputs:
 
     # Define the oxidizer flow
     ox_flow = 1.08
-
     init_parameters = {
                         'combustion': {
                                        'geometric_params': {
                                                             'type': ConicCircularPort1D,
-                                                            'L': 0.4,
+                                                            'length': 0.4,
                                                             'r_init': 0.06/2,
                                                             'r_final': 0.09/2,
                                                             'depth': 0.2,
+                                                            'exit_depth': 20e-3,
+                                                            'r_exit': 40e-3,
                                                             'r_ext': 0.05,
-                                                            'N': 100,
-                                                            'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel
+                                                            'nodes_number': 100,
+                                                            'regression_model': Reg.TwoRegimesMarxmanAndFloodedModel
                                                             },
 
                                        'nozzle_params': {
@@ -382,9 +438,7 @@ def single_case_analysis_1d_single_port():
                                                          'OF': 5},
                                       },
 
-
                       }
-
 
     simulation_parameters = {
                               'CombustionModel': CombustionObject1D,
@@ -477,76 +531,6 @@ def run_design_cases():
     simulation_object.export_results_to_file(file_name_expression="/".join([data_directory,
                                                                             file_name_expression]))
 
-
-def generate_fourier_coefficients(n_coefs, period, fun, *args):
-    """ generate_fourier_coefficients for given configuration """
-
-    # Generate the x coordinates
-    x = np.linspace(0, 1, 1000)
-
-    # Preallocate results as numpy arrays
-    a_s = np.empty(shape=(n_coefs,1))
-    b_s = np.empty(shape=(n_coefs,1))
-
-    for i in range(1, n_coefs+1):
-        sin_fourier = lambda x_: m.sin(2 * m.pi * i * x_ / period) * fun(x_, *args)
-        cos_fourier = lambda x_: m.cos(2 * m.pi * i * x_ / period) * fun(x_, *args)
-        sin_fourier = np.vectorize(sin_fourier)
-        cos_fourier = np.vectorize(cos_fourier)
-        a_s[i-1] = 2 / period * trapz(cos_fourier(x), x)
-        b_s[i-1] = 2 / period * trapz(sin_fourier(x), x)
-
-    # Return the results
-    return a_s, b_s
-
-
-def my_fun_2(x, *args):
-    delta1, delta2 = args[0], args[1]
-    if 0<=x<delta1:
-        return 0
-    elif delta1<=x<delta2:
-        return 0.5
-    elif delta2<=x<1-delta2:
-        return 1 + 0.12*m.fabs(x - 0.5)
-    elif 1-delta2<=x<1-delta1:
-        return 0.5
-    elif 1-delta1<=x<=1:
-        return 0
-
-
-def my_fun(x, *args):
-    """
-    my_fun generates the desired profile for the branch
-    :param x: float with x-coordinate
-    :param br: float with branch radius position
-    :param r: radius
-    :return: value of function
-    """
-    br, r, delta = args[0], args[1], args[2]
-
-    # Check the inputs
-    assert r < 0.5, 'The radius has to be less than 0.5'
-    assert 0<= x <=1, 'x has to be contained between 0 and 1'
-    assert r < br, 'br has to be greater than r'
-
-    if delta <= x <= 1-delta:
-        # Scale x
-        x = (x - delta)/(1 - 2*delta)
-        # Evaluate the function
-        if 0<=x <br-r:
-            return (1-r)/(br-r)*x
-        elif br-r<=x<br:
-            return m.sqrt(r**2 - (x - br)**2) + (1 - r)
-        elif br<=x<1-br:
-            return 1
-        elif 1-br<=x<1-br+r:
-            return sqrt(r**2 - (x - 1 + br)**2) + (1 - r)
-        elif 1-br+r<=x<=1:
-            return (1-r)/(br-r)*(1-x)
-    else:
-        return 0
-
-
 # ----------------------------- MAIN ------------------------------
 
 
@@ -556,7 +540,7 @@ if __name__ == '__main__':
     # run_design_cases()
     # single_case_analysis_three_circular_ports()
     # single_case_analysis_one_port_review()
-    single_case_analysis_one_port_image_geometry()
-    # single_case_analysis_1d_single_port()
+    # single_case_analysis_one_port_image_geometry()
+    single_case_analysis_1d_single_port()
     plt.show()
     # single_case_analysis_one_circular_port()

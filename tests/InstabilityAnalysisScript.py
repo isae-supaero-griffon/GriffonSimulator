@@ -47,10 +47,10 @@ def define_onera_physical_hycom_13_test_combustion_object():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.130,
+    geometric_params = {'length': 0.130,
                         'rintInitial': 0.015,
                         'rext0': 94.5e-3 / 2,
-                        'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
+                        'regression_model': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
 
     nozzle_params = {'At': 4.03764e-5, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -83,7 +83,7 @@ def define_rossiter_modes_hycom_13_test(combustion_module):
 
     # -------------------- Generate Post-Combustion Object:
 
-    post_combustion_params = {'L': 0.177,        # Length of post-combustion chamber
+    post_combustion_params = {'length': 0.177,        # Length of post-combustion chamber
                               'D': 0.047}        # Diameter of post-combustion chamber
 
     post_combustion_obj = PostCombustion(**post_combustion_params)
@@ -151,15 +151,15 @@ def define_onera_physical_hycom_16_test_combustion_object():
     # ------------ Define parameters:
 
     shape_params = {'polynom': [-0.2701822916666667, 0.15625, 0],
-                    'baseRadius': 0.02,
+                    'base_radius': 0.02,
                     'branches': 5,
                     'n': 50}
 
-    geometric_params = {'L': 0.130,
+    geometric_params = {'length': 0.130,
                         'externalRadius': 74.5 / 2000,
                         'imagePixelSize': 2048,
                         'imageMeterSize': 0.09,
-                        'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
+                        'regression_model': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
 
     nozzle_params = {'At': 4.243e-5, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -168,7 +168,7 @@ def define_onera_physical_hycom_16_test_combustion_object():
     # ------------- Generate objects:
 
     geometry_obj = Geom.SinglePortImageGeometry(**geometric_params)
-    geometry_obj.generatePolynom(**shape_params)
+    geometry_obj.generate_polynom(**shape_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
     # Instantiate the combustion module
@@ -193,7 +193,7 @@ def define_rossiter_modes_hycom_16_test(combustion_module):
 
     # -------------------- Generate Post-Combustion Object:
 
-    post_combustion_params = {'L': 0.135,        # Length of post-combustion chamber
+    post_combustion_params = {'length': 0.135,        # Length of post-combustion chamber
                               'D': 0.09}        # Diameter of post-combustion chamber
 
     post_combustion_obj = PostCombustion(**post_combustion_params)
@@ -260,10 +260,10 @@ def define_onera_physical_hycom_12_test_combustion_object():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.130,
+    geometric_params = {'length': 0.130,
                         'rintInitial': 17.23e-3 / 2,
                         'rext0': 94.5e-3 / 2,
-                        'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
+                        'regression_model': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
 
     nozzle_params = {'At': (np.pi / 4) * 7.1e-3 ** 2, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -296,7 +296,7 @@ def define_rossiter_modes_hycom_12_test(combustion_module):
 
     # -------------------- Generate Post-Combustion Object:
 
-    post_combustion_params = {'L': 0.135,        # Length of post-combustion chamber
+    post_combustion_params = {'length': 0.135,        # Length of post-combustion chamber
                               'D': 0.09}        # Diameter of post-combustion chamber
 
     post_combustion_obj = PostCombustion(**post_combustion_params)
@@ -363,10 +363,10 @@ def define_onera_physical_hycom_14_test_combustion_object():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.130,
+    geometric_params = {'length': 0.130,
                         'rintInitial': 13.30e-3 / 2,
                         'rext0': 94.5e-3 / 2,
-                        'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
+                        'regression_model': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
 
     nozzle_params = {'At': (np.pi / 4) * 7.25e-3 ** 2, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 

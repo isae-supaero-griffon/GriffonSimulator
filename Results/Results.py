@@ -7,7 +7,7 @@
 
 from Libraries.Collections import Collections                   # Import Collections class to define results collections
 import csv                                                      # Import csv to allow the use of csv files
-import datetime                                                 # Import the datetime to record the date of recording of the file
+import datetime                                                 # Import the datetime to record the date
 import numpy as np                                              # Import numpy to handle numpy arrays
 import pandas as pd                                             # Import pandas to handle time-series
 from Initializer.Initializer import Initializer                 # Import the Initializer class

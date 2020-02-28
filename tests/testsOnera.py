@@ -50,10 +50,10 @@ def test_onera_physical_test_1():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.157,
-                        'rintInitial': 0.02,
-                        'rext0': 0.041,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+    geometric_params = {'length': 0.157,
+                        'r_int_initial': 0.02,
+                        'r_ext': 0.041,
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -96,10 +96,10 @@ def test_onera_physical_test_1_2():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.130,
-                        'rintInitial': 0.015,
-                        'rext0': 94.5e-3 / 2,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+    geometric_params = {'length': 0.130,
+                        'r_int_initial': 0.015,
+                        'r_ext': 94.5e-3 / 2,
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -141,10 +141,10 @@ def test_onera_physical_test_2():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.130,
-                        'rintInitial': 17.23e-3 / 2,
-                        'rext0': 94.5e-3 / 2,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+    geometric_params = {'length': 0.130,
+                        'r_int_initial': 17.23e-3 / 2,
+                        'r_ext': 94.5e-3 / 2,
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -186,10 +186,10 @@ def test_onera_physical_test_3():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.130,
-                        'rintInitial': 13.33e-3 / 2,
-                        'rext0': 94.5e-3 / 2,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+    geometric_params = {'length': 0.130,
+                        'r_int_initial': 13.33e-3 / 2,
+                        'r_ext': 94.5e-3 / 2,
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -217,53 +217,6 @@ def test_onera_physical_test_3():
     combustion_obj.plot_results()
 
 
-def test_onera_three_port_geometry():
-        """ Study the potential evolution of the geometry associated to a Three Port Geometry
-            to be performed at ONERA. The characteristics of the Test are:
-            1. Three Port Geometry
-            2. Go range: TBD kg/m^2/sec
-            3. ox flow: same
-            4. Chamber pressure: 36 bar, closest possible to the target pressure of Griffon.
-        """
-
-        # ------------ Generate the data layer:
-
-        json_interpreter = generate_data_layer()  # Use same data-layer used for Griffon (same pressure)
-        combustion_table = json_interpreter.return_combustion_table()
-
-        # ------------ Define parameters:
-
-        geometric_params = {'L': 0.130,
-                            'portsIntialRadius': 12e-3 / 2,
-                            'r_ext': 94.5e-3 / 2,
-                            'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
-
-        nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
-
-        simulation_params = {'ox_flow': 0.069, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
-
-        # ------------- Generate objects:
-
-        geometry_obj = Geom.ThreeCircularPorts(**geometric_params)
-        nozzle_obj = Noz.Nozzle(**nozzle_params)
-        json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
-
-        # Instantiate the combustion module
-        combustion_obj = CombustionObject(json_interpreter=json_interpreter,
-                                          geometry_object=geometry_obj,
-                                          nozzle_object=nozzle_obj)
-
-        # -------------- Run simulation & Plot:
-
-        combustion_obj.run_simulation_constant_fuel_sliver(**simulation_params)
-
-        # Print the module
-        print(combustion_obj)
-
-        # Plot the results
-        combustion_obj.plot_results()
-
-
 def test_onera_three_port_geometry_with_center_port():
     """ Study the potential evolution of the geometry associated to a Three Port Geometry
         to be performed at ONERA. The characteristics of the Test are:
@@ -280,15 +233,12 @@ def test_onera_three_port_geometry_with_center_port():
 
     # ------------ Define parameters:
 
-    # MultipleCircularPortsWithCircularCenter
-    # N, L, regressionModel, ringPortsIntialRadius, centralPortInitialRadius, r_ext
-
-    geometric_params = {'N': 4,
-                        'L': 0.130,
-                        'ringPortsIntialRadius': 9e-3 / 2,
-                        'centralPortInitialRadius': 9e-3 / 2,
+    geometric_params = {'nodes_number': 4,
+                        'length': 0.130,
+                        'ring_ports_initial_radius': 9e-3 / 2,
+                        'central_ports_initial_radius': 9e-3 / 2,
                         'r_ext': 94.5e-3 / 2,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -307,7 +257,6 @@ def test_onera_three_port_geometry_with_center_port():
                                       nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
-
 
     combustion_obj.run_simulation_constant_fuel_sliver(**simulation_params)
 
@@ -369,11 +318,10 @@ if __name__ == '__main__':
 
     plt.close()
     # Call on desired test method
-    #test_onera_physical_test_1()
-    #test_onera_physical_test_1_2()
-    #test_onera_physical_test_2()
+    # test_onera_physical_test_1()
+    # test_onera_physical_test_1_2()
+    # test_onera_physical_test_2()
     # test_onera_physical_test_3()
-    #test_onera_three_port_geometry()
     # test_onera_three_port_geometry_with_center_port()
     compute_sampling_frequency_for_hycomm()
     # Show any plots

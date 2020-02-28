@@ -20,7 +20,7 @@ def rho(h):
     for the I.S.A. (International standard atmosphere)
     """  
     g0=9.81 # m/s^2
-    R=8.314 # N.m/(mol.K) Ideal gas constant
+    R=8.314 # nodes_number.m/(mol.K) Ideal gas constant
     M=0.02896 # kg/mol, Molar mass of air
     rho_0=1.225 # kg/m3
     T_0=298 # K
@@ -94,7 +94,7 @@ def Newt(Vectorthrust, Vectormass, S, Cd, g0, pos, t, rho, h, v, dv):
     """
     Calculation of the acceleration at discrete time=t
         -Thrust vector, defined as 2 line n column matrix where 
-         first line is the thrust(N) in a discrete time and second line is 
+         first line is the thrust(nodes_number) in a discrete time and second line is 
          the time(s)
         -Mass vector, defined as 3 line n column matrix where 
          first line is the mass(kg) at each time, second line is the time(s)
@@ -131,7 +131,7 @@ def Newt(Vectorthrust, Vectormass, S, Cd, g0, pos, t, rho, h, v, dv):
 def RK4(Vectorthrust, Vectormass, S, Cd, g0, rho):
     """
     -Thrust vector, defined as 2 line n column matrix where 
-         first line is the thrust(N) in a discrete time and second line is 
+         first line is the thrust(nodes_number) in a discrete time and second line is 
          the time(s)
         -Mass vector, defined as 3 line n column matrix where 
          first line is the mass(kg) at each time, second line is the time(s)

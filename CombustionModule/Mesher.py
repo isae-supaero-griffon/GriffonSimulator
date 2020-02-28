@@ -15,18 +15,12 @@
 
 from abc import ABC, abstractmethod                     # Import abstract class module
 from Libraries.Interpolator import Interpolator         # Import Interpolator
-import CombustionModule.Geometries as Geom              # Import Geometries object
+import CombustionModule.Geometries1D as Geom            # Import the Geometries 1D
 import math as m                                        # Import math module
 import numpy as np                                      # Import numpy
 
-
-
-# ----------------------- FUNCTION DEFINITIONS ----------------------- #
-
-
-
-
 # ------------------------- CLASS DEFINITIONS ------------------------ #
+
 
 class Mesh(ABC):
     """
@@ -80,7 +74,7 @@ class Mesh(ABC):
         :return: x, area array, perimeter array
         """
         x, areas, perimeters = zip(*[(my_cell.x_cor, my_cell.return_area_data(), my_cell.return_perimeter_data()) for
-                                    my_cell in self.cells])
+                                     my_cell in self.cells])
         return np.array(x), np.array(areas), np.array(perimeters)
 
 
@@ -104,7 +98,7 @@ class UniformlySpacedMesh(Mesh):
 
         # Attributes definition
         self.n_el = n_el
-        self.dx = geometry_obj.L / n_el
+        self.dx = geometry_obj.length / n_el
         self._generate_cells(geometry_obj.my_cell_factory)
 
     def _generate_cells(self, cell_factory):
@@ -170,7 +164,7 @@ class Cell(ABC):
     Its attributes are:
         0. number: integer starting from 0 defining the position on the mesh array
         1. x_cor: float defining the x coordinate of the cell. First cell starts at 0 and last
-                  finishes at L equivalent to the length of the domain.
+                  finishes at length equivalent to the length of the domain.
         2. profile: associated profile to the cell depends on the type of geometry
         3. r_ext: external radius of the cell
     """
@@ -236,7 +230,6 @@ class Cell(ABC):
         :return: single number
         """
         pass
-
 
     @abstractmethod
     def update_min_thickness(self):

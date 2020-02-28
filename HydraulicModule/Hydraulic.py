@@ -82,6 +82,7 @@ class HydraulicModule:
         self.is_initialized = False
         self.is_active = True
         self.solver_params = {'name': 'Nelder-Mead', 'tol': 1e-3, 'maxiter': 100, 'scale': 1e5}
+        self.results = {'time': [0], 'run_values': {}, 'magnitudes': {}}
 
         # Initialize the network
         self._initialize(hydraulic_table)
@@ -106,6 +107,15 @@ class HydraulicModule:
         :param dt: time-step [sec]
         :return: nothing
         """
+        # Determine cummulative time
+        # TODO: check if maybe using a clock class would be helpful (implement as a singleton)
+        next_time = self.results['time'][-1] + dt
+        self.results['time'].append(next_time)
+
+        # Collect the results
+        self._collect_results()
+
+        # Update every component
         for component in self.components:
             component.update(dt)
 
@@ -131,13 +141,32 @@ class HydraulicModule:
         # Set the solver params
         if 'solver' in hydraulic_table:
             self.solver_params = hydraulic_table['solver']
+        # Generate the results
+        self._generate_results()
         # Check activity
         self.check_activity()
 
-    def _create_dof(self, number, type):
+    def _generate_results(self):
+        """
+        _generate_results is a private method that collects the degrees of freedom which are
+        to be part of the results
+        :return: nothing
+        """
+        self.results['run_values'] = {dof: [np.nan] for dof in self.dofs.elements_list if dof.save}
+
+    def _collect_results(self):
+        """
+        _collect_results will collect the local results stored in the degrees of freedom which
+        have been selected to be saved
+        :return: nothing
+        """
+        for dof, value in self.results['run_values'].items():
+            value.append(dof.get_value())
+
+    def _create_dof(self, identifier, type, save=False):
         """
         _create_dof instantiates a new Dof object and appends it to the dof list
-        :param number: dof identifier
+        :param identifier: dof identifier
         :param type: objects variable type
         :return: Dof instance of interest
         """
@@ -147,30 +176,27 @@ class HydraulicModule:
             s = self.solver_params['scale']
         else:
             s = 1
-        self.dofs.add_element(Dof(number, type, s))
-        return self.dofs.return_element(number)
+        self.dofs.add_element(Dof(identifier, type, s, save))
+        return self.dofs.return_element(identifier)
 
     def _create_node(self, node_dict, link_iterator=None):
         """
         _create_node instantiates a new Node object and appends it to the nodes list
-        :param node_dict: dictionary defining the node keys: ["id", "type"}
+        :param node_dict: dictionary defining the node keys: ["identifier", "type"}
         :param link_iterator: iterator of components used for instantiation of the mass dofs
         :return: Node instance
         """
 
-        # Extract the node data
-        node_number, dof_type = node_dict['identifier'], node_dict['type']
-
         # Create associated Dofs and DofCollection
-        if dof_type == "mass":
+        if node_dict['type'] == "mass":
             link = next(link_iterator)
-            my_dof = link.request_link() if link is not None else self._create_dof(node_number, dof_type)
+            my_dof = link.request_link() if link is not None else self._create_dof(**node_dict)
         else:
-            my_dof = self._create_dof(node_number, dof_type)
+            my_dof = self._create_dof(**node_dict)
 
         # Instantiate the node and add it to the NodesCollection
-        self.nodes.add_element(Node(node_number, my_dof))
-        return self.nodes.return_element(node_number)
+        self.nodes.add_element(Node(node_dict['identifier'], my_dof))
+        return self.nodes.return_element(node_dict['identifier'])
 
     def _create_fluid(self, name, T):
         """
@@ -250,9 +276,6 @@ class HydraulicModule:
         for dof in pressure_dofs:
             dof.set_value(f_interp(dof.number))
 
-        # Set isInitialized
-        self.is_initialized = True
-
     def check_activity(self):
         """
         check_activity determines is the network is still operating, if one element of the
@@ -266,7 +289,29 @@ class HydraulicModule:
         return_exit_flow returns the flow at the end of the hydraulic module. Typically an injector
         :return: exit flow in [kg/s]
         """
-        return self.components[-1].mass_dof.dof.get_value()
+        return self.components[-1].mass_node.dof.get_value()
+
+    def initialize(self, init_dict):
+        """
+        initialize method will set the component ready for running the simulation, by providing the initial
+        values of: mass flows involved (oxidizer, pressurizer), and chamber pressure
+        :param init_dict: dictionary containing the keys: ['ox_flow', 'pressurizer_flow', 'chamber_pressure']
+        :return: nothing
+        """
+        # Check the dictionary contains the right keys
+        assert {'chamber_pressure', 'ox_flow', 'pressurizer_flow'} <= set(init_dict), "Init_dict does not contain " \
+                                                                                      "right keys. \n"
+        self.set_chamber_pressure(init_dict['chamber_pressure'])                # Set the chamber pressure
+
+        # Set the flows
+        self.checkout_component("oxidizer_tank").mass_node[1].dof.set_value(init_dict['ox_flow'])
+        self.checkout_component("pressurizer_tank").mass_node[1].dof.set_value(init_dict['pressurizer_flow'])
+
+        # Initialize the pressure dofs
+        self.initialize_pressure_dofs()
+
+        # Set isInitialized
+        self.is_initialized = True
 
     def run_simulation(self):
         """
@@ -319,4 +364,6 @@ class HydraulicModule:
         sol = opt.minimize(optimize_fun, x0, method=self.solver_params['name'], jac=None,
                            tol=self.solver_params['tol'],
                            options=self.solver_params['options'])
+
+        # Spit the results
         return sol, res

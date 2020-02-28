@@ -86,7 +86,7 @@ def newton(thrust_vector, mass_vector, drag, pos, t, h, v, dv):
     """
     Calculation of the acceleration at discrete time=t
         -Thrust vector, defined as 2 line n column matrix where
-         first line is the thrust(N) in a discrete time and second line is
+         first line is the thrust(nodes_number) in a discrete time and second line is
          the time(s)
         -Mass vector, defined as 3 line n column matrix where
          first line is the mass(kg) at each time, second line is the time(s)
@@ -121,7 +121,7 @@ def newton(thrust_vector, mass_vector, drag, pos, t, h, v, dv):
 def runge_kutta_4(thrust_vector, mass_vector, initial_conditions, drag):
     """
     -Thrust vector, defined as 2 line n column matrix where
-         first line is the thrust(N) in a discrete time and second line is
+         first line is the thrust(nodes_number) in a discrete time and second line is
          the time(s)
         -Mass vector, defined as 3 line n column matrix where
          first line is the mass(kg) at each time, second line is the time(s)

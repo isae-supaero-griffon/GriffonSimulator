@@ -43,10 +43,10 @@ def test_combustion():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.4,
-                        'rintInitial': 0.05,
-                        'rext0': 0.07,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+    geometric_params = {'length': 0.4,
+                        'r_int_initial': 0.05,
+                        'r_ext': 0.07,
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -64,8 +64,8 @@ def test_combustion():
 
     # Instantiate the combustion module
     combustion_obj = CombustionObjectClassic(json_interpreter=json_interpreter,
-                                      geometry_object=geometry_obj,
-                                      nozzle_object=nozzle_obj)
+                                             geometry_object=geometry_obj,
+                                             nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
@@ -88,39 +88,38 @@ def test_combustion_image_geometry():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.4,
-                        'externalRadius': 0.45,
-                        'imagePixelSize': 2048,
-                        'imageMeterSize': 0.1,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+    geometric_params = {'length': 0.4,
+                        'r_ext': 0.45,
+                        'image_pixel_size': 2048,
+                        'image_meter_size': 0.1,
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
-    shape_params = {'a' : [0.07552083333333333, -0.22916666666666666, 0.3151041666666667],
-                    'b' : [],
-                    'baseRadius' : 0.036,
-                    'branches' : 8,
-                    'impact' : 0.3,
-                    'n' : 40}
+    shape_params = {'a': [0.07552083333333333, -0.22916666666666666, 0.3151041666666667],
+                    'b': [],
+                    'base_radius': 0.036,
+                    'branches': 8,
+                    'impact': 0.3,
+                    'n': 40}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
     design_params = {'gamma': 1.27, 'p_chamber': 3200000, 'p_exit': 100000,
                      'c_star': 1500, 'ox_flow': 1., 'OF': 9}
 
-    simulation_params = {'ox_flow': 0.96875, 'safety_thickness': 0.000000001, 'max_burn_time' : 5, 'dt': 0.05}
+    simulation_params = {'ox_flow': 0.96875, 'safety_thickness': 0.000000001, 'max_burn_time': 5, 'dt': 0.05}
 
     # ------------- Generate objects:
 
     geometry_obj = Geom.SinglePortImageGeometry(**geometric_params)
-    geometry_obj.generateFourier(**shape_params)
-    #geometry_obj.draw_geometry()
+    geometry_obj.generate_fourier(**shape_params)
+    # geometry_obj.draw_geometry()
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     nozzle_obj.set_design(**design_params)
-    json_interpreter = generate_data_layer()
 
     # Instantiate the combustion module
     combustion_obj = Comb.CombustionObjectImage(json_interpreter=json_interpreter,
-                                      geometry_object=geometry_obj,
-                                      nozzle_object=nozzle_obj)
+                                                geometry_object=geometry_obj,
+                                                nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
@@ -138,7 +137,7 @@ def test_combustion_three_port_geometry():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.6, 'portsIntialRadius': 0.01, 'r_ext': 0.07}
+    geometric_params = {'length': 0.6, 'portsIntialRadius': 0.01, 'r_ext': 0.07}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -156,8 +155,8 @@ def test_combustion_three_port_geometry():
 
     # Instantiate the combustion module
     combustion_obj = CombustionObjectClassic(json_interpreter=json_interpreter,
-                                      geometry_object=geometry_obj,
-                                      nozzle_object=nozzle_obj)
+                                             geometry_object=geometry_obj,
+                                             nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
@@ -180,25 +179,24 @@ def test_combustion_onera_data():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.235,
-                        'rintInitial': 0.0186658954,
-                        'rext0': 0.2,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+    geometric_params = {'length': 0.235,
+                        'r_int_initial': 0.0186658954,
+                        'r_ext': 0.2,
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
     simulation_params = {'ox_flow': 0.0855, 'safety_thickness': 0.005, 'dt': 0.05, 'max_burn_time': 8.25}
 
     # ------------- Generate objects:
-
     geometry_obj = Geom.OneCircularPort(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
 
     # Instantiate the combustion module
     combustion_obj = CombustionObjectClassic(json_interpreter=json_interpreter,
-                                      geometry_object=geometry_obj,
-                                      nozzle_object=nozzle_obj)
+                                             geometry_object=geometry_obj,
+                                             nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
 
@@ -226,28 +224,26 @@ def test_onera_physical_test_2():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.157,
-                        'rintInitial': 0.007465,
-                        'rext0': 0.041,
-                        'regressionModel': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
+    geometric_params = {'length': 0.157,
+                        'r_int_initial': 0.007465,
+                        'r_ext': 0.041,
+                        'regression_model': Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
 
     simulation_params = {'ox_flow': 0.0876, 'safety_thickness': 0.005, 'dt': 0.01, 'max_burn_time': 8}
 
     # ------------- Generate objects:
-
     geometry_obj = Geom.OneCircularPort(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     json_interpreter = generate_data_layer(data_file="Thermodynamic Data Onera 41 bar H2O2 87_5.json")
 
     # Instantiate the combustion module
     combustion_obj = CombustionObjectClassic(json_interpreter=json_interpreter,
-                                      geometry_object=geometry_obj,
-                                      nozzle_object=nozzle_obj)
+                                             geometry_object=geometry_obj,
+                                             nozzle_object=nozzle_obj)
 
     # -------------- Run simulation & Plot:
-
     combustion_obj.run_simulation_constant_fuel_sliver(**simulation_params)
 
     # Print the module
@@ -330,15 +326,12 @@ def test_fuel():
     """ Test the Fuel Module first definition """
 
     # ------------ Generate Data Layer:
-
     json_interpreter = generate_data_layer()
 
     # ------------ Instantiate Fuel
-
     my_fuel = Fuel(json_interpreter)
 
     # ------------ Test the object
-
     # Obtain the output
     params = {'Pc': bar2psia(36), 'eps': 36, 'MR': 5.5, 'short_output': 1}
     s = my_fuel.ispObj.get_full_cea_output(**params)
@@ -355,8 +348,8 @@ if __name__ == '__main__':
     # test_combustion()
     # test_combustion_three_port_geometry()
     # test_mass_simulator()
-    #test_trajectory()
-    #test_combustion_onera_data()
+    # test_trajectory()
+    # test_combustion_onera_data()
     # test_onera_physical_test_2()
     test_combustion_image_geometry()
     # test_fuel()

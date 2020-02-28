@@ -7,7 +7,7 @@
 
 from DataLayer.JsonInterpreter import JsonInterpreter         # Import the Data Layer
 import CombustionModule.Combustion as Combustion              # Import only the CombustionObject1D
-import CombustionModule.Geometries as Geom                    # Import only the SingleCircularPort1D Geometry
+import CombustionModule.Geometries1D as Geom                  # Import only the SingleCircularPort1D Geometry
 import CombustionModule.RegressionModel as Reg                # Import all the possible regression models
 import CombustionModule.Nozzle as Noz                         # Import the Nozzle module
 from HydraulicModule.Hydraulic import HydraulicModule         # Import the Hydraulic module class
@@ -44,10 +44,10 @@ def test_1d_implementation_single_circular_port():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 4.572,
+    geometric_params = {'length': 4.572,
                         'r_init': 0.152/2,
                         'r_ext': 0.5,
-                        'N': 12}
+                        'nodes_number': 12}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -56,7 +56,7 @@ def test_1d_implementation_single_circular_port():
                          'times': [0.1, 20, 60]}
 
     # ------------- Generate objects:
-    geometric_params['regressionModel'] = Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)
+    geometric_params['regression_model'] = Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)
     geometry_obj = Geom.SingleCircularPort1D(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 
@@ -91,14 +91,14 @@ def test_1d_implementation_single_circular_port_balanced_nozzle():
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.4,
+    geometric_params = {'length': 0.4,
                         'r_init': 0.052/2,
                         'r_final': 0.094/2,
                         'r_exit': 0.08/2,
                         'exit_depth': 0.02,
                         'depth': 0.3,
                         'r_ext': 0.05,
-                        'N': 200}
+                        'nodes_number': 200}
 
     nozzle_params = {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98, 'erosion': 0}
 
@@ -106,7 +106,7 @@ def test_1d_implementation_single_circular_port_balanced_nozzle():
                          'max_burn_time': 4.6, 'tol_press': 1e-3}
 
     # ------------- Generate objects:
-    geometric_params['regressionModel'] = Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)
+    geometric_params['regression_model'] = Reg.TwoRegimesMarxmanAndFloodedModel(**combustion_table)
     geometry_obj = Geom.ConicCircularPort1D(**geometric_params)
     nozzle_obj = Noz.Nozzle(**nozzle_params)
 

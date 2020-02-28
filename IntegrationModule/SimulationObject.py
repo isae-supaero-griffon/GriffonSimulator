@@ -106,9 +106,8 @@ class SimulationObject:
         # Check the validity of the initializer
         if self.initialization_object:
             # Initialize the combustion object if initializer is present
-            obj = self.initialization_object.simulation_parameters['CombustionModel'](**self.initialization_object.combustion_parameters)
-            # else:
-                # obj = Comb.CombustionObjectClassic(**self.initialization_object.combustion_parameters)
+            obj_init = self.initialization_object.simulation_parameters['CombustionModel']
+            obj = obj_init(**self.initialization_object.combustion_parameters)
         else:
             # Set the object to None value, issue warning
             warnings.warn("Set the CombustionObject to None, not representative object. \n")

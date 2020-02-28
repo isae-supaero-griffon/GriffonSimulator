@@ -431,7 +431,7 @@ class PostCombustion:
     the hydrodinamic instabilities.
 
     # Attributes:
-        1. L: float length of post-combustion chamber
+        1. length: float length of post-combustion chamber
         2. D: float diameter of post-combustion chamber
     """
 

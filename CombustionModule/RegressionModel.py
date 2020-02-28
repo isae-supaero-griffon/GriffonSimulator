@@ -1,7 +1,7 @@
 # RegressionModel.py allows for different hybrid fuel regression laws to be implemented.
 # It defines the required model outputs through an abstract class definition,
 # followed by several implementations.
-# Author: Maxime Sicat
+# Author: Maxime Sicat / Jose Felix Zapata Usandivaras
 # Date: 26/02/2019
 
 # -------------------------- IMPORT MODULES -------------------------------
@@ -25,11 +25,10 @@ class RegressionModel(ABC):
         """
         class initializer
         """
-
         super().__init__()
 
     @abstractmethod
-    def computeRegressionRate(self, geometry, ox_flow):
+    def compute_regression_rate(self, geometry, ox_flow):
         """
         Return the instantenous solid fuel regression rate
         """
@@ -61,7 +60,7 @@ class SingleRegimeMarxmanModel(RegressionModel):
     Classical regression model in which there exists a single
     regression regime, governed my Marxman's classical equation
     dependant on oxidizer mass flux through the combustion port:
-    r = a.(L^-0.2)(Go^n)
+    r = a.(length^-0.2)(Go^n)
 
     # Attributes:
         1. a: Constant factor dependant on fuel choice (experimental)
@@ -80,13 +79,13 @@ class SingleRegimeMarxmanModel(RegressionModel):
         self.n = n
         self.m = m
 
-    def computeRegressionRate(self, geometry, ox_flow):
+    def compute_regression_rate(self, geometry, ox_flow):
         """
         Return the instantenous solid fuel regression rate
         according to Marxman's equation
         """
 
-        oxidizer_mass_flux = ox_flow / geometry.totalCrossSectionArea()
+        oxidizer_mass_flux = ox_flow / geometry.total_cross_section_area()
 
         return self.a * (geometry.get_length() ** self.m) * (oxidizer_mass_flux ** self.n)
 
@@ -96,7 +95,7 @@ class SingleRegimeMarxmanModel(RegressionModel):
         according to Marxman's equation
         """
         if x != 0:
-            return self.a * x ** self.m  * m_flux ** self.n
+            return self.a * x ** self.m * m_flux ** self.n
         else:
             return 0
 
@@ -118,13 +117,12 @@ class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
         """
         class initializer
         """
-
         super().__init__(**kwargs)
 
         self.marxman = SingleRegimeMarxmanModel(a, n, m)
         self.threshold = maxGo
 
-    def getMaxRegressionRate(self, geometry):
+    def get_max_regression_rate(self, geometry):
         """
         Return the maximum regression rate possible
         within this model
@@ -143,18 +141,18 @@ class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
             # TODO: Solve singularity
             return 0
 
-    def computeRegressionRate(self, geometry, ox_flow):
+    def compute_regression_rate(self, geometry, ox_flow):
         """
         Return the instantenous solid fuel regression rate
         depending on the current regime
         """
 
-        oxidizer_mass_flux = ox_flow / geometry.totalCrossSectionArea()
+        oxidizer_mass_flux = ox_flow / geometry.total_cross_section_area()
 
         if oxidizer_mass_flux < self.threshold:
-            return self.marxman.computeRegressionRate(geometry, ox_flow)
+            return self.marxman.compute_regression_rate(geometry, ox_flow)
         else:
-            return self.getMaxRegressionRate(geometry)
+            return self.get_max_regression_rate(geometry)
 
     def compute_regression_rate_haltman(self, x, m_flux):
         """
@@ -165,7 +163,7 @@ class MarxmanAndConstantFloodingRegimeModel(RegressionModel):
         if m_flux < self.threshold:
             return self.marxman.compute_regression_rate_haltman(x, m_flux)
         else:
-                return self.get_max_regression_rate_local(x)
+            return self.get_max_regression_rate_local(x)
 
 
 class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
@@ -189,7 +187,7 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         """
         class initializer
         Warning : it is insufficient by itself, as the
-        makeContinuous() has to be run before using this model.
+        make_continuous() has to be run before using this model.
         """
 
         super().__init__(**kwargs)
@@ -199,7 +197,7 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         self.flooded = SingleRegimeMarxmanModel(0, n2, m)
         self.continuous = False
 
-    def makeContinuous(self):
+    def make_continuous(self):
         """
         Sets the factor in the flooded equation to assure
         continuity between the two regimes
@@ -210,7 +208,7 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
         self.flooded.a = a2
         self.continuous = True
 
-    def computeRegressionRate(self, geometry, ox_flow):
+    def compute_regression_rate(self, geometry, ox_flow):
         """
         Return the instantenous solid fuel regression rate
         depending on the current regime
@@ -219,14 +217,14 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
 
         if not self.continuous:
             # Make the model continuous if it's not already continuous
-            self.makeContinuous()
+            self.make_continuous()
 
-        oxidizer_mass_flux = ox_flow / geometry.totalCrossSectionArea()
+        oxidizer_mass_flux = ox_flow / geometry.total_cross_section_area()
 
         if oxidizer_mass_flux < self.threshold:
-            regression_rate = self.marxman.computeRegressionRate(geometry, ox_flow)
+            regression_rate = self.marxman.compute_regression_rate(geometry, ox_flow)
         else:
-            regression_rate = self.flooded.computeRegressionRate(geometry, ox_flow)
+            regression_rate = self.flooded.compute_regression_rate(geometry, ox_flow)
 
         # Return the regression rate
         return regression_rate
@@ -240,7 +238,7 @@ class TwoRegimesMarxmanAndFloodedModel(RegressionModel):
 
         if not self.continuous:
             # Make the model continuous if it's not already continuous
-            self.makeContinuous()
+            self.make_continuous()
 
         if m_flux < self.threshold:
             regression_rate = self.marxman.compute_regression_rate_haltman(x, m_flux)

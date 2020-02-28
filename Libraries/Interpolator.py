@@ -11,6 +11,7 @@ from scipy.interpolate import interp1d                  # Import interp1d
 
 # ------------------------- CLASS DEFINITIONS ------------------------ #
 
+
 class Interpolator:
     """
     Interpolator class helps in the interpolation of the cross section
@@ -62,4 +63,3 @@ class Interpolator:
         """
         # return value
         return self.extrap_fun(x)
-

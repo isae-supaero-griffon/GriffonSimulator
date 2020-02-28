@@ -29,11 +29,11 @@ def define_propellants():
     # Introduce the fuel definition
     fuel_card = "fuel=Air  wt=0.01  t(k)=298 " \
                 "fuel=ABS  wt=99.9  t(k)=298 " \
-                "h,kj/mol=62.63  C 3.85 H 4.85 N 0.43"
+                "h,kj/mol=62.63  C 3.85 H 4.85 nodes_number 0.43"
 
     # Introduce the oxidizer definition
-    oxidizer_card = "oxid=H2O2(L) wt=87.5  t(k)=298 " \
-                    "oxid=H2O(L) wt=12.5  t(k)=298"
+    oxidizer_card = "oxid=H2O2(length) wt=87.5  t(k)=298 " \
+                    "oxid=H2O(length) wt=12.5  t(k)=298"
 
     # Add the new fuel and oxidizer
     cea_obj.add_new_fuel("3DPrinted_ABS", fuel_card)

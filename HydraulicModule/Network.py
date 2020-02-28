@@ -26,12 +26,13 @@ class Dof:
             2. value: float indicating the value of the degree of freedom
     """
 
-    def __init__(self, number, type, scale=1, value=0):
+    def __init__(self, number, type, scale=1, save=False, value=0):
         """
         class constructor
         :param number: degree of freedom number
         :param type: string variable the dof is associated with
         :param scale: scale to which responds the degree of freedom
+        :param save: boolean which indicates if the dof should be saved or not
         :param value: float containing the value of the degree of freedom.
         By default it is initialized to 0.
         """
@@ -44,6 +45,7 @@ class Dof:
         self.isFixed = False
         self._scale = scale
         self.value = value
+        self.save = save
 
     def __str__(self):
         return "Dof:: Type: {type:10s}, ID: {id:5d}, isFixed: {fix:6b},Value: {val:>10.5f}".format(type=self.type,

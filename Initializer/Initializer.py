@@ -8,12 +8,16 @@
 
 from math import pi, sqrt                                   # Import math functions
 from CombustionModule.Geometries import *                   # Import the Geometries
+from CombustionModule.Geometries1D import *                 # Import the 1D Geometries
+from CombustionModule.Geometries0D import *                 # Import the 0D Geometries
 from CombustionModule.Nozzle import *                       # Import the nozzles
 from DataLayer.JsonInterpreter import JsonInterpreter       # Import the JsonInterpreter class
 from TrajectoryModule.Drag import *                         # Import the Drag Module (DensityLaw in it)
 from Libraries.Collections import Collections               # Import Collections class
 from MassEstimationModule.system import *                   # Import the Mass Module classes
-import CombustionModule.RegressionModel as Reg                  # Import the RegressionModel module
+import CombustionModule.RegressionModel as Reg              # Import the RegressionModel module
+from HydraulicModule.Hydraulic import HydraulicModule       # Import the Hydraulic module
+
 # ------------------ FUNCTIONS/STATIC CLASSES -------------------
 
 
@@ -32,7 +36,8 @@ class InitializerCalculator:
         :param fuel_density: density of the fuel in the combustion chamber [kg/m^3] """
 
         # Check the inputs
-        assert isinstance(geometry_obj, Geometry), "Please insert a valid Geometry type. \n"
+        assert isinstance(geometry_obj, Geometry) or isinstance(geometry_obj, Geometry1D), \
+            "Please insert a valid Geometry type. \n"
 
         # Return the output
         return geometry_obj.get_fuel_mass(fuel_density)
@@ -202,12 +207,12 @@ class Initializer:
 
         # Geometry
         geometry_type = combustion_init_dict['geometric_params'].pop('type')
-        regression_obj = Reg.MarxmanAndConstantFloodingRegimeModel(**json_interpreter.return_combustion_table())
-        combustion_init_dict['geometric_params']['regressionModel'] = regression_obj
+        regression_type = combustion_init_dict['geometric_params'].pop('regression_model')
+        regression_obj = regression_type(**json_interpreter.return_combustion_table())
+        combustion_init_dict['geometric_params']['regression_model'] = regression_obj
         geometry_obj = geometry_type(**combustion_init_dict['geometric_params'])
-        if geometry_type == SinglePortImageGeometry :
-            geometry_obj.generateFourier(**combustion_init_dict['shape_params'])
-
+        if geometry_type == SinglePortImageGeometry:
+            geometry_obj.generate_fourier(**combustion_init_dict['shape_params'])
 
         # Nozzle
         nozzle_obj = Nozzle(**combustion_init_dict['nozzle_params'])
@@ -270,7 +275,6 @@ class Initializer:
                                                                     combustion_table['rho_fuel'])
 
         # ----------------------- Calculate oxidiser mass
-
 
         ox_flow = self.simulation_parameters['mass_simulator']['ox_flow']
         burn_time = self.simulation_parameters['mass_simulator']['burn_time']

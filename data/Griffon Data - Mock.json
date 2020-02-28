@@ -177,7 +177,7 @@
   },
   "hydraulic_table":  {
     "solver": {"name": "Nelder-Mead", "tol": 1e-3, "scale": 1e5,
-               "options":{"maxiter": 5000, "disp": "False", "adaptive": "True"}},
+               "options":{"maxiter": 5000, "disp": false, "adaptive": true}},
     "fluids": [
       {
         "fluid": "Gas",
@@ -211,11 +211,13 @@
           "nodes": [
             {
               "identifier": 0,
-              "type": "pressure"
+              "type": "pressure",
+              "save": true
             },
             {
               "identifier": 1,
-              "type": "mass"
+              "type": "mass",
+              "save": true
             },
             {
               "identifier": 2,
@@ -265,7 +267,8 @@
           "nodes": [
             {
               "identifier": 4,
-              "type": "pressure"
+              "type": "pressure",
+              "save": true
             },
             {
               "identifier": 5,
@@ -273,7 +276,8 @@
             },
             {
               "identifier": 6,
-              "type": "pressure"
+              "type": "pressure",
+              "save": true
             }
           ]
         },
@@ -347,11 +351,13 @@
             },
             {
               "identifier": 12,
-              "type": "pressure"
+              "type": "pressure",
+              "save": true
             },
             {
               "identifier": 13,
-              "type": "mass"
+              "type": "mass",
+              "save": true
             },
             {
               "identifier": 14,
@@ -535,7 +541,8 @@
             },
             {
               "identifier": 26,
-              "type": "pressure"
+              "type": "pressure",
+              "save": true
             }
           ]
         }

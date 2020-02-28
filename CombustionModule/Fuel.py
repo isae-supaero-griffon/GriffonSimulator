@@ -12,6 +12,7 @@ from DataLayer.JsonInterpreter import JsonInterpreter   # Import the JsonInterpr
 
 # -------------------------- FUNCTION DEFINITIONS ------------------------
 
+
 def bar2psia(a):
     """
     bar2psia converts from bar to psia
@@ -38,6 +39,7 @@ def pascal2bar(a):
         """
     return a / 10 ** 5
 
+
 def feet2meters(a):
     """
         feet2meters converts from feet to meters
@@ -45,6 +47,7 @@ def feet2meters(a):
         :return: length/speed in meters
         """
     return a / 3.28083
+
 
 def lbmfeet2kgm(a):
     """
@@ -84,16 +87,14 @@ class Fuel:
             # Assert nature of the inputs - JsonInterpreter is a singleton so it is instantiated once
             assert json_interpreter == JsonInterpreter.instance, "Please insert a valid JsonInterpreter. \n"
 
-
             # Extract the propellants table
             propellant_table = json_interpreter.return_propellant_table()
             self.define_fuel(fuel_table=propellant_table['fuel'])
             self.define_oxidizer(oxidizer_table=propellant_table['oxidizer'])
 
             # Define the ispObj
-            self.ispObj = cea_obj.CEA_Obj(oxName= propellant_table['oxidizer']['name'],
+            self.ispObj = cea_obj.CEA_Obj(oxName=propellant_table['oxidizer']['name'],
                                           fuelName=propellant_table['fuel']['name'])
-
 
         @staticmethod
         def define_fuel(fuel_table):
@@ -120,7 +121,7 @@ class Fuel:
                                                            value=fuel_type['h']['value']))
 
                 if "composition" in fuel_type:
-                    card.append(" ".join(("{name} {value}".format(name=key, value= val)
+                    card.append(" ".join(("{name} {value}".format(name=key, value=val)
                                           for key, val in fuel_type['composition'].items())))
 
             # Join the card
@@ -128,7 +129,6 @@ class Fuel:
 
             # Add the fuel to the cea_obj
             cea_obj.add_new_fuel(fuel_table['name'], card)
-
 
         @staticmethod
         def define_oxidizer(oxidizer_table):
@@ -162,7 +162,6 @@ class Fuel:
 
             # Add the fuel to the cea_obj
             cea_obj.add_new_oxidizer(oxidizer_table['name'], card)
-
 
         def return_chamber_c_star(self, Pc, MR):
             """
