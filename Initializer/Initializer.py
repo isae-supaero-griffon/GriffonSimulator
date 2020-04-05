@@ -380,7 +380,6 @@ class Initializer:
         """
 
         # TODO: review if possible to implement calculation of aerodynamic area of rocket based on system dict
-
         # Extract the trajectory data and generate the objects
         trajectory_data = json_interpreter.return_trajectory_table()
         density_obj = DensityLaw(trajectory_data['density'])

@@ -120,9 +120,9 @@ def test_hydraulic_module_network_solution():
     pressurizer_tank.mass_node[1].dof.set_value(value=pressurizer_flow)
 
     # Solve the module
-    _, _ = my_module.run_simulation()
+    _, res = my_module.run_simulation()
 
-    # print(res/my_module.solver_params['scale'])
+    print(res/my_module.solver_params['scale'])
 
     # print the module dofs
     print(my_module.dof_print())
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     # p = pstats.Stats('../data/data_tests/my_code_stats')
     # p.strip_dirs().sort_stats(-1).print_stats()
     # test_hydraulic_module_initiation()
-    # test_hydraulic_module_network_solution()
-    test_hydraulic_module_network_solution_transient()
+    test_hydraulic_module_network_solution()
+    # test_hydraulic_module_network_solution_transient()
     # test_hydraulic_module_valve()
     # generate_injector_json_table()

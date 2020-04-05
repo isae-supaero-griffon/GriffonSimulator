@@ -22,7 +22,7 @@ def prepare_inputs_for_trajectory_module(thrust_vector, isp_vector, simulation_t
     :param isp_vector: isp_vector as obtained from the combustion module
     :param simulation_time: simulation_time [secs] for which we want the trajectory module to be run
     :param dt: time-spacing [secs] (same as used in combustion to make time-series coincident
-    :return: time, thrust, isp,
+    :return: thrust, isp,
     """
 
     # Get the time-array and complete the vectors
@@ -171,6 +171,9 @@ class SimulationObject:
         self.mass_simulator_module = None
         self.trajectory_module = self._generate_trajectory_module()
 
+        # Reset the clock
+        Clock.instance.reset()
+
     def store_current_simulation_outputs(self):
         """
         store the current simulation outputs into the ResultsCollection attribute
@@ -251,15 +254,12 @@ class SimulationObject:
 
         # Get the results from combustion and unpack them
         combustion_results = self.combustion_module.return_results()
-        thrust_vector = combustion_results['run_values']['thrust']
+        thrust = combustion_results['run_values']['thrust']
         isp = combustion_results['run_values']['isp']
-
-        # Get time, thrust and isp
-        time, thrust, isp = prepare_inputs_for_trajectory_module(thrust_vector, isp, simulation_time, dt)
 
         # ------------------------ RUN TRAJECTORY MODULE -------------------------
 
-        self.trajectory_module.run_simulation_on_trajectory(time, thrust, isp, initial_conditions)
+        self.trajectory_module.run_simulation_on_trajectory(thrust, isp, initial_conditions, simulation_time, dt)
 
         # -------------------------- STORE THE RESULTS ----------------------------
 

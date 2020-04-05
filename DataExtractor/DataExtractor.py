@@ -263,12 +263,12 @@ def generate_propellants_table():
                 'oxidizer': {
                                 'name': "H2O2GriffonOxidizer",
                                 'components':   [{
-                                                    'oxid': "H2O2(L)",                                # Name of the oxidizer
+                                                    'oxid': "H2O2(length)",                                # Name of the oxidizer
                                                     'wt': 87.5,                                       # Mass weight percentage of the Oxidizer
                                                     't': {'value': 298, 'units': '(k)'}               # Reference Temperature in Kelvin
                                                   },
                                                 {
-                                                    'oxid': "H2O(L)",                                 # Name of the oxidizer
+                                                    'oxid': "H2O(length)",                                 # Name of the oxidizer
                                                     'wt': 12.5,                                       # Mass weight percentage of the Oxidiser
                                                     't': {'value': 298, 'units': '(k)'},              # Reference Temperature in Kelvin
                                                 }]},
@@ -292,7 +292,7 @@ def generate_propellants_table():
                                                  # Reference Temperature in Kelvin
                                                      'h': {'value': 62.63, 'units': 'kj/mol'},
                                                  # Reference Enthalpy in kj/mol
-                                                     'composition': {'C': 3.85, 'H': 4.85, 'N': 0.43}
+                                                     'composition': {'C': 3.85, 'H': 4.85, 'nodes_number': 0.43}
                                                  # Composition of the fuel
                                                  }]}
     }

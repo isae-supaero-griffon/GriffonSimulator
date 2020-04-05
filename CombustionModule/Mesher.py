@@ -31,10 +31,11 @@ class Mesh(ABC):
         1. cells: array of cells
     """
 
-    def __init__(self, name, geometry_obj):
+    def __init__(self, name, geometry_obj, n_el):
         """ class initializer
             :param  name: string containing the name of the mesh.
             :param geometry_obj: Geometry class instance which defined the domain of the problem.
+            :param n_el: number of elements
         """
         # Call superclass initializer
         super(Mesh, self).__init__()
@@ -42,12 +43,21 @@ class Mesh(ABC):
         # Check the inputs
         assert isinstance(name, str), "Failed assertion: name of mesh has to be of str type.\n"
         assert isinstance(geometry_obj, Geom.Geometry1D), "Failed assertion: geometry_obj has to be of Geometry type.\n"
+        assert isinstance(n_el, int), "Failed assertion: check n_el is an int.\n"
 
         # Initialize attributes
         self.name = name
         self.geometry = geometry_obj
-        # TODO: find a more convenient array type with iterator protocol to operate with cells
+        self.n_el = n_el
         self.cells = []
+
+    def __str__(self):
+        """ generate the mesh string """
+        out = "{name}, {my_type}, {cell_type}, {n_el} nodes".format(name=self.name,
+                                                                       my_type=type(self).__name__,
+                                                                       cell_type=type(self.cells[0]).__name__,
+                                                                       n_el=self.n_el,)
+        return out
 
     @abstractmethod
     def _generate_cells(self, cell_factory):
@@ -91,14 +101,10 @@ class UniformlySpacedMesh(Mesh):
         :param n_el: number of cells integer.
         """
         # Call superclass constructor
-        super(UniformlySpacedMesh, self).__init__(name, geometry_obj)
-
-        # Check the input
-        assert isinstance(n_el, int), "Failed assertion: check n_el is an int.\n"
+        super(UniformlySpacedMesh, self).__init__(name, geometry_obj, n_el)
 
         # Attributes definition
-        self.n_el = n_el
-        self.dx = geometry_obj.length / n_el
+        self.dx = geometry_obj.length / self.n_el
         self._generate_cells(geometry_obj.my_cell_factory)
 
     def _generate_cells(self, cell_factory):
@@ -107,7 +113,6 @@ class UniformlySpacedMesh(Mesh):
         :param cell_factory: cell factory method associated to the geometry object
         :return: nothing
         """
-
         for i in range(0, self.n_el):
             new_cell = cell_factory(i, (i+1)*self.dx)
             self.cells.append(new_cell)
@@ -129,14 +134,12 @@ class GeometricMesh(Mesh):
         """
 
         # Call superclass constructor
-        super(GeometricMesh, self).__init__(name, geometry_obj)
+        super(GeometricMesh, self).__init__(name, geometry_obj, n_el)
 
         # Check the input
-        assert isinstance(n_el, int), "Failed assertion: check n_el is an int.\n"
         assert 0 < bias, "Bias has to be strictly greater than 0. \n"
 
         # Attributes definition
-        self.n_el = n_el
         self.bias = bias
         self._generate_cells(geometry_obj.my_cell_factory)
 

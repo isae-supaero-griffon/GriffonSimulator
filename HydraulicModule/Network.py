@@ -53,6 +53,9 @@ class Dof:
                                                                                                    val=self.value,
                                                                                                    fix=self.isFixed)
 
+    def dof_name(self):
+        return "dof_{0:d}_{1:s}".format(self.number, self.type)
+
     def set_value(self, value):
         self.value = value
 

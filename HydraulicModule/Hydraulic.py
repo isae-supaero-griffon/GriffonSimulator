@@ -13,6 +13,7 @@
 # -------------------------- IMPORT MODULES -------------------------------
 
 from abc import ABC, abstractmethod                                                 # Import the abstract class mold
+from Libraries.GriffonModule import GriffonModule                                   # Import the GriffonModule
 import numpy as np                                                                  # Import  numpy
 import math as m                                                                    # Import math library
 from Libraries.Collections import Collections, UniqueCollections                    # Import the collections class
@@ -45,10 +46,11 @@ def get_x_activity(x):
 # -------------------------- CLASS DEFINITIONS -----------------------------
 
 
-class HydraulicModule:
+class HydraulicModule(GriffonModule):
     """
     HydraulicModule class is the master class in charge of commanding the hydraulic
-    module physics. Its functions include, creation of the different components, initialization
+    module physics. It inherits from the GriffonModule class
+    Its functions include, creation of the different components, initialization
     and later commanding the network solving.
 
         Attributes:
@@ -57,7 +59,6 @@ class HydraulicModule:
             3. nodes: list of nodes that integrate the hydraulic network
             4. dofs: list of dofs that integrate the hydraulic network
     """
-
     # Define useful functions to be generated once during the simulation
     activity_function = np.vectorize(get_x_activity)
 
@@ -73,6 +74,9 @@ class HydraulicModule:
         class initializer
         :param hydraulic_table: dictionary defining the data necessary for the hydraulic module
         """
+        # Call superclass initializer
+        super(HydraulicModule, self).__init__()
+
         # Initialize attributes as lists
         self._dimension = 0
         self.fluids = {}
@@ -81,8 +85,8 @@ class HydraulicModule:
         self.dofs = DofCollection([])
         self.is_initialized = False
         self.is_active = True
+        self._saved_dofs = []
         self.solver_params = {'name': 'Nelder-Mead', 'tol': 1e-3, 'maxiter': 100, 'scale': 1e5}
-        self.results = {'time': [0], 'run_values': {}, 'magnitudes': {}}
 
         # Initialize the network
         self._initialize(hydraulic_table)
@@ -107,13 +111,8 @@ class HydraulicModule:
         :param dt: time-step [sec]
         :return: nothing
         """
-        # Determine cummulative time
-        # TODO: check if maybe using a clock class would be helpful (implement as a singleton)
-        next_time = self.results['time'][-1] + dt
-        self.results['time'].append(next_time)
-
         # Collect the results
-        self._collect_results()
+        self._allocate_result()
 
         # Update every component
         for component in self.components:
@@ -142,26 +141,22 @@ class HydraulicModule:
         if 'solver' in hydraulic_table:
             self.solver_params = hydraulic_table['solver']
         # Generate the results
-        self._generate_results()
+        self._initialize_results()
         # Check activity
         self.check_activity()
 
-    def _generate_results(self):
-        """
-        _generate_results is a private method that collects the degrees of freedom which are
-        to be part of the results
-        :return: nothing
-        """
-        self.results['run_values'] = {dof: [np.nan] for dof in self.dofs.elements_list if dof.save}
+    def _initialize_results(self):
+        self._saved_dofs = {dof: dof.dof_name() for dof in self.dofs.elements_list if dof.save}
+        self._populate_run_values(self._saved_dofs.values())
 
-    def _collect_results(self):
+    def _allocate_result(self, **kwargs):
         """
-        _collect_results will collect the local results stored in the degrees of freedom which
+        _allocate_result will collect the local results stored in the degrees of freedom which
         have been selected to be saved
         :return: nothing
         """
-        for dof, value in self.results['run_values'].items():
-            value.append(dof.get_value())
+        for dof, key in self._saved_dofs.items():
+            self.results['run_values'][key] = np.append(self.results['run_values'][key], dof.get_value())
 
     def _create_dof(self, identifier, type, save=False):
         """
@@ -352,7 +347,7 @@ class HydraulicModule:
 
         # Define the optimization bounds
         # TODO: implement a solver for root finding, investigate if its better than optimize - bounds definition
-        x0_fun = np.vectorize(lambda x: x.get_value()/scale if x.type == "pressure" else x.get_value())
+        x0_fun        = np.vectorize(lambda x: x.get_value() / scale if x.type == "pressure" else x.get_value())
         x0 = x0_fun(non_fixed_dofs)
 
         # Check the activity of the system

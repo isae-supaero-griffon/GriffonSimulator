@@ -7,6 +7,7 @@ Date: 14 Dec 2018
 
 # ------------------- IMPORT MODULES ----------------------
 
+from Libraries.GriffonModule import GriffonModule, Clock    # Import the GriffonModule class
 from TrajectoryModule.Drag import *                         # Import the drag module
 from TrajectoryModule.Density import *                      # Import the density module
 import numpy as np                                          # Import numpy
@@ -15,7 +16,7 @@ import matplotlib.pyplot as plt                             # Import matplotlib 
 
 # ----------------- FUNCTION DEFINITIONS ------------------
 
-
+# TODO: replace all this implementation of RK4 with scipy/numpy library implemented propagator
 def mass_calc(thrust_vector, isp, g0, m0):
     """
     Calculation of the mass in the point where the thrust curve is defined
@@ -174,11 +175,12 @@ def runge_kutta_4(thrust_vector, mass_vector, initial_conditions, drag):
 
 # -------------------- CLASS DEFINITIONS --------------------
 
-class TrajectoryObject:
+class TrajectoryObject(GriffonModule):
     """
     TrajectoryObject is in charge of handling all of the altitude computations for the rocket
     based on the Isp and Thrust values. The current class acts as a wrapper to ease integration
-    into the simulation code and make it object oriented.
+    into the simulation code and make it object oriented. The class TrajectoryObject inherits from
+    the GriffonModule abstract class.
 
     Attributes:
         0.data_dictionary: dictionary containing all of the relevant data to the Trajectory
@@ -194,6 +196,8 @@ class TrajectoryObject:
         :param density_obj: DensityLaw instance with the density calculation
         :param drag_obj: Drag instance
         """
+        # Call superclass initializer
+        super(TrajectoryObject, self).__init__()
 
         # First perform check on inputs
         assert isinstance(density_obj, DensityLaw), "Please insert a valid DensityLaw. \n"
@@ -202,8 +206,6 @@ class TrajectoryObject:
         # Allocate the attributes
         self.density = density_obj
         self.drag = drag_obj
-        self.results = {'run_values': {'time': np.nan, 'altitude': np.nan, 'velocity': np.nan, 'acceleration': np.nan},
-                        'magnitudes': {}}
 
     def __str__(self):
         """ redefine the str method for the TrajectoryObject """
@@ -214,37 +216,66 @@ class TrajectoryObject:
         # Return the output
         return "\n".join(["\nTrajectory,", str(self.drag), "\nResults,", results_str])
 
-    def post_process_results(self):
+    def _initialize_results(self):
+        keys = ['altitude' 'velocity', 'acceleration']
+        self._populate_run_values(keys)
+
+    def _recondition_inputs_for_simulation(self, thrust, isp, simulation_time, dt):
+        """
+        _recondition_inputs_for_simulation takes care that the dimensions of the vectors are consistent
+        in order to start the simulation. It reconditions the clock log
+        :param thrust: np.array with thrust values
+        :param isp: np.array with isp values
+        :param simulation_time: float with total simulation time for TrajectoryModule
+        :param dt: time-step of the system
+        :return: reconditioned arrays for thrust and isp.
+        """
+        # Get the times
+        new_time = dt * np.arange(start=0, stop=int(simulation_time / dt) + 1)
+        old_time = self.clock.get_log()
+        # Perform the interpolation
+        new_thrust = np.interp(new_time, old_time, thrust, left=0.0, right=0.0, period=None)
+        new_isp = np.interp(new_time, old_time, isp, left=np.nan, right=np.nan, period=None)
+        # Set the new clock
+        self.clock.set_limit(None)
+        self.clock.set_time(simulation_time)
+        self.clock.set_log(new_time)
+
+        # Return conditioned arrays
+        return new_thrust, new_isp
+
+    def post_process_data(self, *args):
         """
         post_process_results determines the magnitudes of interest that are to be outputted from the TrajectoryModule
         :return: nothing
         """
+        super(TrajectoryObject, self).post_process_data()
+        self._calculate_maximums()          # Simply determine the maximum values of the parameters
 
-        self.results['magnitudes'] = {"max_{key}".format(key=key): np.nanmax(value) for key, value in
-                                      self.results['run_values'].items() if key != 'time'}
-
-    def run_simulation_on_trajectory(self, time, thrust, isp, initial_conditions):
+    def run_simulation_on_trajectory(self, thrust, isp, initial_conditions, simulation_time, dt):
         """
         run_simulation_on_trajectory performs the calculation of the rocket performance based on a given
         thrust and isp curve and initial_conditions.
-        :param time: time array
         :param thrust: thrust array - mapping with time has to be one-2-one
         :param isp: isp array/value
         :param initial_conditions: dictionary with initial conditions {'h0', 'v0', 'm0'}
+        :param simulation_time: float with simulation time for trajectory module
+        :param dt: time-step for data in secs
         :return: nothing
         """
-
         # Perform basic checks on the inputs
-        assert len(time) == len(thrust), "Time and Thrust arrays do not have same length, please check inputs. \n"
         assert 'h0' in initial_conditions, "Please make sure initial conditions are properly set. \n"
         assert 'v0' in initial_conditions, "Please make sure initial conditions are properly set. \n"
         assert 'm0' in initial_conditions, "Please make sure initial conditions are properly set. \n"
 
+        # Recondition arrays
+        thrust, isp = self._recondition_inputs_for_simulation(thrust, isp, simulation_time, dt)
+
         # Prepare inputs and call the simulation methods
-        n_points = len(time)
+        n_points = len(self.clock.log)
         thrust_vector = np.empty((2, n_points))
         thrust_vector[0, :] = thrust
-        thrust_vector[1, :] = time
+        thrust_vector[1, :] = self.clock.log
 
         # Calculate the mass over time for the rocket
         mass_vector = mass_calc(thrust_vector, isp, self.drag.density.g0, initial_conditions['m0'])
@@ -253,13 +284,12 @@ class TrajectoryObject:
         output = runge_kutta_4(thrust_vector, mass_vector, initial_conditions, self.drag)
 
         # Unpack output and store results
-        self.results['run_values'] = {'time': output[1, :],
-                                      'altitude': output[3, :],
+        self.results['run_values'] = {'altitude': output[3, :],
                                       'velocity': output[0, :],
                                       'acceleration': output[2, :]}
 
         # Post-process results
-        self.post_process_results()
+        self.post_process_data()
 
     def plot_results(self):
         """
@@ -268,10 +298,9 @@ class TrajectoryObject:
         """
 
         # Check the time array is not, if so then raise error, otherwise
-        if self.results['run_values']["time"].any != np.nan:
-
+        if self.clock.get_log().any != np.nan:
             # Extract the concerning results
-            time = self.results['run_values']["time"]
+            time = self.results["time"]
             altitude = self.results['run_values']["altitude"]
             velocity = self.results['run_values']["velocity"]
             acceleration = self.results['run_values']["acceleration"]
@@ -332,7 +361,3 @@ class TrajectoryObject:
         axs[3].set_ylim(bottom=velocity[0], top=100)
         axs[3].set_xticks(np.linspace(0, 10, 11))
         axs[3].set_yticks(np.linspace(0, 100, 11))
-
-    def return_results(self):
-        """ return the results from the simulation """
-        return self.results

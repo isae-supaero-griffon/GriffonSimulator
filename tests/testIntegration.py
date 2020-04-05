@@ -37,15 +37,15 @@ def generate_fourier_coefficients(n_coefs, period, fun, *args):
 
 def my_fun_2(x, *args):
     delta1, delta2 = args[0], args[1]
-    if 0<=x<delta1:
+    if 0 <= x < delta1:
         return 0
-    elif delta1<=x<delta2:
+    elif delta1 <= x < delta2:
         return 0.5
-    elif delta2<=x<1-delta2:
+    elif delta2 <= x < 1-delta2:
         return 1 + 0.12*m.fabs(x - 0.5)
-    elif 1-delta2<=x<1-delta1:
+    elif 1 - delta2 <= x < 1 - delta1:
         return 0.5
-    elif 1-delta1<=x<=1:
+    elif 1 - delta1 <= x <= 1:
         return 0
 
 
@@ -53,31 +53,29 @@ def my_fun(x, *args):
     """
     my_fun generates the desired profile for the branch
     :param x: float with x-coordinate
-    :param br: float with branch radius position
-    :param r: radius
     :return: value of function
     """
     br, r, delta = args[0], args[1], args[2]
 
     # Check the inputs
     assert r < 0.5, 'The radius has to be less than 0.5'
-    assert 0<= x <=1, 'x has to be contained between 0 and 1'
+    assert 0 <= x <= 1, 'x has to be contained between 0 and 1'
     assert r < br, 'br has to be greater than r'
 
     if delta <= x <= 1-delta:
         # Scale x
         x = (x - delta)/(1 - 2*delta)
         # Evaluate the function
-        if 0<=x <br-r:
-            return (1-r)/(br-r)*x
-        elif br-r<=x<br:
+        if 0 <= x < br-r:
+            return (1 - r) / (br - r) * x
+        elif br-r <= x < br:
             return m.sqrt(r**2 - (x - br)**2) + (1 - r)
-        elif br<=x<1-br:
+        elif br <= x < 1-br:
             return 1
-        elif 1-br<=x<1-br+r:
+        elif 1-br <= x < 1-br+r:
             return sqrt(r**2 - (x - 1 + br)**2) + (1 - r)
-        elif 1-br+r<=x<=1:
-            return (1-r)/(br-r)*(1-x)
+        elif 1-br+r <= x <= 1:
+            return (1 - r) / (br - r) * (1 - x)
     else:
         return 0
 
@@ -242,6 +240,11 @@ def test_hydraulic_module_integration_with_combustion():
     # Print the module
     print(combustion_obj)
 
+    # Export the results to a File
+    data_dir = "../data/data_tests/MergeResults/"
+    combustion_obj.export_results_file(file_name=data_dir + "CombustionResultsImage_Valve_2.csv")
+    hydraulic_obj.export_results_file(file_name=data_dir + "HydraulicResultsImage_Valve_2.csv")
+
     # Plot the results
     combustion_obj.plot_results()
     geometry_obj.draw_geometry()
@@ -283,7 +286,7 @@ def test_hydraulic_module_integration_with_combustion_1d():
         }
     }
 
-    simulation_parameters = {'hydraulic_module': None, 'safety_thickness': 0.004, 'dt': 0.05,
+    simulation_parameters = {'hydraulic_module': None, 'safety_thickness': 0.004, 'dt': 0.025,
                              'max_burn_time': None, 'tol_press': 1e-3}
 
     # ---------- Generate objects:
@@ -308,6 +311,11 @@ def test_hydraulic_module_integration_with_combustion_1d():
     # Print the module
     print(combustion_obj)
 
+    # Export the results to a File
+    data_dir = "../data/data_tests/MergeResults/"
+    combustion_obj.export_results_file(file_name=data_dir + "CombustionResults1D_7.csv")
+    hydraulic_obj.export_results_file(file_name=data_dir + "HydraulicResults1D_7.csv")
+
     # Plot the results
     combustion_obj.plot_results()
     plt.show()
@@ -319,5 +327,5 @@ if __name__ == '__main__':
 
     # Call the test functions
     # test_simulation_initializer()
-    # test_hydraulic_module_integration_with_combustion()
-    test_hydraulic_module_integration_with_combustion_1d()
+    test_hydraulic_module_integration_with_combustion()
+    # test_hydraulic_module_integration_with_combustion_1d()

@@ -15,8 +15,6 @@ from CombustionModule.Combustion import CombustionObject        # Import the Com
 
 # ------------------------ FUNCTION DEFINITIONS ------------------------
 
-
-
 def test_combustion_image_geometry_polynom(polynom, baseRadius, branches, ox_flow):
     """ Give the geometry mean Isp as an objective function """
 
@@ -27,14 +25,14 @@ def test_combustion_image_geometry_polynom(polynom, baseRadius, branches, ox_flo
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.23,
+    geometric_params = {'length': 0.23,
                         'externalRadius': 88.5 / 2000,
                         'imagePixelSize': 2048,
                         'imageMeterSize': 0.09,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     shape_params = {'polynom': polynom,
-                    'baseRadius': baseRadius,
+                    'base_radius': baseRadius,
                     'branches': branches,
                     'n': 20}
 
@@ -45,7 +43,7 @@ def test_combustion_image_geometry_polynom(polynom, baseRadius, branches, ox_flo
     # ------------- Generate objects:
 
     geometry_obj = Geom.SinglePortImageGeometry(**geometric_params)
-    geometry_obj.generatePolynom(**shape_params)
+    geometry_obj.generate_polynom(**shape_params)
     #geometry_obj.draw_geometry()
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     json_interpreter = generate_data_layer()
@@ -60,7 +58,6 @@ def test_combustion_image_geometry_polynom(polynom, baseRadius, branches, ox_flo
     combustion_obj.run_simulation_constant_fuel_sliver_image_geometry(**simulation_params)
 
     mean_isp = 0
-
 
     for k in range(1, len(combustion_obj.results["run_values"]['isp'])):
 
@@ -81,17 +78,17 @@ def test_combustion_image_geometry_fourier(a, b, baseRadius, branches, ox_flow):
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.13,
+    geometric_params = {'length': 0.13,
                         'externalRadius': 88.5 / 2000,
                         'imagePixelSize': 2048,
                         'imageMeterSize': 0.09,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     shape_params = {'a': a,
                     'b': b,
                     'impact' : 0.5,
                     'branches': branches,
-                    'baseRadius': baseRadius,
+                    'base_radius': baseRadius,
                     'n': 20}
 
     nozzle_params = {'At': 0.000038, 'expansion': 6.3, 'lambda_e': 0.98, 'erosion': 0}
@@ -101,7 +98,7 @@ def test_combustion_image_geometry_fourier(a, b, baseRadius, branches, ox_flow):
     # ------------- Generate objects:
 
     geometry_obj = Geom.SinglePortImageGeometry(**geometric_params)
-    geometry_obj.generateFourier(**shape_params)
+    geometry_obj.generate_fourier(**shape_params)
     #geometry_obj.draw_geometry()
     nozzle_obj = Noz.Nozzle(**nozzle_params)
     json_interpreter = generate_data_layer()
@@ -135,21 +132,21 @@ def test_geom_validity(polynom, baseRadius, branches):
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.13,
+    geometric_params = {'length': 0.13,
                         'externalRadius': 88.5 / 2000,
                         'imagePixelSize': 2048,
                         'imageMeterSize': 0.09,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     shape_params = {'polynom': polynom,
-                    'baseRadius': baseRadius,
+                    'base_radius': baseRadius,
                     'branches': branches,
                     'n': 20}
 
     # ------------- Generate objects:
 
     geometry_obj = Geom.SinglePortImageGeometry(**geometric_params)
-    geometry_obj.generatePolynom(**shape_params)
+    geometry_obj.generate_polynom(**shape_params)
 
     return geometry_obj.min_bloc_thickness() > 0.01
 
@@ -161,23 +158,23 @@ def test_geom_validity_fourier(a, b, baseRadius, branches):
 
     # ------------ Define parameters:
 
-    geometric_params = {'L': 0.13,
+    geometric_params = {'length': 0.13,
                         'externalRadius': 88.5 / 2000,
                         'imagePixelSize': 2048,
                         'imageMeterSize': 0.09,
-                        'regressionModel': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
+                        'regression_model': Reg.MarxmanAndConstantFloodingRegimeModel(**combustion_table)}
 
     shape_params = {'a': a,
                     'b': b,
                     'impact': 0.5,
                     'branches': branches,
-                    'baseRadius': baseRadius,
+                    'base_radius': baseRadius,
                     'n': 20}
 
     # ------------- Generate objects:
 
     geometry_obj = Geom.SinglePortImageGeometry(**geometric_params)
-    geometry_obj.generatePolynom(**shape_params)
+    geometry_obj.generate_polynom(**shape_params)
 
     return geometry_obj.min_bloc_thickness() > 0.01
 
