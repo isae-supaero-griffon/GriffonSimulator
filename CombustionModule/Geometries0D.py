@@ -426,7 +426,7 @@ class SinglePortImageGeometry(Geometry0D):
         :param length: float with length of grain [m]
         :param regression_model: RegressionModel instance
         :param r_ext: float external radius of the geometry [mm]
-        :param image_pixel_size: pixel size of the image
+        :param image_pixel_size: pixel size of the image (the number of pixels being image_pixel_size^2)
         :param image_meter_size: size in meters of the image
         """
         # Call superclass initializer

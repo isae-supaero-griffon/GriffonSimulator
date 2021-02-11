@@ -105,8 +105,8 @@ def test_simulation_initializer():
 
     init_parameters = {
                         'combustion': {
-                                       'geometric_params': {'type': SinglePortImageGeometry, 'length': 0.4,
-                                                            'r_ext': 0.05, 'image_pixel_size': 1024,
+                                       'geometric_params': {'type': SinglePortImageGeometry, 'length': 0.5,
+                                                            'r_ext': 0.0582, 'image_pixel_size': 1024,
                                                             'image_meter_size': 0.1},
 
                                        'shape_params': {'a': [0, 1], 'b': [1, 0, 0],
@@ -190,10 +190,10 @@ def test_hydraulic_module_integration_with_combustion():
     # ---------- Pack the inputs:
     init_parameters = {
         'combustion': {
-            'geometric_params': {'length': 0.40,
+            'geometric_params': {'length': 0.5,
                                  'regression_model': TwoRegimesMarxmanAndFloodedModel(**combustion_table),
-                                 'r_ext': 0.05,
-                                 'image_pixel_size': 2048*4,
+                                 'r_ext': 0.0582,
+                                 'image_pixel_size': 2048*2,
                                  'image_meter_size': 0.1},
 
             'shape_params': {'a': a_s, 'b': b_s,
@@ -263,7 +263,7 @@ def test_hydraulic_module_integration_with_combustion_1d():
     init_parameters = {
         'combustion': {
             'geometric_params': {
-                                 'length': 0.4,
+                                 'length': 0.5,
                                  'regression_model': TwoRegimesMarxmanAndFloodedModel(**combustion_table),
                                  'r_init': 0.052 / 2,
                                  'r_final': 0.094 / 2,

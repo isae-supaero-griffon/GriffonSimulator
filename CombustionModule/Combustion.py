@@ -802,7 +802,7 @@ class CombustionObjectImage(CombustionObject0D):
                                                                                                rho_fuel,
                                                                                                tol_press)
 
-                r = R / gas_molar_mass  # Specific gaz constant
+                r = R / gas_molar_mass  # Specific gaz constant recomputed with updated gas molar mass
                 delta_t = dr / self.geometry.regression_model.compute_regression_rate(self.geometry, m_ox)
 
                 # Determine the flow port-speed
