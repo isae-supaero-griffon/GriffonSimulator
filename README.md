@@ -43,7 +43,15 @@ Run (you can replace the python version with the output of `python3 --version`):
 ```bash
 conda create -n <insert name of the new environment here> python=3.8
 ```
-You will need to execute the command
+If linux doesn't find the conda command (conda: command not found) then try running
+```bash
+bash
+```
+or
+```bash
+source ~/.bashrc
+```
+Then you will need to execute the command
 ```bash
 conda activate <insert name of the environment previously created here>
 ```
@@ -54,6 +62,7 @@ Run
 ```bash
 conda update --all
 conda install matplotlib numpy scipy pandas pip
+sudo apt-get install gfortran
 pip install rocketcea
 python -c "from rocketcea.cea_obj import CEA_Obj; C=CEA_Obj(oxName='LOX', fuelName='LH2'); print(C.get_Isp())"
 ```
