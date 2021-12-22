@@ -23,13 +23,14 @@ def generate_fourier_coefficients(n_coefs, period, fun, *args):
     a_s = np.empty(shape=(n_coefs,1))
     b_s = np.empty(shape=(n_coefs,1))
 
-    for i in range(1, n_coefs+1):
+    # Equations 13 onwards used from https://mathworld.wolfram.com/FourierSeries.html
+    for i in range(n_coefs):
         sin_fourier = lambda x_: m.sin(2 * m.pi * i * x_ / period) * fun(x_, *args)
         cos_fourier = lambda x_: m.cos(2 * m.pi * i * x_ / period) * fun(x_, *args)
         sin_fourier = np.vectorize(sin_fourier)
         cos_fourier = np.vectorize(cos_fourier)
-        a_s[i-1] = 2 / period * trapz(cos_fourier(x), x)
-        b_s[i-1] = 2 / period * trapz(sin_fourier(x), x)
+        a_s[i] = 2 / period * trapz(cos_fourier(x), x)
+        b_s[i] = 2 / period * trapz(sin_fourier(x), x)
 
     # Return the results
     return a_s, b_s
@@ -192,7 +193,7 @@ def test_hydraulic_module_integration_with_combustion():
         'combustion': {
             'geometric_params': {'length': 0.5,
                                  'regression_model': TwoRegimesMarxmanAndFloodedModel(**combustion_table),
-                                 'r_ext': 0.0582,
+                                 'r_ext': 0.0682,
                                  'image_pixel_size': 2048*2,
                                  'image_meter_size': 0.1},
 
