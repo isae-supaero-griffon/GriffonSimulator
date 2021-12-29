@@ -112,7 +112,7 @@ def compute_point_image_position(image_pixel_size, pixel_base_radius, branches,
 def generate_image(base_radius, branches, impact, n, br, r, delta):
     image_pixel_size = 2048*2
     image_size = 0.2
-    ext_radius = 0.07
+    ext_radius = 0.06325
     image = np.zeros((image_pixel_size, image_pixel_size), np.uint8)
     meters_per_pixel = image_size/image_pixel_size
     pixel_base_radius = m.floor(base_radius / meters_per_pixel)  # Get the base radius in pixels
@@ -136,18 +136,19 @@ def generate_image(base_radius, branches, impact, n, br, r, delta):
 
 
 if __name__ == '__main__':
-    impact = 0.8
-    br, r, delta = 0.3, 0.2, 0.17
-    base_radius, branches, n = 0.032, 12, 50
-    #generate_image(base_radius, branches, impact, n, br, r, delta)
+    impact = 1.11
+    r, br, delta = 0.2, 0.3, 0.17
+    base_radius, branches, n = 0.025, 12, 100
+    # generate_image(base_radius, branches, impact, n, br, r, delta)
     a, b = generate_fourier_coefficients(100, 1, my_fun, br, r, delta)
 
-    x = np.linspace(0, 1, 100)
-    y = []
-    for i in range(len(x)):
-        y.append(evaluate_fourier(a, b, x[i]))
-    plt.plot(x, y)
-    plt.grid()
+    # x = np.linspace(0, 1, 200)
+    # y = []
+    # for i in x:
+    #     y.append(evaluate_fourier(a, b, i))
+    # plt.plot(x, y)
+    # plt.grid()
+
 
     generate_fourier(a, b, base_radius, branches, impact, n)
 

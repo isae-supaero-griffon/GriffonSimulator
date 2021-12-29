@@ -334,7 +334,7 @@
           "fluid": [
             {"name": "Air", "T": 298.0},
             {"name": "H2O2", "T": 298.0}],
-          "volume": 4e-3,
+          "volume": 8e-3,
           "flow_factors": [0.9801, 3],
           "inlet_diameter": 0.01,
           "outlet_diameter": 0.01,

@@ -181,7 +181,7 @@ def test_hydraulic_module_integration_with_combustion():
     Hydraulic module and the Combustion module """
 
     # ------------ Generate the data-layer:
-    json_interpreter = generate_data_layer("Griffon Data - Mock.json")
+    json_interpreter = generate_data_layer("Griffon II Data - AEther.json")
     combustion_table = json_interpreter.return_combustion_table()
 
     # ------------ Generate the Fourier Coefficients:
@@ -191,14 +191,14 @@ def test_hydraulic_module_integration_with_combustion():
     # ---------- Pack the inputs:
     init_parameters = {
         'combustion': {
-            'geometric_params': {'length': 0.5,
+            'geometric_params': {'length': 0.4,
                                  'regression_model': TwoRegimesMarxmanAndFloodedModel(**combustion_table),
-                                 'r_ext': 0.0682,
-                                 'image_pixel_size': 2048*2,
-                                 'image_meter_size': 0.1},
+                                 'r_ext': 0.06325,
+                                 'image_pixel_size': 2048*4,
+                                 'image_meter_size': 0.15},
 
             'shape_params': {'a': a_s, 'b': b_s,
-                             'base_radius': 0.032, 'branches': 12, 'impact': 0.8,
+                             'base_radius': 0.025, 'branches': 12, 'impact': 1.11,
                              'n': 50},
 
             'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
@@ -212,7 +212,7 @@ def test_hydraulic_module_integration_with_combustion():
                       'pressurizer_flow': 0.01137
         }
     }
-    simulation_parameters = {'hydraulic_module': None, 'safety_thickness': 0.004, 'dt': 0.05,
+    simulation_parameters = {'hydraulic_module': None, 'safety_thickness': 0.002, 'dt': 0.05,
                              'max_burn_time': None, 'tol_press': 1e-3}
 
     # ---------- Generate objects:
