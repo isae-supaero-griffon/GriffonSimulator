@@ -12,7 +12,7 @@ import CombustionModule.Combustion as Comb                      # Import the Com
 from CombustionModule.Fuel import *                             # Import the Fuel class
 from MassEstimationModule.system import System                  # Import the system class
 from TrajectoryModule.Drag import *                             # Import the Drag library
-from TrajectoryModule.Density import DensityLaw                 # Import the density-law library
+from TrajectoryModule.Atmosphere import DensityLaw                 # Import the density-law library
 from TrajectoryModule.Trajectory import TrajectoryObject        # Import the trajectory object
 import numpy as np                                              # Import numpy
 import matplotlib.pyplot as plt                                 # Import matplotlib
@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt                                 # Import matplot
 # ------------------------ FUNCTION DEFINITIONS ------------------------
 
 
-def generate_data_layer(data_file="DataLayerONERATests_Hycom16.json"):
+def generate_data_layer(data_file="Griffon II Data - AEther.json"):
     """ generate_data_layer instantiates all of the objects that
     are required as data layer for the program to run properly.
     :param data_file: name of the json file to be used as reference for the simulation (str)
@@ -268,6 +268,19 @@ def test_mass_simulator():
 def test_trajectory():
     """ perform the test over the trajectory module """
 
+    # ------------- Generate objects:
+
+    json_interpreter = generate_data_layer()
+    trajectory_data = json_interpreter.return_trajectory_table()
+    density_obj = DensityLaw(trajectory_data['density'])
+
+    drag_parameters = {'cd_table': trajectory_data['drag']['cd_table'],
+                       'area_ref': trajectory_data['drag']['area_ref'],
+                       'density': density_obj}
+
+    drag_obj = DragCatalogue.return_drag_object(trajectory_data['drag']['type'], drag_parameters)
+    trajectory_obj = TrajectoryObject(density_obj=density_obj, drag_obj=drag_obj)
+
     # -------------- Define parameters:
 
     # thrust & time
@@ -277,7 +290,7 @@ def test_trajectory():
     thrust = []                                             # Initiate the thrust array
     isp = []                                                # Initiate the isp array
     time = []                                               # Initiate the time array
-    burn_time = 4.5
+    burn_time = 8
     # Burn time in seconds
     constant_thrust = 2600                         # Thrust value in newtons
     constant_isp = 210                              # Isp value in seconds
@@ -285,6 +298,7 @@ def test_trajectory():
     for i in range(0, n_points):
         t = delta_t*i
         time.append(t)
+        trajectory_obj.clock.update(delta_t)
         if t < burn_time:
             thrust.append(constant_thrust)
             isp.append(constant_isp)
@@ -295,22 +309,12 @@ def test_trajectory():
     # isp, area_ref, initial conditions
     initial_conditions = {'h0': 0, 'v0': 0, 'm0': 35}       # Initial mass in kg
 
-    # ------------- Generate objects:
 
-    json_interpreter = generate_data_layer()
-    trajectory_data = json_interpreter.return_trajectory_table()
-    density_obj = DensityLaw(trajectory_data['density'])
-
-    drag_parameters = {'drag_coefficient': trajectory_data['drag']['Cd'],
-                       'area_ref': trajectory_data['drag']['area_ref'],
-                       'density': density_obj}
-
-    drag_obj = DragCatalogue.return_drag_object(trajectory_data['drag']['type'], drag_parameters)
-    trajectory_obj = TrajectoryObject(density_obj=density_obj, drag_obj=drag_obj)
 
     # -------------- Run simulation:
 
-    trajectory_obj.run_simulation_on_trajectory(time=np.asarray(time),
+    trajectory_obj.run_simulation_on_trajectory(dt=delta_t,
+                                                simulation_time=simulation_time,
                                                 thrust=np.asarray(thrust),
                                                 isp=np.asarray(isp),
                                                 initial_conditions=initial_conditions)
@@ -348,10 +352,10 @@ if __name__ == '__main__':
     # test_combustion()
     # test_combustion_three_port_geometry()
     # test_mass_simulator()
-    # test_trajectory()
+    test_trajectory()
     # test_combustion_onera_data()
     # test_onera_physical_test_2()
-    test_combustion_image_geometry()
+    # test_combustion_image_geometry()
     # test_fuel()
     # Show any plots
     plt.show()
