@@ -6,7 +6,10 @@
 # ---------------------- IMPORT MODULES -----------------------
 
 from abc import ABC, abstractmethod     # Import ABC for abstract methods definition
-from TrajectoryModule.Density import *  # Import the density module
+
+import numpy as np
+
+from TrajectoryModule.Atmosphere import *  # Import the density module
 
 # --------------------- CLASS DEFINITIONS ---------------------
 
@@ -33,8 +36,13 @@ class Drag(ABC):
 
     def __str__(self):
         """ redefine the str method for the Drag class to print the constants """
-        return "\n".join(["\nDrag,",
-                          "\n".join(("{0}, {1:3.4f}".format(key, value) for key, value in self.constants.items()))])
+        string = "\nDrag,"
+        for key, value in self.constants.items():
+            if key == "cd_table":
+                string = string + "\nUsed cd_table available in input .json"  # can't print the whole cd table
+            else:
+                string = string + "\n" + ("{0}, {1:3.4f}".format(key, value))
+        return string
 
     @abstractmethod
     def compute_drag_coefficient(self, *args, **kwargs):
@@ -62,7 +70,8 @@ class Drag(ABC):
 
         # Compute the drag coefficient
         rho_ = self.density.compute_density(altitude)
-        cd = self.compute_drag_coefficient()
+        mach = speed / self.density.compute_sonic_speed(altitude)
+        cd = self.compute_drag_coefficient(mach)
         s = self.compute_area_reference()
 
         # Return overall drag force
@@ -88,11 +97,34 @@ class ConstantDrag(Drag):
         return self.constants['S']
 
 
+class MachVaryingDrag(Drag):
+    """MachVaryingDrag is used to calculate the Drag force when the Cd
+    varies with the Mach"""
+
+    def __init__(self, cd_table, area_ref, density):
+        """
+        Class initializer
+        :param cd_table: array containing experimental
+        outputs of aerodynamic simulations
+        """
+        super().__init__({'cd_table': cd_table, 'S': area_ref}, density)
+
+    def compute_drag_coefficient(self, mach):
+        """Compute Cd as a function of Mach number"""
+        mach_array = self.constants['cd_table'][0]
+        cd_array = self.constants['cd_table'][1]
+        return np.interp(mach, mach_array, cd_array)
+
+    def compute_area_reference(self):
+        """ compute the reference area (return the constant) """
+        return self.constants['S']
+
 class DragCatalogue:
     """ DragCatalogue is a static class which helps on choosing the type of drag to
     use for the calculations """
 
-    drag_collection = {'constant': ConstantDrag}
+    drag_collection = {'constant': ConstantDrag,
+                       'machVarying': MachVaryingDrag}
 
     @staticmethod
     def return_drag_object(obj_type, input_parameters):

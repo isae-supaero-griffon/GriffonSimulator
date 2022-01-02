@@ -9,7 +9,7 @@ Date: 14 Dec 2018
 
 from Libraries.GriffonModule import GriffonModule, Clock    # Import the GriffonModule class
 from TrajectoryModule.Drag import *                         # Import the drag module
-from TrajectoryModule.Density import *                      # Import the density module
+from TrajectoryModule.Atmosphere import *                      # Import the density module
 import numpy as np                                          # Import numpy
 import matplotlib.pyplot as plt                             # Import matplotlib for plot generation
 
