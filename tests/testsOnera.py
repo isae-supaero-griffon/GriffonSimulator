@@ -13,7 +13,7 @@ import CombustionModule.Nozzle as Noz                           # Import the Noz
 from CombustionModule.Combustion import CombustionObject        # Import the CombustionObject
 from MassEstimationModule.system import System                  # Import the system class
 from TrajectoryModule.Drag import *                             # Import the Drag library
-from TrajectoryModule.Density import DensityLaw                 # Import the density-law library
+from TrajectoryModule.Atmosphere import DensityLaw                 # Import the density-law library
 from TrajectoryModule.Trajectory import TrajectoryObject        # Import the trajectory object
 import numpy as np                                              # Import numpy
 import matplotlib.pyplot as plt                                 # Import matplotlib

@@ -66,12 +66,13 @@ def evaluate_fourier(a, b, x):
     """
     assert 0 <= x <= 1, "x variable not contained in [0, 1] \n"
 
+    # Equation 13 used from https://mathworld.wolfram.com/FourierSeries.html
     # Generate the sum for both arrays
-    sum_a = sum((a[k] * m.cos(2 * m.pi * (k+1) * x) for k in range(len(a))))
-    sum_b = sum((b[k] * m.sin(2 * m.pi * (k+1) * x) for k in range(len(b))))
+    sum_a = sum((a[k] * m.cos(2 * m.pi * k * x) for k in range(len(a))))
+    sum_b = sum((b[k] * m.sin(2 * m.pi * k * x) for k in range(len(b))))
 
     # Return the output
-    return sum_a + sum_b
+    return sum_a + sum_b - a[0] / 2
 
 
 def compute_point_image_position(image_pixel_size, pixel_base_radius, branches,

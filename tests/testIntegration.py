@@ -23,13 +23,14 @@ def generate_fourier_coefficients(n_coefs, period, fun, *args):
     a_s = np.empty(shape=(n_coefs,1))
     b_s = np.empty(shape=(n_coefs,1))
 
-    for i in range(1, n_coefs+1):
+    # Equations 13 onwards used from https://mathworld.wolfram.com/FourierSeries.html
+    for i in range(n_coefs):
         sin_fourier = lambda x_: m.sin(2 * m.pi * i * x_ / period) * fun(x_, *args)
         cos_fourier = lambda x_: m.cos(2 * m.pi * i * x_ / period) * fun(x_, *args)
         sin_fourier = np.vectorize(sin_fourier)
         cos_fourier = np.vectorize(cos_fourier)
-        a_s[i-1] = 2 / period * trapz(cos_fourier(x), x)
-        b_s[i-1] = 2 / period * trapz(sin_fourier(x), x)
+        a_s[i] = 2 / period * trapz(cos_fourier(x), x)
+        b_s[i] = 2 / period * trapz(sin_fourier(x), x)
 
     # Return the results
     return a_s, b_s
@@ -180,7 +181,7 @@ def test_hydraulic_module_integration_with_combustion():
     Hydraulic module and the Combustion module """
 
     # ------------ Generate the data-layer:
-    json_interpreter = generate_data_layer("Griffon Data - Mock.json")
+    json_interpreter = generate_data_layer("Griffon II Data - AEther.json")
     combustion_table = json_interpreter.return_combustion_table()
 
     # ------------ Generate the Fourier Coefficients:
@@ -190,14 +191,14 @@ def test_hydraulic_module_integration_with_combustion():
     # ---------- Pack the inputs:
     init_parameters = {
         'combustion': {
-            'geometric_params': {'length': 0.5,
+            'geometric_params': {'length': 0.4,
                                  'regression_model': TwoRegimesMarxmanAndFloodedModel(**combustion_table),
-                                 'r_ext': 0.0582,
-                                 'image_pixel_size': 2048*2,
-                                 'image_meter_size': 0.1},
+                                 'r_ext': 0.06325,
+                                 'image_pixel_size': 2048*4,
+                                 'image_meter_size': 0.15},
 
             'shape_params': {'a': a_s, 'b': b_s,
-                             'base_radius': 0.032, 'branches': 12, 'impact': 0.8,
+                             'base_radius': 0.025, 'branches': 12, 'impact': 1.11,
                              'n': 50},
 
             'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
@@ -211,7 +212,7 @@ def test_hydraulic_module_integration_with_combustion():
                       'pressurizer_flow': 0.01137
         }
     }
-    simulation_parameters = {'hydraulic_module': None, 'safety_thickness': 0.004, 'dt': 0.05,
+    simulation_parameters = {'hydraulic_module': None, 'safety_thickness': 0.002, 'dt': 0.05,
                              'max_burn_time': None, 'tol_press': 1e-3}
 
     # ---------- Generate objects:

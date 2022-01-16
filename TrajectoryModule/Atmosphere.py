@@ -1,17 +1,18 @@
-# Density.py contains the declaration of the DensityLaw class used in the calculation
+# Atmosphere.py contains the declaration of the DensityLaw class used in the calculation
 # of the density variation with altitude used to asses the rockets performance in flight.
 # Author: Jose Felix Zapata Usandivaras
 # Date: 30/12/2018
 
 # ------------------------ IMPORT MODULES -----------------------
 
-import math                             # Import math library
+import math  # Import math library
+
 
 # ----------------------- CLASS DEFINITIONS ---------------------
 
 
 class DensityLaw:
-    """ DensityLaw class is in charge of calculating the density change with altitude """
+    """ DensityLaw class is in charge of calculating the atmospheric parameters' change with altitude """
 
     def __init__(self, density_parameters):
         """
@@ -34,3 +35,14 @@ class DensityLaw:
         :return: density [kg/m^3]
         """
         return self._rho0 * math.exp(-self.g0 * self._m * (altitude - self.h_0) / (self._r * self._t_0))
+
+    def compute_sonic_speed(self, altitude):
+        """
+        compute the speed of sound at a given altitude
+        :param altitude: float-altitude at which we want the speed to be calculated [m]
+        :return: sonic speed [m/s]
+        """
+        # TODO: insert new variables inside input file
+        gamma = 1.4
+        t = self._t_0 - altitude * 6.5e-3 # from standard atmosphere, beginning at 298 K instead of 288 K
+        return math.sqrt(gamma * self._r * self._m * 1e3 * t)
