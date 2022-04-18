@@ -358,7 +358,7 @@ def test_hydraulic_module_integration_with_combustion_with_trajectory():
                              'base_radius': 0.025, 'branches': 12, 'impact': 1.11,
                              'n': 50},
 
-            'nozzle_params': {'At': 0.000589, 'expansion': 5.7, 'lambda_e': 0.98,
+            'nozzle_params': {'At': 0.00057255526, 'expansion': 5.27297669049, 'lambda_e': 0.982,
                               'erosion': 0},
 
             'set_nozzle_design': False
