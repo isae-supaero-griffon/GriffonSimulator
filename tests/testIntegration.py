@@ -341,8 +341,11 @@ def test_hydraulic_module_integration_with_combustion_with_trajectory():
     json_interpreter = generate_data_layer("Griffon II Data - AEther.json")
     combustion_table = json_interpreter.return_combustion_table()
 
-    # ------------ Generate the Fourier Coefficients:
-    r, br, delta, n_coefs, period = 0.2, 0.3, 0.25, 100, 1
+    delta_vec = np.linspace(20, 70, 12)/100
+
+# ------------ Generate the Fourier Coefficients:
+    r, br, delta, n_coefs, period = 0.2, 0.3, 0.2, 100, 1
+    #r, br, n_coefs, period = 0.2, 0.3, 100, 1
     a_s, b_s = generate_fourier_coefficients(n_coefs, period, my_fun, br, r, delta)
 
     # ---------- Pack the inputs:
@@ -355,7 +358,7 @@ def test_hydraulic_module_integration_with_combustion_with_trajectory():
                                  'image_meter_size': 0.15},
 
             'shape_params': {'a': a_s, 'b': b_s,
-                             'base_radius': 0.025, 'branches': 12, 'impact': 1.11,
+                             'base_radius': 0.0213, 'branches': 12, 'impact': 1.11,
                              'n': 50},
 
             'nozzle_params': {'At': 0.00057255526, 'expansion': 5.27297669049, 'lambda_e': 0.982,
@@ -370,7 +373,7 @@ def test_hydraulic_module_integration_with_combustion_with_trajectory():
         }
     }
     simulation_parameters = {'hydraulic_module': None, 'safety_thickness': 0.002, 'dt': 0.05,
-                             'max_burn_time': 8, 'tol_press': 1e-3}
+                             'max_burn_time': 5, 'tol_press': 1e-3}
 
     # ---------- Generate objects:
 
@@ -400,8 +403,8 @@ def test_hydraulic_module_integration_with_combustion_with_trajectory():
 
     # Export the results to a File
     data_dir = "../data/data_tests/MergeResults/"
-    combustion_obj.export_results_file(file_name=data_dir + "CombustionResultsImage_Valve_2.csv")
-    hydraulic_obj.export_results_file(file_name=data_dir + "HydraulicResultsImage_Valve_2.csv")
+    combustion_obj.export_results_file(file_name=data_dir + str(delta) + "CombustionResultsImage_Valve_2.csv")
+    hydraulic_obj.export_results_file(file_name=data_dir + str(delta) + "HydraulicResultsImage_Valve_2.csv")
 
     # Create the trajectory module
 
