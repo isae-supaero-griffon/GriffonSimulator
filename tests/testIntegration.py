@@ -342,10 +342,9 @@ def test_hydraulic_module_integration_with_combustion_with_trajectory():
     combustion_table = json_interpreter.return_combustion_table()
 
     delta_vec = np.linspace(20, 70, 12)/100
-
+#
 # ------------ Generate the Fourier Coefficients:
     r, br, delta, n_coefs, period = 0.2, 0.3, 0.2, 100, 1
-    #r, br, n_coefs, period = 0.2, 0.3, 100, 1
     a_s, b_s = generate_fourier_coefficients(n_coefs, period, my_fun, br, r, delta)
 
     # ---------- Pack the inputs:
