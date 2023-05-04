@@ -8,7 +8,18 @@
 from Initializer.Initializer import *                               # Import the Initializer object
 from CombustionModule.Combustion import *                           # Import the Combustion module
 from IntegrationModule.SimulationObject import SimulationObject     # Import the SimulationObject
-
+from DataLayer.JsonInterpreter import JsonInterpreter           # Import the json interpreter
+import CombustionModule.RegressionModel as Reg                  # Import the RegressionModel module
+import CombustionModule.Geometries as Geom                      # Import the Geometry module
+import CombustionModule.Nozzle as Noz                           # Import the Nozzle module
+import CombustionModule.Combustion as Comb                      # Import the Combustion module
+from CombustionModule.Fuel import *                             # Import the Fuel class
+from MassEstimationModule.system import System                  # Import the system class
+from TrajectoryModule.Drag import *                             # Import the Drag library
+from TrajectoryModule.Atmosphere import DensityLaw                 # Import the density-law library
+from TrajectoryModule.Trajectory import TrajectoryObject        # Import the trajectory object
+import numpy as np                                              # Import numpy
+import matplotlib.pyplot as plt                                 # Import matplotlib
 
 # -------------------- FUNCTIONS DEFINITIONS ------------------
 
@@ -321,6 +332,134 @@ def test_hydraulic_module_integration_with_combustion_1d():
     combustion_obj.plot_results()
     plt.show()
 
+
+def test_hydraulic_module_integration_with_combustion_with_trajectory():
+    """ The aim of this function is to integrate and test such integration between the
+        Hydraulic module, the Combustion module and the Trajectory module"""
+
+    # ------------ Generate the data-layer:
+    json_interpreter = generate_data_layer("Griffon II Data - AEther.json")
+    combustion_table = json_interpreter.return_combustion_table()
+
+    delta_vec = np.linspace(20, 70, 12)/100
+#
+# ------------ Generate the Fourier Coefficients:
+    r, br, delta, n_coefs, period = 0.2, 0.3, 0.2, 100, 1
+    a_s, b_s = generate_fourier_coefficients(n_coefs, period, my_fun, br, r, delta)
+
+    # ---------- Pack the inputs:
+    init_parameters = {
+        'combustion': {
+            'geometric_params': {'length': 0.4,
+                                 'regression_model': TwoRegimesMarxmanAndFloodedModel(**combustion_table),
+                                 'r_ext': 0.06325,
+                                 'image_pixel_size': 2048 * 4,
+                                 'image_meter_size': 0.15},
+
+            'shape_params': {'a': a_s, 'b': b_s,
+                             'base_radius': 0.0213, 'branches': 12, 'impact': 1.11,
+                             'n': 50},
+
+            'nozzle_params': {'At': 0.00057255526, 'expansion': 5.27297669049, 'lambda_e': 0.982,
+                              'erosion': 0},
+
+            'set_nozzle_design': False
+        },
+        'hydraulic': {
+            'chamber_pressure': combustion_table['P_chamber_bar'] * 1e5,
+            'ox_flow': 1.08,
+            'pressurizer_flow': 0.01137
+        }
+    }
+    simulation_parameters = {'hydraulic_module': None, 'safety_thickness': 0.002, 'dt': 0.05,
+                             'max_burn_time': 5, 'tol_press': 1e-3}
+
+    # ---------- Generate objects:
+
+    geometry_obj = SinglePortImageGeometry(**init_parameters['combustion']['geometric_params'])
+    geometry_obj.generate_fourier(**init_parameters['combustion']['shape_params'])
+    nozzle_obj = Nozzle(**init_parameters['combustion']['nozzle_params'])
+
+    # Generate the Combustion Module:
+    combustion_obj = CombustionObjectImage(json_interpreter=json_interpreter,
+                                           geometry_object=geometry_obj,
+                                           nozzle_object=nozzle_obj)
+
+    # Generate the Hydraulic Module:
+    hydraulic_obj = HydraulicModule(json_interpreter.return_hydraulic_table())
+    hydraulic_obj.initialize(init_parameters['hydraulic'])
+    simulation_parameters['hydraulic_module'] = hydraulic_obj
+
+    # Generate the plot before it runs
+    geometry_obj.draw_geometry()
+
+    # ---------- Run simulation and & Plot:
+
+    combustion_obj.run_full_flow_analysis(**simulation_parameters)
+
+    # Print the module
+    print(combustion_obj)
+
+    # Export the results to a File
+    data_dir = "../data/data_tests/MergeResults/"
+    combustion_obj.export_results_file(file_name=data_dir + str(delta) + "CombustionResultsImage_Valve_2.csv")
+    hydraulic_obj.export_results_file(file_name=data_dir + str(delta) + "HydraulicResultsImage_Valve_2.csv")
+
+    # Create the trajectory module
+
+    trajectory_data = json_interpreter.return_trajectory_table()
+    density_obj = DensityLaw(trajectory_data['density'])
+
+    drag_parameters = {'cd_table': trajectory_data['drag']['cd_table'],
+                       'area_ref': trajectory_data['drag']['area_ref'],
+                       'density': density_obj}
+
+    drag_obj = DragCatalogue.return_drag_object(trajectory_data['drag']['type'], drag_parameters)
+    trajectory_obj = TrajectoryObject(density_obj=density_obj, drag_obj=drag_obj)
+
+    # -------------- Define parameters:
+
+    # thrust & time
+    delta_t = simulation_parameters['dt']  # delta-time in seconds
+    simulation_time = 60  # simulation-time
+    n_points = int(simulation_time / delta_t) + 1  # total number of points
+    thrust = []  # Initiate the thrust array
+    isp = []  # Initiate the isp array
+    time = []  # Initiate the time array
+    burn_time = combustion_obj.results['time'][-1]
+    trajectory_obj.clock.reset()
+    # Burn time in seconds
+    constant_thrust = 2600  # Thrust value in newtons
+    isp = combustion_obj.results['run_values']['isp']  # Isp value in seconds
+    thrust = combustion_obj.results['run_values']['thrust']
+    for i in range(0, n_points):
+        t = delta_t * i
+        time.append(t)
+        trajectory_obj.clock.update(delta_t)
+        if t > burn_time:
+            thrust = np.append(thrust, 0)
+            isp = np.append(isp, np.nan)
+
+    # isp, area_ref, initial conditions
+    initial_conditions = {'h0': 0, 'v0': 0, 'm0': 35}  # Initial mass in kg
+
+    # -------------- Run simulation:
+
+    trajectory_obj.run_simulation_on_trajectory(dt=delta_t,
+                                                simulation_time=simulation_time,
+                                                thrust=np.asarray(thrust),
+                                                isp=np.asarray(isp),
+                                                initial_conditions=initial_conditions)
+
+    # Print the results
+    print(trajectory_obj)
+
+    # Plot the results
+    combustion_obj.plot_results()
+    geometry_obj.draw_geometry()
+    trajectory_obj.plot_results()
+    plt.show()
+
 # ----------------------------- MAIN ------------------------------
 
 
@@ -328,5 +467,6 @@ if __name__ == '__main__':
 
     # Call the test functions
     # test_simulation_initializer()
-    test_hydraulic_module_integration_with_combustion()
+    # test_hydraulic_module_integration_with_combustion()
     # test_hydraulic_module_integration_with_combustion_1d()
+    test_hydraulic_module_integration_with_combustion_with_trajectory()

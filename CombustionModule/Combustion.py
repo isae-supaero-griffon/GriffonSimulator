@@ -95,7 +95,7 @@ class CombustionObject(GriffonModule):
         # Generate a string for the results
         if self.results['magnitudes']:
             results_str = "\nAverages values: \n\t" + "\t\n\t". \
-                join(("{name}, {value:.2E}".format(name=name, value=value) for
+                join(("{name}, {value:.4E}".format(name=name, value=value) for
                       name, value in self.results['magnitudes'].items()))
         else:
             results_str = "\nNo results have been yet calculated. \n"
